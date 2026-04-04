@@ -11,6 +11,38 @@ export interface PlantResult {
   date: string;
 }
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+function compressImage(
+  dataUrl: string,
+  maxWidth = 400,
+  quality = 0.7
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const ratio = Math.min(maxWidth / img.width, 1);
+      const width = Math.round(img.width * ratio);
+      const height = Math.round(img.height * ratio);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("No se pudo crear el canvas"));
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => reject(new Error("No se pudo cargar la imagen"));
+    img.src = dataUrl;
+  });
+}
+
 export function usePlantIdentifier() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<PlantResult | null>(null);
@@ -22,11 +54,18 @@ export function usePlantIdentifier() {
     setResult(null);
 
     try {
-      // Convert image to base64
-      const base64 = await fileToBase64(imageFile);
+      if (!imageFile.type.startsWith("image/")) {
+        throw new Error("El archivo debe ser una imagen");
+      }
+      if (imageFile.size > MAX_FILE_SIZE) {
+        throw new Error("La imagen no puede superar los 10 MB");
+      }
+
+      const rawBase64 = await fileToBase64(imageFile);
+      const compressed = await compressImage(rawBase64);
 
       const { data, error: fnError } = await supabase.functions.invoke("identify-plant", {
-        body: { image: base64 },
+        body: { image: compressed },
       });
 
       if (fnError) throw new Error(fnError.message);
@@ -38,7 +77,7 @@ export function usePlantIdentifier() {
         description: data.description,
         care: data.care,
         diagnosis: data.diagnosis,
-        imageUrl: base64,
+        imageUrl: compressed,
         date: new Date().toISOString(),
       };
 
