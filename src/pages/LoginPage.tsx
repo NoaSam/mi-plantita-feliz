@@ -255,7 +255,7 @@ export default function LoginPage() {
           <div className="flex flex-col items-center gap-4 pt-8">
             <Leaf className="size-16 text-primary" strokeWidth={1.2} />
             <h1 className="font-display text-3xl font-bold text-foreground text-center">
-              Mi Plantita Feliz
+              Mi jardín
             </h1>
             <p className="text-lg text-muted-foreground text-center">
               {emailVerified

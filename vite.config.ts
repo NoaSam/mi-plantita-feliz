@@ -17,17 +17,17 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico"],
       workbox: {
-        navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webp}"],
       },
       manifest: {
-        name: "El Jardín de Mamá",
-        short_name: "Mi Jardín",
+        name: "Mi jardín",
+        short_name: "Mi jardín",
         description: "Identifica y cuida tus plantas con una foto",
         theme_color: "#2D5A27",
         background_color: "#FDFCF8",
         display: "standalone",
         orientation: "portrait",
+        lang: "es",
         start_url: "/",
         icons: [
           {
@@ -39,6 +39,12 @@ export default defineConfig(({ mode }) => ({
             src: "/pwa-512.png",
             sizes: "512x512",
             type: "image/png",
+          },
+          {
+            src: "/pwa-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
           },
         ],
       },
