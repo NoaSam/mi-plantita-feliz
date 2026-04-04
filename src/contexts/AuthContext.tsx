@@ -1,4 +1,5 @@
 import { createContext, useEffect, useState, type ReactNode } from "react";
+import posthog from "posthog-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -53,6 +54,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) console.error("signOut failed:", error.message);
+    posthog.reset();
   };
 
   const clearEmailVerified = () => setEmailVerified(false);

@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import posthog from "posthog-js";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface PlantResult {
@@ -103,6 +104,7 @@ export function usePlantIdentifier() {
         };
 
         setResult(plantResult);
+        posthog.capture("plant_identified", { plant_name: row.name, logged_in: true });
       } else {
         // Fallback to localStorage for anonymous users
         const plantResult: PlantResult = {
@@ -116,6 +118,7 @@ export function usePlantIdentifier() {
         };
 
         setResult(plantResult);
+        posthog.capture("plant_identified", { plant_name: data.name, logged_in: false });
 
         try {
           const history = JSON.parse(localStorage.getItem("plant-history") || "[]");
@@ -126,7 +129,9 @@ export function usePlantIdentifier() {
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error desconocido");
+      const msg = e instanceof Error ? e.message : "Error desconocido";
+      setError(msg);
+      posthog.capture("plant_identification_failed", { error: msg });
     } finally {
       setIsLoading(false);
     }
