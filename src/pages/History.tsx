@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Leaf, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ const MONTHS = [
 
 export default function HistoryPage() {
   const navigate = useNavigate();
-  const { history } = usePlantHistory();
+  const { history, isLoading: historyLoading } = usePlantHistory();
   const { signOut } = useAuth();
   const [search, setSearch] = useState("");
   const [monthFilter, setMonthFilter] = useState(0);
@@ -72,7 +72,11 @@ export default function HistoryPage() {
           </select>
 
           {/* List */}
-          {filtered.length === 0 ? (
+          {historyLoading ? (
+            <div className="flex justify-center py-12">
+              <Leaf className="size-10 text-primary animate-pulse-slow" strokeWidth={1.2} />
+            </div>
+          ) : filtered.length === 0 ? (
             <p className="text-center text-xl text-muted-foreground py-12">
               No hay plantas guardadas
             </p>

@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -13,100 +13,89 @@ serve(async (req) => {
 
   try {
     const { image } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Extract base64 data and media type from data URL
+    const match = image.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (!match) throw new Error("Invalid image format");
+    const mediaType = match[1];
+    const base64Data = match[2];
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `Eres un botánico experto. El usuario te envía una foto de una planta. Debes responder SIEMPRE en español, de forma clara y sencilla para una persona mayor.
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1024,
+        system: `Eres un botánico experto. El usuario te envía una foto de una planta. Debes responder SIEMPRE en español, de forma clara y sencilla para una persona no técnica.
 
-Usa la herramienta "plant_info" para devolver la información estructurada.`,
-          },
+Responde SOLO con un JSON válido con esta estructura exacta, sin texto adicional:
+{
+  "name": "Nombre común de la planta",
+  "description": "Qué es la planta, familia, origen y características principales. 2-3 frases.",
+  "care": "Consejos de cuidado: riego, luz, suelo, temperatura. 3-4 frases claras.",
+  "diagnosis": "Diagnóstico visual: si se ve sana o tiene algún problema. 2-3 frases."
+}`,
+        messages: [
           {
             role: "user",
             content: [
               {
-                type: "image_url",
-                image_url: { url: image },
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mediaType,
+                  data: base64Data,
+                },
               },
               {
                 type: "text",
-                text: "Identifica esta planta. Dime qué es, cómo cuidarla y si le pasa algo (si se ve alguna enfermedad o problema).",
+                text: "Identifica esta planta. Dime qué es, cómo cuidarla y si le pasa algo.",
               },
             ],
           },
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "plant_info",
-              description: "Devuelve información estructurada sobre la planta identificada.",
-              parameters: {
-                type: "object",
-                properties: {
-                  name: { type: "string", description: "Nombre común de la planta" },
-                  description: { type: "string", description: "Descripción breve de qué es la planta, su familia, origen y características principales. 2-3 frases." },
-                  care: { type: "string", description: "Consejos de cuidado: riego, luz, suelo, temperatura. 3-4 frases claras." },
-                  diagnosis: { type: "string", description: "Diagnóstico visual: si la planta se ve sana o si tiene algún problema visible (plagas, hojas amarillas, falta de agua, etc.). 2-3 frases." },
-                },
-                required: ["name", "description", "care", "diagnosis"],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "plant_info" } },
       }),
     });
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Demasiadas consultas. Espera un momento y vuelve a intentarlo." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos agotados. Contacta con el administrador." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Demasiadas consultas. Espera un momento y vuelve a intentarlo." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Error al identificar la planta. Inténtalo de nuevo." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("Anthropic API error:", response.status, t);
+      return new Response(
+        JSON.stringify({ error: "Error al identificar la planta. Inténtalo de nuevo." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    const text = data.content?.[0]?.text || "";
 
-    if (!toolCall) {
-      // Fallback: try to parse content directly
-      const content = data.choices?.[0]?.message?.content || "";
-      return new Response(JSON.stringify({
-        name: "Planta no identificada",
-        description: content || "No se pudo identificar la planta. Intenta con otra foto más clara.",
-        care: "Asegúrate de que la foto muestre bien la planta.",
-        diagnosis: "No hay suficiente información para un diagnóstico.",
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Extract JSON from response (handle possible markdown code blocks)
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return new Response(
+        JSON.stringify({
+          name: "Planta no identificada",
+          description: text || "No se pudo identificar la planta. Intenta con otra foto más clara.",
+          care: "Asegúrate de que la foto muestre bien la planta.",
+          diagnosis: "No hay suficiente información para un diagnóstico.",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    const plantInfo = JSON.parse(toolCall.function.arguments);
+    const plantInfo = JSON.parse(jsonMatch[0]);
 
     return new Response(JSON.stringify(plantInfo), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -115,7 +104,7 @@ Usa la herramienta "plant_info" para devolver la información estructurada.`,
     console.error("identify-plant error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Error desconocido" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });

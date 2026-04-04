@@ -71,22 +71,60 @@ export function usePlantIdentifier() {
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
 
-      const plantResult: PlantResult = {
-        id: crypto.randomUUID(),
-        name: data.name,
-        description: data.description,
-        care: data.care,
-        diagnosis: data.diagnosis,
-        imageUrl: compressed,
-        date: new Date().toISOString(),
-      };
+      const now = new Date().toISOString();
 
-      setResult(plantResult);
+      // Try to save to Supabase if user is logged in
+      const { data: { session } } = await supabase.auth.getSession();
 
-      // Save to localStorage history
-      const history = JSON.parse(localStorage.getItem("plant-history") || "[]");
-      history.unshift(plantResult);
-      localStorage.setItem("plant-history", JSON.stringify(history));
+      if (session?.user) {
+        const { data: row, error: dbError } = await supabase
+          .from("plant_searches")
+          .insert({
+            user_id: session.user.id,
+            name: data.name,
+            description: data.description,
+            care: data.care,
+            diagnosis: data.diagnosis,
+            image_url: compressed,
+          })
+          .select()
+          .single();
+
+        if (dbError) throw new Error(dbError.message);
+
+        const plantResult: PlantResult = {
+          id: row.id,
+          name: row.name,
+          description: row.description,
+          care: row.care,
+          diagnosis: row.diagnosis,
+          imageUrl: row.image_url,
+          date: row.created_at,
+        };
+
+        setResult(plantResult);
+      } else {
+        // Fallback to localStorage for anonymous users
+        const plantResult: PlantResult = {
+          id: crypto.randomUUID(),
+          name: data.name,
+          description: data.description,
+          care: data.care,
+          diagnosis: data.diagnosis,
+          imageUrl: compressed,
+          date: now,
+        };
+
+        setResult(plantResult);
+
+        try {
+          const history = JSON.parse(localStorage.getItem("plant-history") || "[]");
+          history.unshift(plantResult);
+          localStorage.setItem("plant-history", JSON.stringify(history.slice(0, 20)));
+        } catch {
+          // localStorage full or unavailable — ignore
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error desconocido");
     } finally {

@@ -14,7 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      plant_searches: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          description: string
+          care: string
+          diagnosis: string
+          image_url: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          description: string
+          care: string
+          diagnosis: string
+          image_url: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          description?: string
+          care?: string
+          diagnosis?: string
+          image_url?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plant_searches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
