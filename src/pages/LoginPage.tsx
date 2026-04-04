@@ -3,8 +3,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
-import { Leaf, Mail } from "lucide-react";
+import { CheckCircle, Leaf, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -239,6 +240,7 @@ function RegisterForm() {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { emailVerified, clearEmailVerified } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
@@ -256,9 +258,33 @@ export default function LoginPage() {
               Mi Plantita Feliz
             </h1>
             <p className="text-lg text-muted-foreground text-center">
-              Inicia sesión para guardar tus plantas
+              {emailVerified
+                ? "Tu cuenta ha sido verificada"
+                : "Inicia sesión para guardar tus plantas"}
             </p>
           </div>
+
+          {/* Verification success banner */}
+          {emailVerified && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-3 p-4 bg-primary/10 border-2 border-primary/30 rounded-2xl"
+            >
+              <CheckCircle className="size-6 text-primary shrink-0" />
+              <p className="text-lg text-foreground">
+                Cuenta verificada correctamente. Ya puedes entrar.
+              </p>
+              <button
+                type="button"
+                onClick={clearEmailVerified}
+                className="text-muted-foreground text-sm ml-auto shrink-0"
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </motion.div>
+          )}
 
           {/* Auth tabs */}
           <Tabs defaultValue="login" className="w-full">

@@ -29,7 +29,7 @@ export async function signUp(email: string, password: string) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: window.location.origin },
+    options: { emailRedirectTo: window.location.origin + "/mis-plantas?email_confirmed=true" },
   });
   return {
     user: data.user ?? null,
