@@ -8,11 +8,11 @@ const phHost = import.meta.env.VITE_POSTHOG_HOST;
 
 if (phKey) {
   posthog.init(phKey, {
-    api_host: phHost,
+    api_host: "/ingest",
+    ui_host: phHost,
     capture_pageview: true,
     capture_pageleave: true,
     persistence: "localStorage",
-    request_batching: false,
   });
 }
 
