@@ -12,6 +12,7 @@ if (phKey) {
     capture_pageview: true,
     capture_pageleave: true,
     persistence: "localStorage",
+    request_batching: false,
   });
 }
 
