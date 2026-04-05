@@ -47,6 +47,7 @@ type RegisterValues = z.infer<typeof registerSchema>;
 // --- Login Form ---
 
 function LoginForm() {
+  const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
   const {
     register,
@@ -57,7 +58,11 @@ function LoginForm() {
   const onSubmit = async ({ email, password }: LoginValues) => {
     setServerError(null);
     const { error } = await authService.signIn(email, password);
-    if (error) setServerError(error);
+    if (error) {
+      setServerError(error);
+    } else {
+      navigate("/mis-plantas");
+    }
   };
 
   return (
