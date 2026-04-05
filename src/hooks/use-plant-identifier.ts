@@ -67,9 +67,13 @@ export function usePlantIdentifier() {
       const rawBase64 = await fileToBase64(imageFile);
       const compressed = await compressImage(rawBase64);
 
+      track("debug_step_1_calling_edge_fn");
+
       const { data, error: fnError } = await supabase.functions.invoke("identify-plant", {
         body: { image: compressed },
       });
+
+      track("debug_step_2_edge_fn_returned", { has_error: !!fnError, has_data_error: !!data?.error });
 
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
@@ -77,10 +81,10 @@ export function usePlantIdentifier() {
       const now = new Date().toISOString();
       const model = data.model || undefined;
 
-      // Track IMMEDIATELY after getting result, before any DB operations
+      track("plant_identified", { plant_name: data.name, model });
+
       const { data: { session } } = await supabase.auth.getSession();
       const loggedIn = !!session?.user;
-      track("plant_identified", { plant_name: data.name, logged_in: loggedIn, model });
 
       if (session?.user) {
         const { data: row, error: dbError } = await supabase
