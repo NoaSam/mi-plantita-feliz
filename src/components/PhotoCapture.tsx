@@ -28,7 +28,6 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         onChange={handleChange}
       />
