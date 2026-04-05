@@ -77,8 +77,10 @@ export function usePlantIdentifier() {
       const now = new Date().toISOString();
       const model = data.model || undefined;
 
-      // Try to save to Supabase if user is logged in
+      // Track IMMEDIATELY after getting result, before any DB operations
       const { data: { session } } = await supabase.auth.getSession();
+      const loggedIn = !!session?.user;
+      track("plant_identified", { plant_name: data.name, logged_in: loggedIn, model });
 
       if (session?.user) {
         const { data: row, error: dbError } = await supabase
@@ -110,9 +112,7 @@ export function usePlantIdentifier() {
 
         setResult(plantResult);
         lastResultRef.current = plantResult;
-        track("plant_identified", { plant_name: row.name, logged_in: true, model });
       } else {
-        // Fallback to localStorage for anonymous users
         const plantResult: PlantResult = {
           id: crypto.randomUUID(),
           name: data.name,
@@ -126,7 +126,6 @@ export function usePlantIdentifier() {
 
         setResult(plantResult);
         lastResultRef.current = plantResult;
-        track("plant_identified", { plant_name: data.name, logged_in: false, model });
 
         try {
           const history = JSON.parse(localStorage.getItem("plant-history") || "[]");
