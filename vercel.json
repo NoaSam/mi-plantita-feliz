@@ -2,8 +2,8 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/ingest/static/:path*", "destination": "https://eu-assets.i.posthog.com/static/:path*" },
-    { "source": "/ingest/:path*", "destination": "https://eu.i.posthog.com/:path*" },
-    { "source": "/((?!assets/|ingest/).*)", "destination": "/index.html" }
+    { "source": "/ingest/static/(.*)", "destination": "https://eu-assets.i.posthog.com/static/$1" },
+    { "source": "/ingest/(.*)", "destination": "https://eu.i.posthog.com/$1" },
+    { "source": "/((?!assets/).*)", "destination": "/index.html" }
   ]
 }
