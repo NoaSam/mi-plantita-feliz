@@ -8,8 +8,8 @@ const phHost = import.meta.env.VITE_POSTHOG_HOST;
 
 if (phKey) {
   posthog.init(phKey, {
-    api_host: "/ingest",
-    ui_host: phHost,
+    api_host: "https://mi-plantita-feliz.vercel.app/ingest",
+    ui_host: "https://eu.posthog.com",
     capture_pageview: true,
     capture_pageleave: true,
     persistence: "localStorage",
