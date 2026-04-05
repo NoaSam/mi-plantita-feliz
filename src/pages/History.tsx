@@ -109,7 +109,7 @@ export default function HistoryPage() {
                       className="w-full rounded-xl border-2 border-foreground"
                     />
                     <div>
-                      <h3 className="font-display text-lg font-semibold mb-1">🌱 Que es</h3>
+                      <h3 className="font-display text-lg font-semibold mb-1">🌱 Qué es</h3>
                       <div className="prose prose-sm max-w-none"><ReactMarkdown>{item.description}</ReactMarkdown></div>
                     </div>
                     <div>
@@ -117,7 +117,7 @@ export default function HistoryPage() {
                       <div className="prose prose-sm max-w-none"><ReactMarkdown>{item.care}</ReactMarkdown></div>
                     </div>
                     <div>
-                      <h3 className="font-display text-lg font-semibold mb-1">🔍 Diagnostico</h3>
+                      <h3 className="font-display text-lg font-semibold mb-1">🔍 Diagnóstico</h3>
                       <div className="prose prose-sm max-w-none"><ReactMarkdown>{item.diagnosis}</ReactMarkdown></div>
                     </div>
                   </motion.div>

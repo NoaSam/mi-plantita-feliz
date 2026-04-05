@@ -31,10 +31,10 @@ export default function Index() {
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-5rem)] px-6 gap-8">
       <Leaf className="size-24 text-primary" strokeWidth={1.2} />
       <h1 className="font-display text-3xl font-bold text-foreground text-center leading-tight">
-        Hola, que planta quieres ver hoy?
+        Hola, ¿qué planta quieres ver hoy?
       </h1>
       <p className="text-lg text-muted-foreground text-center">
-        Haz una foto y te diremos que planta es, como cuidarla y si le pasa algo.
+        Haz una foto y te diremos qué planta es, cómo cuidarla y si le pasa algo.
       </p>
 
       {error && (

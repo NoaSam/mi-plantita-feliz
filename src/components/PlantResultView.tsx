@@ -65,11 +65,11 @@ export default function PlantResultView({ result, onReset, onFeedback }: PlantRe
       {/* Feedback card */}
       <section className="border-2 border-primary rounded-2xl p-6 bg-primary/10" style={{ boxShadow: "var(--shadow-press)" }}>
         {feedbackGiven ? (
-          <p className="text-lg text-center text-foreground/80">Gracias por tu respuesta!</p>
+          <p className="text-lg text-center text-foreground/80">¡Gracias por tu respuesta!</p>
         ) : (
           <>
             <h2 className="font-display text-xl font-semibold text-foreground mb-4 text-center">
-              Te ha identificado bien la planta?
+              ¿Te ha identificado bien la planta?
             </h2>
             <div className="flex flex-col gap-3">
               <Button
