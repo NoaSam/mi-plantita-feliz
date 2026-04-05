@@ -1,5 +1,4 @@
 const PH_KEY = import.meta.env.VITE_POSTHOG_KEY;
-const PH_HOST = import.meta.env.VITE_POSTHOG_HOST;
 
 let distinctId: string | null = null;
 
@@ -20,8 +19,7 @@ function getDistinctId(): string {
 export function track(event: string, properties?: Record<string, unknown>) {
   if (!PH_KEY) return;
 
-  const host = "/ingest";
-  const payload = {
+  const payload = JSON.stringify({
     api_key: PH_KEY,
     event,
     properties: {
@@ -30,21 +28,15 @@ export function track(event: string, properties?: Record<string, unknown>) {
       $current_url: window.location.href,
     },
     timestamp: new Date().toISOString(),
-  };
+  });
 
-  // Use sendBeacon for reliability (survives page transitions)
-  const sent = navigator.sendBeacon?.(
-    `${host}/capture/`,
-    new Blob([JSON.stringify(payload)], { type: "application/json" })
-  );
+  // Send directly to PostHog EU (no proxy, no relative URL)
+  const url = "https://eu.i.posthog.com/capture/";
 
-  // Fallback to fetch if sendBeacon fails
-  if (!sent) {
-    fetch(`${host}/capture/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      keepalive: true,
-    }).catch(() => {});
-  }
+  fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload,
+    keepalive: true,
+  }).catch(() => {});
 }
