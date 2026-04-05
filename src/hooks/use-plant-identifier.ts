@@ -67,11 +67,14 @@ export function usePlantIdentifier() {
       const rawBase64 = await fileToBase64(imageFile);
       const compressed = await compressImage(rawBase64);
 
-      const { data, error: fnError } = await supabase.functions.invoke("identify-plant", {
+      const { data: rawData, error: fnError } = await supabase.functions.invoke("identify-plant", {
         body: { image: compressed },
       });
 
       if (fnError) throw new Error(fnError.message);
+
+      // Supabase client may return string instead of parsed JSON
+      const data = typeof rawData === "string" ? JSON.parse(rawData) : rawData;
       if (data?.error) throw new Error(data.error);
 
       const now = new Date().toISOString();

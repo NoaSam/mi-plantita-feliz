@@ -166,24 +166,44 @@ Deno.serve(async (req) => {
       throw e;
     }
 
-    // Extract JSON from response (handle possible markdown code blocks)
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return new Response(
-        JSON.stringify({
-          name: "Planta no identificada",
-          description: text || "No se pudo identificar la planta. Intenta con otra foto más clara.",
-          care: "Asegúrate de que la foto muestre bien la planta.",
-          diagnosis: "No hay suficiente información para un diagnóstico.",
-          model,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    // Parse AI response as JSON
+    let plantInfo: Record<string, unknown> | null = null;
+
+    // Try direct parse first (cleanest case)
+    try {
+      plantInfo = JSON.parse(text);
+    } catch {
+      // Fall back to regex extraction (handles markdown code blocks)
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          plantInfo = JSON.parse(jsonMatch[0]);
+        } catch {
+          // regex captured invalid JSON
+        }
+      }
     }
 
-    const plantInfo = JSON.parse(jsonMatch[0]);
+    const fallback = {
+      name: "Planta no identificada",
+      description: text || "No se pudo identificar la planta. Intenta con otra foto más clara.",
+      care: "Asegúrate de que la foto muestre bien la planta.",
+      diagnosis: "No hay suficiente información para un diagnóstico.",
+    };
 
-    return new Response(JSON.stringify({ ...plantInfo, model }), {
+    // Ensure all fields are strings (AI sometimes returns objects instead of markdown)
+    const toStr = (v: unknown, fb: string) =>
+      typeof v === "string" && v.trim() ? v : fb;
+
+    const result = {
+      name: toStr(plantInfo?.name, fallback.name),
+      description: toStr(plantInfo?.description, fallback.description),
+      care: toStr(plantInfo?.care, fallback.care),
+      diagnosis: toStr(plantInfo?.diagnosis, fallback.diagnosis),
+      model,
+    };
+
+    return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
