@@ -63,7 +63,7 @@ export default function PlantResultView({ result, onReset, onFeedback }: PlantRe
       </section>
 
       {/* Feedback card */}
-      <section className="border-2 border-foreground rounded-2xl p-6 bg-secondary/50" style={{ boxShadow: "var(--shadow-press)" }}>
+      <section className="border-2 border-primary rounded-2xl p-6 bg-primary/10" style={{ boxShadow: "var(--shadow-press)" }}>
         {feedbackGiven ? (
           <p className="text-lg text-center text-foreground/80">Gracias por tu respuesta!</p>
         ) : (
@@ -73,19 +73,19 @@ export default function PlantResultView({ result, onReset, onFeedback }: PlantRe
             </h2>
             <div className="flex flex-col gap-3">
               <Button
-                variant="outline"
+                variant="default"
                 size="lg"
                 onClick={() => handleFeedback("correct")}
-                className="w-full border-2 border-foreground"
+                className="w-full"
               >
                 <Check className="!size-5 mr-1" />
                 Correcto
               </Button>
               <Button
-                variant="outline"
+                variant="destructive"
                 size="lg"
                 onClick={() => handleFeedback("incorrect")}
-                className="w-full border-2 border-foreground"
+                className="w-full"
               >
                 <X className="!size-5 mr-1" />
                 Incorrecto
@@ -94,7 +94,7 @@ export default function PlantResultView({ result, onReset, onFeedback }: PlantRe
                 variant="outline"
                 size="lg"
                 onClick={() => handleFeedback("unknown")}
-                className="w-full border-2 border-foreground"
+                className="w-full"
               >
                 <HelpCircle className="!size-5 mr-1" />
                 No lo sé
