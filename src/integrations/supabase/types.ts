@@ -24,6 +24,7 @@ export type Database = {
           diagnosis: string
           image_url: string
           created_at: string
+          model: string | null
         }
         Insert: {
           id?: string
@@ -34,6 +35,7 @@ export type Database = {
           diagnosis: string
           image_url: string
           created_at?: string
+          model?: string | null
         }
         Update: {
           id?: string
@@ -44,6 +46,7 @@ export type Database = {
           diagnosis?: string
           image_url?: string
           created_at?: string
+          model?: string | null
         }
         Relationships: [
           {

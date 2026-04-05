@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import posthog from "posthog-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,6 +10,7 @@ export interface PlantResult {
   diagnosis: string;
   imageUrl: string;
   date: string;
+  model?: string;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -48,6 +49,7 @@ export function usePlantIdentifier() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<PlantResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const lastResultRef = useRef<PlantResult | null>(null);
 
   const identify = useCallback(async (imageFile: File) => {
     setIsLoading(true);
@@ -73,6 +75,7 @@ export function usePlantIdentifier() {
       if (data?.error) throw new Error(data.error);
 
       const now = new Date().toISOString();
+      const model = data.model || undefined;
 
       // Try to save to Supabase if user is logged in
       const { data: { session } } = await supabase.auth.getSession();
@@ -87,6 +90,7 @@ export function usePlantIdentifier() {
             care: data.care,
             diagnosis: data.diagnosis,
             image_url: compressed,
+            model: model ?? null,
           })
           .select()
           .single();
@@ -101,10 +105,12 @@ export function usePlantIdentifier() {
           diagnosis: row.diagnosis,
           imageUrl: row.image_url,
           date: row.created_at,
+          model,
         };
 
         setResult(plantResult);
-        posthog.capture("plant_identified", { plant_name: row.name, logged_in: true });
+        lastResultRef.current = plantResult;
+        posthog.capture("plant_identified", { plant_name: row.name, logged_in: true, model });
       } else {
         // Fallback to localStorage for anonymous users
         const plantResult: PlantResult = {
@@ -115,10 +121,12 @@ export function usePlantIdentifier() {
           diagnosis: data.diagnosis,
           imageUrl: compressed,
           date: now,
+          model,
         };
 
         setResult(plantResult);
-        posthog.capture("plant_identified", { plant_name: data.name, logged_in: false });
+        lastResultRef.current = plantResult;
+        posthog.capture("plant_identified", { plant_name: data.name, logged_in: false, model });
 
         try {
           const history = JSON.parse(localStorage.getItem("plant-history") || "[]");
@@ -137,7 +145,17 @@ export function usePlantIdentifier() {
     }
   }, []);
 
-  return { identify, isLoading, result, error, setResult };
+  const submitFeedback = useCallback((feedback: "correct" | "incorrect" | "unknown") => {
+    const current = lastResultRef.current;
+    if (!current) return;
+    posthog.capture("plant_feedback", {
+      model: current.model,
+      plant_name: current.name,
+      feedback_value: feedback,
+    });
+  }, []);
+
+  return { identify, isLoading, result, error, setResult, submitFeedback };
 }
 
 function fileToBase64(file: File): Promise<string> {
