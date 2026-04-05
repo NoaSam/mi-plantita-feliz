@@ -1,4 +1,4 @@
-const PH_KEY = import.meta.env.VITE_POSTHOG_KEY;
+const PH_KEY = "phc_p3FGSVLkKb7iQPUb5cyVQ2BCWfs2o488wzdofj4tZDsh";
 
 let distinctId: string | null = null;
 
