@@ -71,12 +71,12 @@ export default function PlantResultView({ result, onReset, onFeedback }: PlantRe
             <h2 className="font-display text-xl font-semibold text-foreground mb-4 text-center">
               Te ha identificado bien la planta?
             </h2>
-            <div className="flex gap-3 justify-center">
+            <div className="flex flex-col gap-3">
               <Button
                 variant="outline"
                 size="lg"
                 onClick={() => handleFeedback("correct")}
-                className="flex-1 border-2 border-foreground"
+                className="w-full border-2 border-foreground"
               >
                 <Check className="!size-5 mr-1" />
                 Correcto
@@ -85,7 +85,7 @@ export default function PlantResultView({ result, onReset, onFeedback }: PlantRe
                 variant="outline"
                 size="lg"
                 onClick={() => handleFeedback("incorrect")}
-                className="flex-1 border-2 border-foreground"
+                className="w-full border-2 border-foreground"
               >
                 <X className="!size-5 mr-1" />
                 Incorrecto
@@ -94,7 +94,7 @@ export default function PlantResultView({ result, onReset, onFeedback }: PlantRe
                 variant="outline"
                 size="lg"
                 onClick={() => handleFeedback("unknown")}
-                className="flex-1 border-2 border-foreground"
+                className="w-full border-2 border-foreground"
               >
                 <HelpCircle className="!size-5 mr-1" />
                 No lo sé
