@@ -1,5 +1,5 @@
-import posthog from "posthog-js";
 import { supabase } from "@/integrations/supabase/client";
+import { track } from "@/lib/track";
 
 const ERROR_MAP: Record<string, string> = {
   "Invalid login credentials": "Email o contraseña incorrectos",
@@ -20,7 +20,7 @@ export async function signIn(email: string, password: string) {
     email,
     password,
   });
-  if (data.user) posthog.identify(data.user.id, { email: data.user.email });
+  if (data.user) track("user_signed_in", { user_id: data.user.id });
   return {
     user: data.user ?? null,
     error: error ? normalizeError(error.message) : null,
@@ -33,7 +33,7 @@ export async function signUp(email: string, password: string) {
     password,
     options: { emailRedirectTo: window.location.origin + "/mis-plantas?email_confirmed=true" },
   });
-  if (data.user && !error) posthog.capture("user_signed_up");
+  if (data.user && !error) track("user_signed_up");
   return {
     user: data.user ?? null,
     error: error ? normalizeError(error.message) : null,
