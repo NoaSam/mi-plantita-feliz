@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
-import LoginPage from "@/pages/LoginPage";
 import { Leaf } from "lucide-react";
 
 export default function RequireAuth({ children }: { children: ReactNode }) {
@@ -14,7 +14,7 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!user) return <LoginPage />;
+  if (!user) return <Navigate to="/login" replace />;
 
   return <>{children}</>;
 }

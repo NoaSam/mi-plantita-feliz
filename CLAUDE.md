@@ -7,7 +7,7 @@ App móvil para identificar plantas a partir de fotos. El usuario sube o toma un
 - **Frontend:** React + Vite + TypeScript + Tailwind CSS + shadcn/ui
 - **AI:** API de Claude (Anthropic) para análisis de imagen de plantas
 - **Almacenamiento:** Supabase (auth + base de datos para historial de búsquedas y fotos)
-- **Despliegue actual:** Lovable (migración prevista a Vercel)
+- **Despliegue:** Vercel
 - **Distribución:** PWA instalable (manifest.json + service worker). Sin coste, sin stores.
 
 ## Origen del código
@@ -42,16 +42,15 @@ src/
 - Accesibilidad básica: contraste, labels, navegación por teclado.
 
 ## Roadmap activo
-- [ ] Migrar repo desde Lovable a GitHub propio
-- [ ] Refactorizar estructura de componentes
-- [ ] Implementar login con Supabase Auth (email/password)
-- [ ] Migrar historial de localStorage a Supabase (tablas: users, plant_searches, photos)
-- [ ] Añadir manifest.json (nombre, iconos 192x192 y 512x512, colores, orientación)
-- [ ] Implementar service worker (offline-first para historial)
-- [ ] Implementar postdog 
+- [x] Migrar repo desde Lovable a GitHub propio
+- [x] Refactorizar estructura de componentes
+- [x] Implementar login con Supabase Auth (email/password)
+- [x] Migrar historial de localStorage a Supabase
+- [x] Añadir manifest.json + PWA (iconos, colores, service worker)
+- [x] Integrar PostHog (analítica de producto)
 - [ ] Optimizar prompts de análisis de plantas
 - [ ] Diseñar onboarding para primer uso
-- [ ] Testear instalación PWA en Android e iOS
+- [x] Testear instalación PWA en Android e iOS
 
 ## Consideraciones de producto
 - **Público objetivo:** personas no técnicas, jardineros aficionados, gente con plantas en casa
