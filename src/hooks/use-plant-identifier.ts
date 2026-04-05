@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from "react";
-import posthog from "posthog-js";
 import { supabase } from "@/integrations/supabase/client";
+import { track } from "@/lib/track";
 
 export interface PlantResult {
   id: string;
@@ -110,7 +110,7 @@ export function usePlantIdentifier() {
 
         setResult(plantResult);
         lastResultRef.current = plantResult;
-        posthog.capture("plant_identified", { plant_name: row.name, logged_in: true, model });
+        track("plant_identified", { plant_name: row.name, logged_in: true, model });
       } else {
         // Fallback to localStorage for anonymous users
         const plantResult: PlantResult = {
@@ -126,7 +126,7 @@ export function usePlantIdentifier() {
 
         setResult(plantResult);
         lastResultRef.current = plantResult;
-        posthog.capture("plant_identified", { plant_name: data.name, logged_in: false, model });
+        track("plant_identified", { plant_name: data.name, logged_in: false, model });
 
         try {
           const history = JSON.parse(localStorage.getItem("plant-history") || "[]");
@@ -139,7 +139,7 @@ export function usePlantIdentifier() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error desconocido";
       setError(msg);
-      posthog.capture("plant_identification_failed", { error: msg });
+      track("plant_identification_failed", { error: msg });
     } finally {
       setIsLoading(false);
     }
@@ -148,7 +148,7 @@ export function usePlantIdentifier() {
   const submitFeedback = useCallback((feedback: "correct" | "incorrect" | "unknown") => {
     const current = lastResultRef.current;
     if (!current) return;
-    posthog.capture("plant_feedback", {
+    track("plant_feedback", {
       model: current.model,
       plant_name: current.name,
       feedback_value: feedback,
