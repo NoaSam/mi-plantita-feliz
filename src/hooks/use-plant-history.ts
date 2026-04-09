@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { PlantResult } from "@/hooks/use-plant-identifier";
@@ -61,5 +61,21 @@ export function usePlantHistory() {
     };
   }, [user]);
 
-  return { history, isLoading };
+  const deletePlants = useCallback(async (ids: string[]) => {
+    if (!user || ids.length === 0) return;
+
+    const { error } = await supabase
+      .from("plant_searches")
+      .delete()
+      .in("id", ids);
+
+    if (error) {
+      console.error("Error deleting plants:", error.message);
+      return;
+    }
+
+    setHistory((prev) => prev.filter((p) => !ids.includes(p.id)));
+  }, [user]);
+
+  return { history, isLoading, deletePlants };
 }
