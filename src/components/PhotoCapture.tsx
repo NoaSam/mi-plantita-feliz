@@ -14,7 +14,7 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingFile = useRef<File | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const { getLocation } = useGeolocation();
+  const { getLocation, getLocationSilently } = useGeolocation();
 
   const handleClick = () => inputRef.current?.click();
 
@@ -27,7 +27,8 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
       pendingFile.current = file;
       setModalOpen(true);
     } else if (hasAcceptedLocation()) {
-      const coords = await getLocation();
+      // Only get location if browser permission is already granted — never shows native prompt
+      const coords = await getLocationSilently();
       onCapture(file, coords);
     } else {
       onCapture(file, null);
@@ -40,6 +41,7 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
     const file = pendingFile.current;
     pendingFile.current = null;
     if (!file) return;
+    // First time: may trigger native browser prompt (unavoidable)
     const coords = await getLocation();
     onCapture(file, coords);
   };

@@ -45,6 +45,7 @@ export default function LocationConsentModal({ open, onAccept, onDecline }: Loca
           <DialogDescription className="text-base text-center">
             Así podrás ver en un mapa todos los sitios donde encontraste tus plantas.
             Solo usamos la ubicación para eso, nada más.
+            Tu navegador te pedirá confirmar el permiso.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex flex-col gap-3 pt-2">
