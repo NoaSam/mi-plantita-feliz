@@ -44,7 +44,7 @@ export default function Index() {
       )}
 
       <div className="w-full">
-        <PhotoCapture onCapture={identify} isLoading={isLoading} />
+        <PhotoCapture onCapture={(file, coords) => identify(file, coords)} isLoading={isLoading} />
       </div>
     </div>
   );

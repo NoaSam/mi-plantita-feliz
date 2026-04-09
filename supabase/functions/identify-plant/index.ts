@@ -98,10 +98,13 @@ async function callClaude(base64Data: string, mediaType: string): Promise<string
   });
 
   if (!response.ok) {
-    if (response.status === 429) throw new Error("RATE_LIMIT");
     const t = await response.text();
-    console.error("Anthropic API error:", response.status, t);
-    throw new Error("API_ERROR");
+    console.error("claude API error:", response.status, t);
+    throw new Error(
+      response.status === 429
+        ? "RATE_LIMIT:claude:429"
+        : `API_ERROR:claude:${response.status}`
+    );
   }
 
   const data = await response.json();
@@ -113,7 +116,7 @@ async function callGemini(base64Data: string, mediaType: string): Promise<string
   if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -134,10 +137,13 @@ async function callGemini(base64Data: string, mediaType: string): Promise<string
   );
 
   if (!response.ok) {
-    if (response.status === 429) throw new Error("RATE_LIMIT");
     const t = await response.text();
-    console.error("Gemini API error:", response.status, t);
-    throw new Error("API_ERROR");
+    console.error("gemini API error:", response.status, t);
+    throw new Error(
+      response.status === 429
+        ? "RATE_LIMIT:gemini:429"
+        : `API_ERROR:gemini:${response.status}`
+    );
   }
 
   const data = await response.json();
@@ -177,10 +183,13 @@ async function callOpenAI(base64Data: string, mediaType: string): Promise<string
   });
 
   if (!response.ok) {
-    if (response.status === 429) throw new Error("RATE_LIMIT");
     const t = await response.text();
-    console.error("OpenAI API error:", response.status, t);
-    throw new Error("API_ERROR");
+    console.error("gpt4o API error:", response.status, t);
+    throw new Error(
+      response.status === 429
+        ? "RATE_LIMIT:gpt4o:429"
+        : `API_ERROR:gpt4o:${response.status}`
+    );
   }
 
   const data = await response.json();
@@ -188,6 +197,20 @@ async function callOpenAI(base64Data: string, mediaType: string): Promise<string
 }
 
 // ─── Parsing and extraction ────────────────────────────────────────────────────
+
+const FALLBACK_NAME        = "Planta no identificada";
+const FALLBACK_DESCRIPTION = "No se pudo identificar la planta. Intenta con otra foto más clara.";
+const FALLBACK_CARE        = "Asegúrate de que la foto muestre bien la planta.";
+const FALLBACK_DIAGNOSIS   = "No hay suficiente información para un diagnóstico.";
+
+function isFallbackResult(info: PlantInfo): boolean {
+  return (
+    info.name        === FALLBACK_NAME &&
+    info.description === FALLBACK_DESCRIPTION &&
+    info.care        === FALLBACK_CARE &&
+    info.diagnosis   === FALLBACK_DIAGNOSIS
+  );
+}
 
 function parseAIResponse(text: string): PlantInfo | null {
   let parsed: Record<string, unknown> | null = null;
@@ -207,10 +230,10 @@ function parseAIResponse(text: string): PlantInfo | null {
     typeof v === "string" && v.trim() ? v : fb;
 
   return {
-    name: toStr(parsed.name, "Planta no identificada"),
-    description: toStr(parsed.description, "No se pudo identificar la planta. Intenta con otra foto más clara."),
-    care: toStr(parsed.care, "Asegúrate de que la foto muestre bien la planta."),
-    diagnosis: toStr(parsed.diagnosis, "No hay suficiente información para un diagnóstico."),
+    name: toStr(parsed.name, FALLBACK_NAME),
+    description: toStr(parsed.description, FALLBACK_DESCRIPTION),
+    care: toStr(parsed.care, FALLBACK_CARE),
+    diagnosis: toStr(parsed.diagnosis, FALLBACK_DIAGNOSIS),
   };
 }
 
@@ -267,17 +290,18 @@ async function callModelTimed(
     const rawText = await caller();
     const responseMs = Date.now() - start;
     const plantInfo = parseAIResponse(rawText);
-    const rawName = plantInfo?.name ?? null;
+    const allFallback = plantInfo !== null && isFallbackResult(plantInfo);
+    const rawName = allFallback ? null : (plantInfo?.name ?? null);
     const scientificName = rawName ? extractScientificName(rawName) : null;
 
     return {
       model,
-      success: plantInfo !== null,
-      plantInfo,
+      success: plantInfo !== null && !allFallback,
+      plantInfo: allFallback ? null : plantInfo,
       rawName,
       scientificName,
       responseMs,
-      errorMessage: null,
+      errorMessage: allFallback ? "PARSE_FALLBACK" : null,
     };
   } catch (e) {
     return {
@@ -301,7 +325,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { image, user_id, anonymous_id } = body;
+    const { image, user_id, anonymous_id, lat, lng } = body;
 
     const match = image?.match(/^data:(image\/\w+);base64,(.+)$/);
     if (!match) throw new Error("Invalid image format");
@@ -334,7 +358,7 @@ Deno.serve(async (req) => {
       ?? null;
 
     if (!winner) {
-      const isRateLimit = allResults.some((r) => r.errorMessage === "RATE_LIMIT");
+      const isRateLimit = allResults.some((r) => r.errorMessage?.startsWith("RATE_LIMIT:"));
       return new Response(
         JSON.stringify({
           error: isRateLimit
@@ -359,6 +383,9 @@ Deno.serve(async (req) => {
         image_url: image,
         model: winner.model,
         ...(user_id ? { user_id } : { user_id: null, anonymous_id: anonymous_id ?? null }),
+        ...(typeof lat === "number" && isFinite(lat) && lat >= -90 && lat <= 90 &&
+           typeof lng === "number" && isFinite(lng) && lng >= -180 && lng <= 180
+          ? { lat, lng } : {}),
       })
       .select("id, created_at")
       .single();
@@ -393,6 +420,14 @@ Deno.serve(async (req) => {
       console.error("model_evaluations insert error:", evalError);
     }
 
+    const modelsSummary = allResults.map((r) => ({
+      model: r.model,
+      success: r.success,
+      response_ms: r.responseMs,
+      consensus_group: consensusGroups.get(r.model) ?? "no_consensus",
+      error_message: r.errorMessage,
+    }));
+
     return new Response(
       JSON.stringify({
         name: winner.plantInfo!.name,
@@ -402,6 +437,7 @@ Deno.serve(async (req) => {
         model: winner.model,
         plant_search_id: searchRow.id,
         created_at: searchRow.created_at,
+        models: modelsSummary,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

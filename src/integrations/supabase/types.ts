@@ -108,6 +108,8 @@ export type Database = {
           image_url: string
           created_at: string
           model: string | null
+          lat: number | null
+          lng: number | null
         }
         Insert: {
           id?: string
@@ -120,6 +122,8 @@ export type Database = {
           image_url: string
           created_at?: string
           model?: string | null
+          lat?: number | null
+          lng?: number | null
         }
         Update: {
           id?: string
@@ -132,6 +136,8 @@ export type Database = {
           image_url?: string
           created_at?: string
           model?: string | null
+          lat?: number | null
+          lng?: number | null
         }
         Relationships: [
           {

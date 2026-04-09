@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { track } from "@/lib/track";
 import { getAnonymousId } from "@/lib/anonymous-id";
+import type { Coords } from "@/hooks/use-geolocation";
 
 export interface PlantResult {
   id: string;
@@ -50,7 +51,7 @@ export function usePlantIdentifier() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<PlantResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const identify = useCallback(async (imageFile: File) => {
+  const identify = useCallback(async (imageFile: File, coords?: Coords | null) => {
     setIsLoading(true);
     setError(null);
     setResult(null);
@@ -75,6 +76,7 @@ export function usePlantIdentifier() {
         ...(session?.user
           ? { user_id: session.user.id }
           : { anonymous_id: getAnonymousId() }),
+        ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
       };
 
       const { data: rawData, error: fnError } = await supabase.functions.invoke(
@@ -89,7 +91,15 @@ export function usePlantIdentifier() {
 
       const model = data.model || undefined;
 
-      track("plant_identified", { plant_name: data.name, logged_in: loggedIn, model });
+      track("plant_identified", {
+        plant_name: data.name,
+        logged_in: loggedIn,
+        winning_model: model,
+        models: data.models ?? [],
+        consensus_reached: Array.isArray(data.models) &&
+          data.models.some((m: { consensus_group: string }) => m.consensus_group === "correct"),
+        has_location: !!coords,
+      });
 
       const plantResult: PlantResult = {
         id: data.plant_search_id,
