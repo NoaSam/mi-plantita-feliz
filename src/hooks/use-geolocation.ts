@@ -2,7 +2,7 @@ import { useCallback } from "react";
 
 export type Coords = { lat: number; lng: number };
 
-async function isBrowserPermissionGranted(): Promise<boolean> {
+export async function isBrowserPermissionGranted(): Promise<boolean> {
   if (!navigator.permissions) return false;
   try {
     const status = await navigator.permissions.query({ name: "geolocation" });

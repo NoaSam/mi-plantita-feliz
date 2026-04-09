@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LocationConsentModal from "@/components/LocationConsentModal";
-import { useGeolocation, type Coords } from "@/hooks/use-geolocation";
+import { useGeolocation, isBrowserPermissionGranted, type Coords } from "@/hooks/use-geolocation";
 import { shouldAskForLocation, hasAcceptedLocation, recordAccept, recordDecline } from "@/lib/geo-permission";
 
 interface PhotoCaptureProps {
@@ -27,9 +27,15 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
       pendingFile.current = file;
       setModalOpen(true);
     } else if (hasAcceptedLocation()) {
-      // Only get location if browser permission is already granted — never shows native prompt
-      const coords = await getLocationSilently();
-      onCapture(file, coords);
+      // Check if browser still has permission — if lost/revoked, re-ask with our modal
+      const granted = await isBrowserPermissionGranted();
+      if (granted) {
+        const coords = await getLocationSilently();
+        onCapture(file, coords);
+      } else {
+        pendingFile.current = file;
+        setModalOpen(true);
+      }
     } else {
       onCapture(file, null);
     }
