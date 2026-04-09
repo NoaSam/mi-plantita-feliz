@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { track } from "@/lib/track";
+import { hasAnonymousId, getAnonymousId, clearAnonymousId } from "@/lib/anonymous-id";
 
 const ERROR_MAP: Record<string, string> = {
   "Invalid login credentials": "Email o contraseña incorrectos",
@@ -13,6 +14,19 @@ const ERROR_MAP: Record<string, string> = {
 
 function normalizeError(message: string): string {
   return ERROR_MAP[message] ?? "Algo ha ido mal. Inténtalo de nuevo.";
+}
+
+export async function claimAnonymousSearches(): Promise<void> {
+  if (!hasAnonymousId()) return;
+  const anonymousId = getAnonymousId();
+  const { error } = await supabase.rpc("claim_anonymous_searches", {
+    p_anonymous_id: anonymousId,
+  });
+  if (error) {
+    console.warn("claim_anonymous_searches failed:", error.message);
+    return;
+  }
+  clearAnonymousId();
 }
 
 export async function signIn(email: string, password: string) {

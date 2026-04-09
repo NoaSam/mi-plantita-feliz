@@ -14,10 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          id: string
+          created_at: string
+        }
+        Insert: {
+          id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      model_evaluations: {
+        Row: {
+          id: string
+          plant_search_id: string
+          model: string
+          raw_name: string | null
+          scientific_name: string | null
+          description: string | null
+          care: string | null
+          diagnosis: string | null
+          response_ms: number | null
+          success: boolean
+          error_message: string | null
+          is_winner: boolean
+          consensus_group: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          plant_search_id: string
+          model: string
+          raw_name?: string | null
+          scientific_name?: string | null
+          description?: string | null
+          care?: string | null
+          diagnosis?: string | null
+          response_ms?: number | null
+          success?: boolean
+          error_message?: string | null
+          is_winner?: boolean
+          consensus_group?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          plant_search_id?: string
+          model?: string
+          raw_name?: string | null
+          scientific_name?: string | null
+          description?: string | null
+          care?: string | null
+          diagnosis?: string | null
+          response_ms?: number | null
+          success?: boolean
+          error_message?: string | null
+          is_winner?: boolean
+          consensus_group?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "model_evaluations_plant_search_id_fkey"
+            columns: ["plant_search_id"]
+            isOneToOne: false
+            referencedRelation: "plant_searches"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       plant_searches: {
         Row: {
           id: string
-          user_id: string
+          user_id: string | null
+          anonymous_id: string | null
           name: string
           description: string
           care: string
@@ -28,7 +111,8 @@ export type Database = {
         }
         Insert: {
           id?: string
-          user_id: string
+          user_id?: string | null
+          anonymous_id?: string | null
           name: string
           description: string
           care: string
@@ -39,7 +123,8 @@ export type Database = {
         }
         Update: {
           id?: string
-          user_id?: string
+          user_id?: string | null
+          anonymous_id?: string | null
           name?: string
           description?: string
           care?: string
@@ -63,7 +148,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_anonymous_searches: {
+        Args: {
+          p_anonymous_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -1,6 +1,7 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { track } from "@/lib/track";
+import { getAnonymousId } from "@/lib/anonymous-id";
 
 export interface PlantResult {
   id: string;
@@ -49,8 +50,6 @@ export function usePlantIdentifier() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<PlantResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const lastResultRef = useRef<PlantResult | null>(null);
-
   const identify = useCallback(async (imageFile: File) => {
     setIsLoading(true);
     setError(null);
@@ -67,69 +66,46 @@ export function usePlantIdentifier() {
       const rawBase64 = await fileToBase64(imageFile);
       const compressed = await compressImage(rawBase64);
 
-      const { data: rawData, error: fnError } = await supabase.functions.invoke("identify-plant", {
-        body: { image: compressed },
-      });
-
-      if (fnError) throw new Error(fnError.message);
-
-      // Supabase client may return string instead of parsed JSON
-      const data = typeof rawData === "string" ? JSON.parse(rawData) : rawData;
-      if (data?.error) throw new Error(data.error);
-
-      const now = new Date().toISOString();
-      const model = data.model || undefined;
-
+      // Resolve identity — edge function handles the DB write
       const { data: { session } } = await supabase.auth.getSession();
       const loggedIn = !!session?.user;
 
+      const requestBody = {
+        image: compressed,
+        ...(session?.user
+          ? { user_id: session.user.id }
+          : { anonymous_id: getAnonymousId() }),
+      };
+
+      const { data: rawData, error: fnError } = await supabase.functions.invoke(
+        "identify-plant",
+        { body: requestBody }
+      );
+
+      if (fnError) throw new Error(fnError.message);
+
+      const data = typeof rawData === "string" ? JSON.parse(rawData) : rawData;
+      if (data?.error) throw new Error(data.error);
+
+      const model = data.model || undefined;
+
       track("plant_identified", { plant_name: data.name, logged_in: loggedIn, model });
 
-      if (session?.user) {
-        const { data: row, error: dbError } = await supabase
-          .from("plant_searches")
-          .insert({
-            user_id: session.user.id,
-            name: data.name,
-            description: data.description,
-            care: data.care,
-            diagnosis: data.diagnosis,
-            image_url: compressed,
-            model: model ?? null,
-          })
-          .select()
-          .single();
+      const plantResult: PlantResult = {
+        id: data.plant_search_id,
+        name: data.name,
+        description: data.description,
+        care: data.care,
+        diagnosis: data.diagnosis,
+        imageUrl: compressed,
+        date: data.created_at ?? new Date().toISOString(),
+        model,
+      };
 
-        if (dbError) throw new Error(dbError.message);
+      setResult(plantResult);
 
-        const plantResult: PlantResult = {
-          id: row.id,
-          name: row.name,
-          description: row.description,
-          care: row.care,
-          diagnosis: row.diagnosis,
-          imageUrl: row.image_url,
-          date: row.created_at,
-          model,
-        };
-
-        setResult(plantResult);
-        lastResultRef.current = plantResult;
-      } else {
-        const plantResult: PlantResult = {
-          id: crypto.randomUUID(),
-          name: data.name,
-          description: data.description,
-          care: data.care,
-          diagnosis: data.diagnosis,
-          imageUrl: compressed,
-          date: now,
-          model,
-        };
-
-        setResult(plantResult);
-        lastResultRef.current = plantResult;
-
+      // Keep localStorage write for anonymous UX (history page reads from here)
+      if (!session?.user) {
         try {
           const history = JSON.parse(localStorage.getItem("plant-history") || "[]");
           history.unshift(plantResult);
@@ -147,17 +123,7 @@ export function usePlantIdentifier() {
     }
   }, []);
 
-  const submitFeedback = useCallback((feedback: "correct" | "incorrect" | "unknown") => {
-    const current = lastResultRef.current;
-    if (!current) return;
-    track("plant_feedback", {
-      model: current.model,
-      plant_name: current.name,
-      feedback_value: feedback,
-    });
-  }, []);
-
-  return { identify, isLoading, result, error, setResult, submitFeedback };
+  return { identify, isLoading, result, error, setResult };
 }
 
 function fileToBase64(file: File): Promise<string> {

@@ -5,7 +5,7 @@ import PlantResultView from "@/components/PlantResultView";
 import { usePlantIdentifier } from "@/hooks/use-plant-identifier";
 
 export default function Index() {
-  const { identify, isLoading, result, error, setResult, submitFeedback } = usePlantIdentifier();
+  const { identify, isLoading, result, error, setResult } = usePlantIdentifier();
 
   const handleReset = () => {
     setResult(null);
@@ -22,7 +22,7 @@ export default function Index() {
   if (result) {
     return (
       <div className="px-6 py-8">
-        <PlantResultView result={result} onReset={handleReset} onFeedback={submitFeedback} />
+        <PlantResultView result={result} onReset={handleReset} />
       </div>
     );
   }

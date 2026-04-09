@@ -1,5 +1,6 @@
 import { createContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { claimAnonymousSearches } from "@/services/auth.service";
 import type { User, Session } from "@supabase/supabase-js";
 
 export interface AuthContextValue {
@@ -37,6 +38,12 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         setEmailVerified(true);
         window.history.replaceState({}, "", window.location.pathname);
         return;
+      }
+
+      // Claim anonymous searches before updating user state so the history
+      // query (triggered by setUser) sees the claimed rows.
+      if (event === "SIGNED_IN" && session?.user) {
+        await claimAnonymousSearches();
       }
 
       setSession(session);

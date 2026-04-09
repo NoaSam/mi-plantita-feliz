@@ -1,22 +1,36 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
-import { RotateCcw, Check, X, HelpCircle } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
 import type { PlantResult } from "@/hooks/use-plant-identifier";
 import ReactMarkdown from "react-markdown";
+import { track } from "@/lib/track";
 
 interface PlantResultViewProps {
   result: PlantResult;
   onReset: () => void;
-  onFeedback: (feedback: "correct" | "incorrect" | "unknown") => void;
 }
 
-export default function PlantResultView({ result, onReset, onFeedback }: PlantResultViewProps) {
-  const [feedbackGiven, setFeedbackGiven] = useState(false);
+const sections = [
+  { value: "description", emoji: "\u{1F331}", label: "Qué es" },
+  { value: "care", emoji: "\u{1F4A7}", label: "Cómo cuidarla" },
+  { value: "diagnosis", emoji: "\u{1F50D}", label: "Qué le pasa" },
+] as const;
 
-  const handleFeedback = (value: "correct" | "incorrect" | "unknown") => {
-    onFeedback(value);
-    setFeedbackGiven(true);
+export default function PlantResultView({ result, onReset }: PlantResultViewProps) {
+  const contentMap: Record<string, string> = {
+    description: result.description,
+    care: result.care,
+    diagnosis: result.diagnosis,
+  };
+
+  const handleSectionClick = (value: string, label: string) => {
+    track("result_section_click", { section: value, section_label: label, plant_name: result.name });
   };
 
   return (
@@ -24,9 +38,9 @@ export default function PlantResultView({ result, onReset, onFeedback }: PlantRe
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-      className="flex flex-col gap-8"
+      className="flex flex-col gap-6"
     >
-      {/* Photo confirmation */}
+      {/* Photo */}
       <div className="rounded-2xl overflow-hidden border-2 border-foreground">
         <img
           src={result.imageUrl}
@@ -40,69 +54,35 @@ export default function PlantResultView({ result, onReset, onFeedback }: PlantRe
         {result.name}
       </h1>
 
-      {/* Herbarium card style sections */}
-      <section className="border-2 border-foreground rounded-2xl p-6 bg-secondary/50" style={{ boxShadow: "var(--shadow-press)" }}>
-        <h2 className="font-display text-2xl font-semibold text-foreground mb-3">🌱 Qué es</h2>
-        <div className="text-lg leading-relaxed text-foreground/80 prose prose-lg max-w-none">
-          <ReactMarkdown>{result.description}</ReactMarkdown>
-        </div>
-      </section>
-
-      <section className="border-2 border-foreground rounded-2xl p-6 bg-secondary/50" style={{ boxShadow: "var(--shadow-press)" }}>
-        <h2 className="font-display text-2xl font-semibold text-foreground mb-3">💧 Cómo cuidarla</h2>
-        <div className="text-lg leading-relaxed text-foreground/80 prose prose-lg max-w-none">
-          <ReactMarkdown>{result.care}</ReactMarkdown>
-        </div>
-      </section>
-
-      <section className="border-2 border-foreground rounded-2xl p-6 bg-secondary/50" style={{ boxShadow: "var(--shadow-press)" }}>
-        <h2 className="font-display text-2xl font-semibold text-foreground mb-3">🔍 Qué le pasa</h2>
-        <div className="text-lg leading-relaxed text-foreground/80 prose prose-lg max-w-none">
-          <ReactMarkdown>{result.diagnosis}</ReactMarkdown>
-        </div>
-      </section>
-
-      {/* Feedback card */}
-      <section className="border-2 border-primary rounded-2xl p-6 bg-primary/10" style={{ boxShadow: "var(--shadow-press)" }}>
-        {feedbackGiven ? (
-          <p className="text-lg text-center text-foreground/80">¡Gracias por tu respuesta!</p>
-        ) : (
-          <>
-            <h2 className="font-display text-xl font-semibold text-foreground mb-4 text-center">
-              ¿Te ha identificado bien la planta?
-            </h2>
-            <div className="flex flex-col gap-3">
-              <Button
-                variant="default"
-                size="lg"
-                onClick={() => handleFeedback("correct")}
-                className="w-full"
-              >
-                <Check className="!size-5 mr-1" />
-                Correcto
-              </Button>
-              <Button
-                variant="destructive"
-                size="lg"
-                onClick={() => handleFeedback("incorrect")}
-                className="w-full"
-              >
-                <X className="!size-5 mr-1" />
-                Incorrecto
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => handleFeedback("unknown")}
-                className="w-full"
-              >
-                <HelpCircle className="!size-5 mr-1" />
-                No lo sé
-              </Button>
-            </div>
-          </>
-        )}
-      </section>
+      {/* Accordion sections */}
+      <Accordion
+        type="multiple"
+        defaultValue={["diagnosis"]}
+        className="flex flex-col gap-4"
+      >
+        {sections.map(({ value, emoji, label }) => (
+          <AccordionItem
+            key={value}
+            value={value}
+            className="border-2 border-foreground rounded-2xl bg-secondary/50 overflow-hidden"
+            style={{ boxShadow: "var(--shadow-press)" }}
+          >
+            <AccordionTrigger
+              className="px-6 py-4 hover:no-underline"
+              onClick={() => handleSectionClick(value, label)}
+            >
+              <span className="font-display text-xl font-semibold text-foreground">
+                {emoji} {label}
+              </span>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-5">
+              <div className="text-lg leading-relaxed text-foreground/80 prose prose-lg max-w-none">
+                <ReactMarkdown>{contentMap[value]}</ReactMarkdown>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
 
       {/* Reset button */}
       <Button

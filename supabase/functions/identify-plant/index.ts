@@ -1,8 +1,12 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+// ─── Prompt ────────────────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `Eres un botánico experto que ayuda a personas con plantas en casa. Responde SIEMPRE en español, con tono cercano y claro. Evita jerga botánica innecesaria — si usas un término técnico, explícalo brevemente.
 
@@ -40,6 +44,29 @@ Instrucciones para cada campo:
 
 const USER_MESSAGE = "Identifica esta planta, dime cómo cuidarla y analiza si le pasa algo.";
 
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
+interface PlantInfo {
+  name: string;
+  description: string;
+  care: string;
+  diagnosis: string;
+}
+
+type ModelName = "claude" | "gemini" | "gpt4o";
+
+interface ModelResult {
+  model: ModelName;
+  success: boolean;
+  plantInfo: PlantInfo | null;
+  rawName: string | null;
+  scientificName: string | null;
+  responseMs: number;
+  errorMessage: string | null;
+}
+
+// ─── Model callers ─────────────────────────────────────────────────────────────
+
 async function callClaude(base64Data: string, mediaType: string): Promise<string> {
   const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
   if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
@@ -61,11 +88,7 @@ async function callClaude(base64Data: string, mediaType: string): Promise<string
           content: [
             {
               type: "image",
-              source: {
-                type: "base64",
-                media_type: mediaType,
-                data: base64Data,
-              },
+              source: { type: "base64", media_type: mediaType, data: base64Data },
             },
             { type: "text", text: USER_MESSAGE },
           ],
@@ -75,9 +98,7 @@ async function callClaude(base64Data: string, mediaType: string): Promise<string
   });
 
   if (!response.ok) {
-    if (response.status === 429) {
-      throw new Error("RATE_LIMIT");
-    }
+    if (response.status === 429) throw new Error("RATE_LIMIT");
     const t = await response.text();
     console.error("Anthropic API error:", response.status, t);
     throw new Error("API_ERROR");
@@ -97,34 +118,23 @@ async function callGemini(base64Data: string, mediaType: string): Promise<string
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: SYSTEM_PROMPT }],
-        },
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: [
           {
             role: "user",
             parts: [
-              {
-                inlineData: {
-                  mimeType: mediaType,
-                  data: base64Data,
-                },
-              },
+              { inlineData: { mimeType: mediaType, data: base64Data } },
               { text: USER_MESSAGE },
             ],
           },
         ],
-        generationConfig: {
-          maxOutputTokens: 2048,
-        },
+        generationConfig: { maxOutputTokens: 2048 },
       }),
     }
   );
 
   if (!response.ok) {
-    if (response.status === 429) {
-      throw new Error("RATE_LIMIT");
-    }
+    if (response.status === 429) throw new Error("RATE_LIMIT");
     const t = await response.text();
     console.error("Gemini API error:", response.status, t);
     throw new Error("API_ERROR");
@@ -134,83 +144,272 @@ async function callGemini(base64Data: string, mediaType: string): Promise<string
   return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
+async function callOpenAI(base64Data: string, mediaType: string): Promise<string> {
+  const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+  if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o",
+      max_tokens: 2048,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${mediaType};base64,${base64Data}`,
+                detail: "high",
+              },
+            },
+            { type: "text", text: USER_MESSAGE },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 429) throw new Error("RATE_LIMIT");
+    const t = await response.text();
+    console.error("OpenAI API error:", response.status, t);
+    throw new Error("API_ERROR");
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
+// ─── Parsing and extraction ────────────────────────────────────────────────────
+
+function parseAIResponse(text: string): PlantInfo | null {
+  let parsed: Record<string, unknown> | null = null;
+
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try { parsed = JSON.parse(jsonMatch[0]); } catch { /* invalid JSON */ }
+    }
+  }
+
+  if (!parsed) return null;
+
+  const toStr = (v: unknown, fb: string) =>
+    typeof v === "string" && v.trim() ? v : fb;
+
+  return {
+    name: toStr(parsed.name, "Planta no identificada"),
+    description: toStr(parsed.description, "No se pudo identificar la planta. Intenta con otra foto más clara."),
+    care: toStr(parsed.care, "Asegúrate de que la foto muestre bien la planta."),
+    diagnosis: toStr(parsed.diagnosis, "No hay suficiente información para un diagnóstico."),
+  };
+}
+
+function extractScientificName(name: string): string | null {
+  const match = name.match(/\(([^)]+)\)/);
+  return match ? match[1].trim().toLowerCase() : null;
+}
+
+// ─── Consensus logic ───────────────────────────────────────────────────────────
+
+function computeConsensus(
+  results: ModelResult[]
+): Map<ModelName, "correct" | "no_consensus"> {
+  const groups = new Map<ModelName, "correct" | "no_consensus">();
+  const successful = results.filter((r) => r.success && r.scientificName);
+
+  if (successful.length < 2) {
+    for (const r of results) groups.set(r.model, "no_consensus");
+    return groups;
+  }
+
+  // Count occurrences of each scientific name
+  const nameCounts = new Map<string, number>();
+  for (const r of successful) {
+    nameCounts.set(r.scientificName!, (nameCounts.get(r.scientificName!) ?? 0) + 1);
+  }
+
+  // Names that appear 2+ times
+  const majorityNames = new Set(
+    [...nameCounts.entries()].filter(([, c]) => c >= 2).map(([n]) => n)
+  );
+
+  for (const r of results) {
+    if (!r.success || !r.scientificName) {
+      groups.set(r.model, "no_consensus");
+    } else if (majorityNames.has(r.scientificName)) {
+      groups.set(r.model, "correct");
+    } else {
+      groups.set(r.model, "no_consensus");
+    }
+  }
+
+  return groups;
+}
+
+// ─── Timed model caller ────────────────────────────────────────────────────────
+
+async function callModelTimed(
+  model: ModelName,
+  caller: () => Promise<string>
+): Promise<ModelResult> {
+  const start = Date.now();
+  try {
+    const rawText = await caller();
+    const responseMs = Date.now() - start;
+    const plantInfo = parseAIResponse(rawText);
+    const rawName = plantInfo?.name ?? null;
+    const scientificName = rawName ? extractScientificName(rawName) : null;
+
+    return {
+      model,
+      success: plantInfo !== null,
+      plantInfo,
+      rawName,
+      scientificName,
+      responseMs,
+      errorMessage: null,
+    };
+  } catch (e) {
+    return {
+      model,
+      success: false,
+      plantInfo: null,
+      rawName: null,
+      scientificName: null,
+      responseMs: Date.now() - start,
+      errorMessage: e instanceof Error ? e.message : "Unknown error",
+    };
+  }
+}
+
+// ─── Handler ───────────────────────────────────────────────────────────────────
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { image } = await req.json();
+    const body = await req.json();
+    const { image, user_id, anonymous_id } = body;
 
-    // Extract base64 data and media type from data URL
-    const match = image.match(/^data:(image\/\w+);base64,(.+)$/);
+    const match = image?.match(/^data:(image\/\w+);base64,(.+)$/);
     if (!match) throw new Error("Invalid image format");
     const mediaType = match[1];
     const base64Data = match[2];
 
-    // A/B test: randomly pick model
-    const model = Math.random() < 0.5 ? "claude" : "gemini";
+    // Service role client — bypasses RLS
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
-    let text: string;
-    try {
-      text = model === "claude"
-        ? await callClaude(base64Data, mediaType)
-        : await callGemini(base64Data, mediaType);
-    } catch (e) {
-      if (e instanceof Error && e.message === "RATE_LIMIT") {
-        return new Response(
-          JSON.stringify({ error: "Demasiadas consultas. Espera un momento y vuelve a intentarlo." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      throw e;
-    }
+    // Call all 3 models in parallel
+    const allResults = await Promise.all([
+      callModelTimed("claude", () => callClaude(base64Data, mediaType)),
+      callModelTimed("gemini", () => callGemini(base64Data, mediaType)),
+      callModelTimed("gpt4o", () => callOpenAI(base64Data, mediaType)),
+    ]);
 
-    // Parse AI response as JSON
-    let plantInfo: Record<string, unknown> | null = null;
+    // Compute consensus first — winner selection uses it
+    const consensusGroups = computeConsensus(allResults);
 
-    // Try direct parse first (cleanest case)
-    try {
-      plantInfo = JSON.parse(text);
-    } catch {
-      // Fall back to regex extraction (handles markdown code blocks)
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          plantInfo = JSON.parse(jsonMatch[0]);
-        } catch {
-          // regex captured invalid JSON
+    // Pick winner: prefer consensus models, then fastest
+    const successful = allResults.filter((r) => r.success);
+    const consensusWinners = successful
+      .filter((r) => consensusGroups.get(r.model) === "correct")
+      .sort((a, b) => a.responseMs - b.responseMs);
+    const winner = consensusWinners[0]
+      ?? successful.sort((a, b) => a.responseMs - b.responseMs)[0]
+      ?? null;
+
+    if (!winner) {
+      const isRateLimit = allResults.some((r) => r.errorMessage === "RATE_LIMIT");
+      return new Response(
+        JSON.stringify({
+          error: isRateLimit
+            ? "Demasiadas consultas. Espera un momento y vuelve a intentarlo."
+            : "No se pudo identificar la planta. Inténtalo de nuevo.",
+        }),
+        {
+          status: isRateLimit ? 429 : 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
-      }
+      );
     }
 
-    const fallback = {
-      name: "Planta no identificada",
-      description: text || "No se pudo identificar la planta. Intenta con otra foto más clara.",
-      care: "Asegúrate de que la foto muestre bien la planta.",
-      diagnosis: "No hay suficiente información para un diagnóstico.",
-    };
+    // Write plant_searches row
+    const { data: searchRow, error: searchError } = await supabaseAdmin
+      .from("plant_searches")
+      .insert({
+        name: winner.plantInfo!.name,
+        description: winner.plantInfo!.description,
+        care: winner.plantInfo!.care,
+        diagnosis: winner.plantInfo!.diagnosis,
+        image_url: image,
+        model: winner.model,
+        ...(user_id ? { user_id } : { user_id: null, anonymous_id: anonymous_id ?? null }),
+      })
+      .select("id, created_at")
+      .single();
 
-    // Ensure all fields are strings (AI sometimes returns objects instead of markdown)
-    const toStr = (v: unknown, fb: string) =>
-      typeof v === "string" && v.trim() ? v : fb;
+    if (searchError) {
+      console.error("plant_searches insert error:", searchError);
+      throw new Error("No se pudo guardar el resultado. Inténtalo de nuevo.");
+    }
 
-    const result = {
-      name: toStr(plantInfo?.name, fallback.name),
-      description: toStr(plantInfo?.description, fallback.description),
-      care: toStr(plantInfo?.care, fallback.care),
-      diagnosis: toStr(plantInfo?.diagnosis, fallback.diagnosis),
-      model,
-    };
+    // Write model_evaluations rows (3 rows, one per model)
+    const evaluationRows = allResults.map((r) => ({
+      plant_search_id: searchRow.id,
+      model: r.model,
+      raw_name: r.rawName,
+      scientific_name: r.scientificName,
+      description: r.plantInfo?.description ?? null,
+      care: r.plantInfo?.care ?? null,
+      diagnosis: r.plantInfo?.diagnosis ?? null,
+      response_ms: r.responseMs,
+      success: r.success,
+      error_message: r.errorMessage,
+      is_winner: r.model === winner.model,
+      consensus_group: r.success ? (consensusGroups.get(r.model) ?? "no_consensus") : null,
+    }));
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const { error: evalError } = await supabaseAdmin
+      .from("model_evaluations")
+      .insert(evaluationRows);
+
+    if (evalError) {
+      // Non-fatal: user still gets their result
+      console.error("model_evaluations insert error:", evalError);
+    }
+
+    return new Response(
+      JSON.stringify({
+        name: winner.plantInfo!.name,
+        description: winner.plantInfo!.description,
+        care: winner.plantInfo!.care,
+        diagnosis: winner.plantInfo!.diagnosis,
+        model: winner.model,
+        plant_search_id: searchRow.id,
+        created_at: searchRow.created_at,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (e) {
     console.error("identify-plant error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Error desconocido" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

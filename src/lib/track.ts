@@ -1,42 +1,20 @@
+import posthog from "posthog-js";
+
 const PH_KEY = "phc_p3FGSVLkKb7iQPUb5cyVQ2BCWfs2o488wzdofj4tZDsh";
 
-let distinctId: string | null = null;
-
-function getDistinctId(): string {
-  if (distinctId) return distinctId;
-  try {
-    const stored = localStorage.getItem("ph_distinct_id");
-    if (stored) {
-      distinctId = stored;
-      return distinctId;
-    }
-  } catch { /* ignore */ }
-  distinctId = crypto.randomUUID();
-  try { localStorage.setItem("ph_distinct_id", distinctId); } catch { /* ignore */ }
-  return distinctId;
-}
+posthog.init(PH_KEY, {
+  api_host: "https://eu.i.posthog.com",
+  person_profiles: "identified_only",
+  capture_pageview: true,
+  capture_pageleave: true,
+  session_recording: {
+    maskAllInputs: true,
+    maskTextSelector: "[data-ph-mask]",
+  },
+});
 
 export function track(event: string, properties?: Record<string, unknown>) {
-  if (!PH_KEY) return;
-
-  const payload = JSON.stringify({
-    api_key: PH_KEY,
-    event,
-    properties: {
-      ...properties,
-      distinct_id: getDistinctId(),
-      $current_url: window.location.href,
-    },
-    timestamp: new Date().toISOString(),
-  });
-
-  // Send directly to PostHog EU (no proxy, no relative URL)
-  const url = "https://eu.i.posthog.com/capture/";
-
-  fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: payload,
-    keepalive: true,
-  }).catch(() => {});
+  posthog.capture(event, properties);
 }
+
+export { posthog };
