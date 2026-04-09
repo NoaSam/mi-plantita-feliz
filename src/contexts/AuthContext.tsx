@@ -1,6 +1,7 @@
 import { createContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { claimAnonymousSearches } from "@/services/auth.service";
+import { posthog } from "@/lib/track";
 import type { User, Session } from "@supabase/supabase-js";
 
 export interface AuthContextValue {
@@ -43,6 +44,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       // Claim anonymous searches before updating user state so the history
       // query (triggered by setUser) sees the claimed rows.
       if (event === "SIGNED_IN" && session?.user) {
+        posthog.identify(session.user.id, { email: session.user.email });
         await claimAnonymousSearches();
       }
 

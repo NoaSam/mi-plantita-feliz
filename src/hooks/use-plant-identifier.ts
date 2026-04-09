@@ -84,7 +84,11 @@ export function usePlantIdentifier() {
         { body: requestBody }
       );
 
-      if (fnError) throw new Error(fnError.message);
+      // Extract actual error from edge function response body when possible
+      if (fnError) {
+        const body = typeof rawData === "string" ? (() => { try { return JSON.parse(rawData); } catch { return null; } })() : rawData;
+        throw new Error(body?.error || fnError.message);
+      }
 
       const data = typeof rawData === "string" ? JSON.parse(rawData) : rawData;
       if (data?.error) throw new Error(data.error);

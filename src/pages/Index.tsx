@@ -3,11 +3,13 @@ import PhotoCapture from "@/components/PhotoCapture";
 import LoadingScreen from "@/components/LoadingScreen";
 import PlantResultView from "@/components/PlantResultView";
 import { usePlantIdentifier } from "@/hooks/use-plant-identifier";
+import { track } from "@/lib/track";
 
 export default function Index() {
   const { identify, isLoading, result, error, setResult } = usePlantIdentifier();
 
   const handleReset = () => {
+    track("search_completed");
     setResult(null);
   };
 
