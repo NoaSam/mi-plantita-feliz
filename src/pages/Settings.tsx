@@ -23,7 +23,7 @@ export default function SettingsPage() {
             <p className="text-base text-muted-foreground break-all">
               {user.email}
             </p>
-            <Button variant="outline" size="lg" onClick={signOut}>
+            <Button variant="outline" size="lg" onClick={async () => { await signOut(); navigate("/"); }}>
               Cerrar sesión
             </Button>
           </>

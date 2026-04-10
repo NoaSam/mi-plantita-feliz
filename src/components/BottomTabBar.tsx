@@ -1,7 +1,13 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Leaf, BookOpen, Settings } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
-const tabs = [
+const publicTabs = [
+  { path: "/", label: "Inicio", icon: Leaf },
+  { path: "/mis-plantas", label: "Mis plantas", icon: BookOpen },
+] as const;
+
+const authTabs = [
   { path: "/", label: "Inicio", icon: Leaf },
   { path: "/mis-plantas", label: "Mis plantas", icon: BookOpen },
   { path: "/ajustes", label: "Ajustes", icon: Settings },
@@ -10,6 +16,9 @@ const tabs = [
 export default function BottomTabBar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const tabs = user ? authTabs : publicTabs;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t-2 border-foreground/10 h-16">
