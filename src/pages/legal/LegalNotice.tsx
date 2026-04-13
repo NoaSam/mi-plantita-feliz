@@ -12,12 +12,11 @@ export default function LegalNotice() {
         siguientes datos:
       </p>
       <ul>
-        <li><strong>Titular:</strong> [COMPLETAR — nombre completo o razón social]</li>
-        <li><strong>NIF/CIF:</strong> [COMPLETAR]</li>
-        <li><strong>Domicilio:</strong> [COMPLETAR]</li>
-        <li><strong>Email de contacto:</strong> [COMPLETAR]</li>
-        <li><strong>Nombre comercial de la app:</strong> Mi jardín / PlantID</li>
-        <li><strong>Sitio web:</strong> [COMPLETAR — URL de producción]</li>
+        <li><strong>Titular:</strong> Noemí Santos</li>
+        <li><strong>Domicilio:</strong> Madrid, España</li>
+        <li><strong>Email de contacto:</strong> noesantos@gmail.com</li>
+        <li><strong>Nombre comercial de la app:</strong> Mi jardín</li>
+        <li><strong>Sitio web:</strong> https://mi-plantita-feliz.vercel.app</li>
       </ul>
 
       <h2>2. Objeto</h2>
@@ -99,7 +98,7 @@ export default function LegalNotice() {
       <p>
         Las presentes condiciones se rigen por la legislación española. Para
         cualquier controversia derivada del uso de la App, las partes se someten
-        a los Juzgados y Tribunales de [COMPLETAR — ciudad], salvo que la
+        a los Juzgados y Tribunales de Madrid, salvo que la
         normativa aplicable establezca otro fuero.
       </p>
     </LegalPageLayout>

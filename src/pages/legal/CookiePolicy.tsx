@@ -139,8 +139,8 @@ export default function CookiePolicy() {
         </li>
         <li>
           <strong>Cambiar preferencias:</strong> puedes modificar tu elección en
-          cualquier momento desde la sección{" "}
-          <Link to="/ajustes">Ajustes</Link> de la app.
+          cualquier momento borrando los datos del sitio desde tu navegador. Al
+          volver a entrar, el banner de cookies aparecerá de nuevo.
         </li>
         <li>
           <strong>Configuración del navegador:</strong> también puedes borrar
@@ -164,8 +164,7 @@ export default function CookiePolicy() {
         <Link to="/privacidad">Política de Privacidad</Link>.
       </p>
       <p>
-        Si tienes preguntas sobre las cookies, escríbenos a [COMPLETAR — email
-        de contacto].
+        Si tienes preguntas sobre las cookies, escríbenos a noesantos@gmail.com.
       </p>
     </LegalPageLayout>
   );

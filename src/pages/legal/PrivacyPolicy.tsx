@@ -6,10 +6,9 @@ export default function PrivacyPolicy() {
     <LegalPageLayout title="Política de Privacidad" lastUpdated="13 de abril de 2026">
       <h2>1. Responsable del tratamiento</h2>
       <ul>
-        <li><strong>Identidad:</strong> [COMPLETAR — nombre o razón social]</li>
-        <li><strong>NIF/CIF:</strong> [COMPLETAR]</li>
-        <li><strong>Dirección:</strong> [COMPLETAR]</li>
-        <li><strong>Email de contacto:</strong> [COMPLETAR]</li>
+        <li><strong>Identidad:</strong> Noemí Santos</li>
+        <li><strong>Ubicación:</strong> Madrid, España</li>
+        <li><strong>Email de contacto:</strong> noesantos@gmail.com</li>
       </ul>
 
       <h2>2. Qué datos personales recogemos</h2>
@@ -165,8 +164,7 @@ export default function PrivacyPolicy() {
           cuenta y todos los datos asociados.
         </li>
         <li>
-          <strong>Otras solicitudes:</strong> envía un email a [COMPLETAR — email de
-          contacto] indicando tu solicitud y adjuntando copia de tu documento de
+          <strong>Otras solicitudes:</strong> envía un email a noesantos@gmail.com indicando tu solicitud y adjuntando copia de tu documento de
           identidad.
         </li>
       </ul>

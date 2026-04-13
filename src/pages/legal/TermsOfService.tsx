@@ -6,9 +6,8 @@ export default function TermsOfService() {
     <LegalPageLayout title="Términos y Condiciones de Uso" lastUpdated="13 de abril de 2026">
       <h2>1. Identificación del titular</h2>
       <ul>
-        <li><strong>Titular:</strong> [COMPLETAR — nombre completo o razón social]</li>
-        <li><strong>NIF/CIF:</strong> [COMPLETAR]</li>
-        <li><strong>Email de contacto:</strong> [COMPLETAR]</li>
+        <li><strong>Titular:</strong> Noemí Santos</li>
+        <li><strong>Email de contacto:</strong> noesantos@gmail.com</li>
       </ul>
 
       <h2>2. Descripción del servicio</h2>
@@ -144,14 +143,14 @@ export default function TermsOfService() {
       <p>
         Estos Términos se rigen por la legislación española. Para cualquier
         controversia, las partes se someten a los Juzgados y Tribunales de
-        [COMPLETAR — ciudad], salvo que la normativa de consumidores establezca
+        Madrid, salvo que la normativa de consumidores establezca
         otro fuero.
       </p>
 
       <h2>13. Contacto</h2>
       <p>
         Si tienes preguntas sobre estos Términos, puedes escribirnos a
-        [COMPLETAR — email de contacto].
+        noesantos@gmail.com.
       </p>
     </LegalPageLayout>
   );
