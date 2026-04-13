@@ -32,6 +32,8 @@ function readFromStorage(): ConsentState {
 
 function writeToStorage(prefs: ConsentPreferences): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  // Update cached snapshot before notifying (must be a new reference)
+  cachedSnapshot = { ...prefs };
   // Notify all subscribers (triggers useSyncExternalStore re-render)
   listeners.forEach((l) => l());
 }
@@ -43,13 +45,17 @@ function writeToStorage(prefs: ConsentPreferences): void {
 type Listener = () => void;
 const listeners = new Set<Listener>();
 
+// Cached snapshot — must return the same reference until data actually changes.
+// useSyncExternalStore compares with Object.is, so a new object = infinite loop.
+let cachedSnapshot: ConsentPreferences | null = readFromStorage().preferences;
+
 function subscribe(listener: Listener): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
 
 function getSnapshot(): ConsentPreferences | null {
-  return readFromStorage().preferences;
+  return cachedSnapshot;
 }
 
 // ---------------------------------------------------------------------------

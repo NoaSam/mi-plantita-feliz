@@ -1,16 +1,13 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Download,
   FileText,
   Leaf,
-  Scale,
   Trash2,
   UserX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,9 +20,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/use-auth";
-import { useConsent } from "@/hooks/use-consent";
 import { supabase } from "@/integrations/supabase/client";
-import { initPostHog, track } from "@/lib/track";
+import { track } from "@/lib/track";
 
 // ---------------------------------------------------------------------------
 // Section wrapper
@@ -60,8 +56,6 @@ function Section({
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { preferences, hasConsented, updatePreferences, acceptAll, rejectAll } =
-    useConsent();
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -131,27 +125,6 @@ export default function SettingsPage() {
     }
   };
 
-  // --- Cookie preference toggles ---
-
-  const analyticsEnabled = preferences?.analytics ?? false;
-  const recordingEnabled = preferences?.sessionRecording ?? false;
-
-  const handleToggleAnalytics = (checked: boolean) => {
-    const newPrefs = {
-      analytics: checked,
-      sessionRecording: checked ? recordingEnabled : false,
-    };
-    updatePreferences(newPrefs);
-    if (checked) initPostHog();
-  };
-
-  const handleToggleRecording = (checked: boolean) => {
-    updatePreferences({
-      analytics: analyticsEnabled,
-      sessionRecording: checked,
-    });
-  };
-
   return (
     <div className="px-6 py-8 flex flex-col gap-6">
       <h1 className="font-display text-2xl font-bold text-foreground">
@@ -189,65 +162,6 @@ export default function SettingsPage() {
               Iniciar sesión
             </Button>
           </>
-        )}
-      </Section>
-
-      {/* Cookie preferences */}
-      <Section title="Privacidad y cookies" icon={Scale}>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <Label className="text-base font-semibold">
-              Cookies esenciales
-            </Label>
-            <p className="text-sm text-muted-foreground">
-              Siempre activas (inicio de sesión, preferencias).
-            </p>
-          </div>
-          <Switch checked disabled aria-label="Cookies esenciales (siempre activas)" />
-        </div>
-
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <Label htmlFor="settings-analytics" className="text-base font-semibold">
-              Analíticas
-            </Label>
-            <p className="text-sm text-muted-foreground">
-              Uso de la app para mejorar el servicio.
-            </p>
-          </div>
-          <Switch
-            id="settings-analytics"
-            checked={analyticsEnabled}
-            onCheckedChange={handleToggleAnalytics}
-          />
-        </div>
-
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <Label htmlFor="settings-recording" className="text-base font-semibold">
-              Grabación de sesión
-            </Label>
-            <p className="text-sm text-muted-foreground">
-              Detección anónima de errores.
-            </p>
-          </div>
-          <Switch
-            id="settings-recording"
-            checked={recordingEnabled}
-            disabled={!analyticsEnabled}
-            onCheckedChange={handleToggleRecording}
-          />
-        </div>
-
-        {!hasConsented && (
-          <div className="flex gap-3">
-            <Button variant="default" size="sm" className="flex-1" onClick={acceptAll}>
-              Aceptar todo
-            </Button>
-            <Button variant="outline" size="sm" className="flex-1" onClick={rejectAll}>
-              Rechazar todo
-            </Button>
-          </div>
         )}
       </Section>
 
@@ -311,36 +225,6 @@ export default function SettingsPage() {
           </AlertDialog>
         </Section>
       )}
-
-      {/* Legal pages */}
-      <Section title="Legal" icon={Scale}>
-        <nav className="flex flex-col gap-2">
-          <Link
-            to="/privacidad"
-            className="text-base text-primary underline underline-offset-2"
-          >
-            Política de privacidad
-          </Link>
-          <Link
-            to="/cookies"
-            className="text-base text-primary underline underline-offset-2"
-          >
-            Política de cookies
-          </Link>
-          <Link
-            to="/aviso-legal"
-            className="text-base text-primary underline underline-offset-2"
-          >
-            Aviso legal
-          </Link>
-          <Link
-            to="/terminos"
-            className="text-base text-primary underline underline-offset-2"
-          >
-            Términos y condiciones
-          </Link>
-        </nav>
-      </Section>
 
       {/* App info */}
       <div className="flex flex-col items-center gap-3 pt-4 text-muted-foreground">
