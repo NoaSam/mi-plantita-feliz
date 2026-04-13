@@ -1,7 +1,11 @@
 import { createRoot } from "react-dom/client";
-import "./lib/track"; // Init PostHog + session recording early
+import { initPostHog } from "./lib/track";
 import App from "./App.tsx";
 import "./index.css";
+
+// Initialize PostHog only if the user has previously consented to analytics.
+// First-time visitors will not have PostHog loaded until they accept cookies.
+initPostHog();
 
 // PWA: register service worker with error handling
 if ("serviceWorker" in navigator) {

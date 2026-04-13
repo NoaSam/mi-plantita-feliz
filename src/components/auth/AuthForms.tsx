@@ -4,11 +4,12 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { CheckCircle, Leaf, Mail } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import * as authService from "@/services/auth.service";
 
 // --- Shared styles ---
@@ -37,6 +38,9 @@ const registerSchema = z
     email: z.string().email("Email no válido"),
     password: z.string().min(6, "Mínimo 6 caracteres"),
     confirmPassword: z.string(),
+    acceptedTerms: z.literal(true, {
+      errorMap: () => ({ message: "Debes aceptar la política de privacidad y los términos" }),
+    }),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: "Las contraseñas no coinciden",
@@ -127,8 +131,12 @@ function RegisterForm() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterValues>({ resolver: zodResolver(registerSchema) });
+
+  const acceptedTerms = watch("acceptedTerms");
 
   const onSubmit = async ({ email, password }: RegisterValues) => {
     setServerError(null);
@@ -225,6 +233,46 @@ function RegisterForm() {
           </p>
         )}
       </div>
+
+      {/* Terms acceptance checkbox */}
+      <div className="flex items-start gap-3">
+        <Checkbox
+          id="inline-register-terms"
+          checked={acceptedTerms === true}
+          onCheckedChange={(checked) =>
+            setValue("acceptedTerms", checked === true ? true : false as never, {
+              shouldValidate: true,
+            })
+          }
+          className="mt-1 size-5 shrink-0 border-2 border-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+        />
+        <Label
+          htmlFor="inline-register-terms"
+          className="text-base font-body font-normal leading-relaxed cursor-pointer"
+        >
+          He leído y acepto la{" "}
+          <Link
+            to="/privacidad"
+            className="text-primary underline underline-offset-2"
+            target="_blank"
+          >
+            política de privacidad
+          </Link>{" "}
+          y los{" "}
+          <Link
+            to="/terminos"
+            className="text-primary underline underline-offset-2"
+            target="_blank"
+          >
+            términos y condiciones
+          </Link>
+        </Label>
+      </div>
+      {errors.acceptedTerms && (
+        <p className="text-accent text-base -mt-3">
+          {errors.acceptedTerms.message}
+        </p>
+      )}
 
       {serverError && <ServerError message={serverError} />}
 
