@@ -28,3 +28,11 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Error tracking baseline (local)
+scripts/.error-baseline.json
+
+# Playwright
+test-results/
+playwright-report/
+e2e/test-image.png
