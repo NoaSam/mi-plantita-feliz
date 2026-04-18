@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
-import { Camera, ImagePlus } from "lucide-react";
+import { Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LocationConsentModal from "@/components/LocationConsentModal";
 import { useGeolocation, isBrowserPermissionGranted, type Coords } from "@/hooks/use-geolocation";
 import { shouldAskForLocation, hasAcceptedLocation, recordAccept, recordDecline } from "@/lib/geo-permission";
+import { isIOS } from "@/lib/platform";
 
 interface PhotoCaptureProps {
   onCapture: (file: File, coords: Coords | null) => void;
@@ -16,6 +17,7 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
   const pendingFile = useRef<File | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const { getLocation, getLocationSilently } = useGeolocation();
+  const ios = isIOS();
 
   const handleCameraClick = () => cameraRef.current?.click();
   const handleGalleryClick = () => galleryRef.current?.click();
@@ -65,21 +67,33 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
 
   return (
     <>
-      <input
-        ref={cameraRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handleChange}
-      />
-      <input
-        ref={galleryRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleChange}
-      />
+      {ios ? (
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleChange}
+        />
+      ) : (
+        <>
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleChange}
+          />
+          <input
+            ref={galleryRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleChange}
+          />
+        </>
+      )}
       <Button
         variant="hero"
         size="xl"
@@ -90,15 +104,16 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
         <Camera className="!size-10" />
         Hacer foto ahora
       </Button>
-      <button
-        type="button"
-        onClick={handleGalleryClick}
-        disabled={isLoading}
-        className="mt-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-      >
-        <ImagePlus className="size-4" />
-        Subir desde galería
-      </button>
+      {!ios && (
+        <button
+          type="button"
+          onClick={handleGalleryClick}
+          disabled={isLoading}
+          className="mt-3 block text-center text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+        >
+          Subir desde galería
+        </button>
+      )}
       <LocationConsentModal open={modalOpen} onAccept={handleAccept} onDecline={handleDecline} />
     </>
   );
