@@ -109,7 +109,7 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
           type="button"
           onClick={handleGalleryClick}
           disabled={isLoading}
-          className="mt-3 block text-center text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          className="mt-3 w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
         >
           Subir desde galería
         </button>
