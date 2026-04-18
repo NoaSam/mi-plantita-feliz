@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Camera } from "lucide-react";
+import { Camera, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LocationConsentModal from "@/components/LocationConsentModal";
 import { useGeolocation, isBrowserPermissionGranted, type Coords } from "@/hooks/use-geolocation";
@@ -11,12 +11,14 @@ interface PhotoCaptureProps {
 }
 
 export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const pendingFile = useRef<File | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const { getLocation, getLocationSilently } = useGeolocation();
 
-  const handleClick = () => inputRef.current?.click();
+  const handleCameraClick = () => cameraRef.current?.click();
+  const handleGalleryClick = () => galleryRef.current?.click();
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -64,7 +66,15 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
   return (
     <>
       <input
-        ref={inputRef}
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleChange}
+      />
+      <input
+        ref={galleryRef}
         type="file"
         accept="image/*"
         className="hidden"
@@ -73,13 +83,22 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
       <Button
         variant="hero"
         size="xl"
-        onClick={handleClick}
+        onClick={handleCameraClick}
         disabled={isLoading}
         style={{ boxShadow: "var(--shadow-press)" }}
       >
         <Camera className="!size-10" />
         Hacer foto ahora
       </Button>
+      <button
+        type="button"
+        onClick={handleGalleryClick}
+        disabled={isLoading}
+        className="mt-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+      >
+        <ImagePlus className="size-4" />
+        Subir desde galería
+      </button>
       <LocationConsentModal open={modalOpen} onAccept={handleAccept} onDecline={handleDecline} />
     </>
   );
