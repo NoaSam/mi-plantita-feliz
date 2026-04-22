@@ -135,24 +135,21 @@ export default function CookieConsentBanner() {
             <div className="flex gap-3">
               <Button
                 variant="default"
-                size="lg"
                 onClick={handleAcceptAll}
-                className="flex-1"
+                className="flex-1 min-w-0"
               >
                 Aceptar todo
               </Button>
               <Button
                 variant="outline"
-                size="lg"
                 onClick={handleRejectAll}
-                className="flex-1"
+                className="flex-1 min-w-0"
               >
                 Rechazar todo
               </Button>
             </div>
             <Button
               variant="ghost"
-              size="lg"
               onClick={() => setShowConfig(true)}
               className="w-full text-muted-foreground"
             >
