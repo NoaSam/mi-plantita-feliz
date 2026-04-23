@@ -82,8 +82,8 @@ Plans:
   5. Tests del hook de identificacion pasan con el nuevo flujo SSE
 **Plans:** 2 plans
 Plans:
-- [ ] 05-01-PLAN.md — Edge function: Promise.race first-winner + SSE streaming response
-- [ ] 05-02-PLAN.md — Client hook: SSE reader + browser-image-compression + test update
+- [x] 05-01-PLAN.md — Edge function: Promise.race first-winner + SSE streaming response
+- [x] 05-02-PLAN.md — Client hook: SSE reader + browser-image-compression + test update
 
 ---
 
