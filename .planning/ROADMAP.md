@@ -31,9 +31,9 @@
 **Plans:** 5 plans
 Plans:
 - [x] 01-01-PLAN.md — Capacitor foundation: install packages, config, platform detection, SW guard, Vite base path
-- [ ] 01-02-PLAN.md — Native plugins: Camera with permissions, Geolocation, Preferences auth adapter
-- [ ] 01-03-PLAN.md — Image Storage migration: Supabase bucket + edge function upload
-- [ ] 01-04-PLAN.md — Android assets: icon and splash screen source images + generation
+- [x] 01-02-PLAN.md — Native plugins: Camera with permissions, Geolocation, Preferences auth adapter
+- [x] 01-03-PLAN.md — Image Storage migration: Supabase bucket + edge function upload
+- [x] 01-04-PLAN.md — Android assets: icon and splash screen source images + generation
 - [ ] 01-05-PLAN.md — Android build: generate project, build APK, end-to-end verification
 **UI hint**: yes
 
@@ -75,7 +75,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
-| 1. Android Native | 1/5 | In progress | - |
+| 1. Android Native | 4/5 | In progress | - |
 | 2. Prompt Optimization | 0/? | Not started | - |
 | 3. Watering Calendar | 0/? | Not started | - |
 | 4. Onboarding | 0/? | Not started | - |
