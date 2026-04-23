@@ -7,8 +7,14 @@ import "./index.css";
 // First-time visitors will not have PostHog loaded until they accept cookies.
 initPostHog();
 
+// Skip SW registration inside Capacitor native shell -- SW intercepts
+// Capacitor bridge requests and causes "Plugin not implemented" errors.
+const isCapacitor = !!(
+  window as Window & { Capacitor?: { isNativePlatform?: () => boolean } }
+).Capacitor?.isNativePlatform?.();
+
 // PWA: register service worker with error handling
-if ("serviceWorker" in navigator) {
+if ("serviceWorker" in navigator && !isCapacitor) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js", { scope: "/" })

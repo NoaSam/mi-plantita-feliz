@@ -36,3 +36,12 @@ scripts/.error-baseline.json
 test-results/
 playwright-report/
 e2e/test-image.png
+
+# Android native (Capacitor)
+android/
+*.keystore
+*.jks
+android/keystore.properties
+
+# Capacitor
+capacitor.config.ts.bak
