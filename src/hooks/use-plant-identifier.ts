@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import imageCompression from "browser-image-compression";
 import { supabase } from "@/integrations/supabase/client";
 import { track } from "@/lib/track";
 import { getAnonymousId } from "@/lib/anonymous-id";
@@ -17,56 +18,11 @@ export interface PlantResult {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
-const COMPRESS_TIMEOUT_MS = 10_000;
 const INVOKE_TIMEOUT_MS = 30_000;
 const SAFETY_TIMEOUT_MS = 45_000;
 
-function compressImage(
-  dataUrl: string,
-  maxWidth = 400,
-  quality = 0.7
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error("Timeout al procesar la imagen. Inténtalo de nuevo."));
-    }, COMPRESS_TIMEOUT_MS);
-
-    const img = new Image();
-    img.onload = () => {
-      clearTimeout(timer);
-      const ratio = Math.min(maxWidth / img.width, 1);
-      const width = Math.round(img.width * ratio);
-      const height = Math.round(img.height * ratio);
-
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        reject(new Error("No se pudo crear el canvas"));
-        return;
-      }
-
-      ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL("image/jpeg", quality));
-    };
-    img.onerror = () => {
-      clearTimeout(timer);
-      reject(new Error("No se pudo cargar la imagen"));
-    };
-    img.src = dataUrl;
-  });
-}
-
-function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(msg)), ms)
-    ),
-  ]);
-}
+const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/identify-plant`;
+const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export function usePlantIdentifier() {
   const [isLoading, setIsLoading] = useState(false);
@@ -102,10 +58,14 @@ export function usePlantIdentifier() {
         throw new Error("La imagen no puede superar los 10 MB");
       }
 
-      console.log("[identify] step 1: fileToBase64");
-      const rawBase64 = await fileToBase64(imageFile);
-      console.log("[identify] step 2: compressImage");
-      const compressed = await compressImage(rawBase64);
+      console.log("[identify] step 2: compress image (Web Worker)");
+      const compressedBlob = await imageCompression(imageFile, {
+        maxSizeMB: 0.3,
+        maxWidthOrHeight: 800,
+        useWebWorker: true,
+        fileType: "image/jpeg",
+      });
+      const compressed = await fileToBase64(compressedBlob);
 
       console.log("[identify] step 3: getSession");
       const { data: { session } } = await supabase.auth.getSession();
@@ -119,57 +79,92 @@ export function usePlantIdentifier() {
         ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
       };
 
-      console.log("[identify] step 4: invoke edge function");
-      const { data: rawData, error: fnError } = await withTimeout(
-        supabase.functions.invoke("identify-plant", { body: requestBody }),
-        INVOKE_TIMEOUT_MS,
-        "La identificación está tardando demasiado. Comprueba tu conexión e inténtalo de nuevo."
-      );
-      console.log("[identify] step 5: got response, fnError=", fnError, "dataType=", typeof rawData);
-
-      // Extract actual error from edge function response body when possible
-      if (fnError) {
-        const body = typeof rawData === "string" ? (() => { try { return JSON.parse(rawData); } catch { return null; } })() : rawData;
-        throw new Error(body?.error || fnError.message);
-      }
-
-      const data = typeof rawData === "string" ? JSON.parse(rawData) : rawData;
-      if (data?.error) throw new Error(data.error);
-
-      const model = data.model || undefined;
-
-      track("plant_identified", {
-        plant_name: data.name,
-        logged_in: loggedIn,
-        winning_model: model,
-        models: data.models ?? [],
-        consensus_reached: Array.isArray(data.models) &&
-          data.models.some((m: { consensus_group: string }) => m.consensus_group === "correct"),
-        has_location: !!coords,
+      console.log("[identify] step 4: fetch edge function (SSE)");
+      const response = await fetch(EDGE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": ANON_KEY,
+          "Authorization": `Bearer ${session?.access_token ?? ANON_KEY}`,
+        },
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(INVOKE_TIMEOUT_MS),
       });
 
-      const plantResult: PlantResult = {
-        id: data.plant_search_id,
-        name: data.name,
-        description: data.description,
-        care: data.care,
-        diagnosis: data.diagnosis,
-        imageUrl: compressed,
-        date: data.created_at ?? new Date().toISOString(),
-        model,
-      };
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body?.error || `HTTP ${response.status}`);
+      }
 
-      console.log("[identify] step 6: setResult");
-      setResult(plantResult);
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let sseBuffer = "";
+      let plantSearchId: string | null = null;
 
-      // Keep localStorage write for anonymous UX (history page reads from here)
-      if (!session?.user) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        sseBuffer += decoder.decode(value, { stream: true });
+        const events = sseBuffer.split("\n\n");
+        sseBuffer = events.pop() ?? "";
+
+        for (const raw of events) {
+          const eventName = raw.match(/^event: (.+)$/m)?.[1];
+          const dataLine = raw.match(/^data: (.+)$/m)?.[1];
+          if (!dataLine) continue;
+          const payload = JSON.parse(dataLine);
+
+          if (eventName === "result") {
+            const plantResult: PlantResult = {
+              id: "",  // will be updated when "done" event arrives
+              name: payload.name,
+              description: payload.description,
+              care: payload.care,
+              diagnosis: payload.diagnosis,
+              imageUrl: compressed,
+              date: new Date().toISOString(),
+              model: payload.model,
+            };
+            console.log("[identify] step 5: setResult (from SSE result event)");
+            setResult(plantResult);
+
+            track("plant_identified", {
+              plant_name: payload.name,
+              logged_in: loggedIn,
+              winning_model: payload.model,
+              has_location: !!coords,
+            });
+          }
+
+          if (eventName === "error") {
+            throw new Error(payload.error);
+          }
+
+          if (eventName === "done") {
+            plantSearchId = payload.plant_search_id;
+            // Update result with DB id and created_at
+            setResult((prev) => prev ? {
+              ...prev,
+              id: payload.plant_search_id ?? prev.id,
+              date: payload.created_at ?? prev.date,
+            } : prev);
+          }
+        }
+      }
+
+      // localStorage for anonymous history (after done event provides the id)
+      if (!session?.user && plantSearchId) {
         try {
-          const history = JSON.parse(localStorage.getItem("plant-history") || "[]");
-          history.unshift(plantResult);
-          localStorage.setItem("plant-history", JSON.stringify(history.slice(0, 20)));
+          setResult((prev) => {
+            if (prev) {
+              const history = JSON.parse(localStorage.getItem("plant-history") || "[]");
+              history.unshift({ ...prev, id: plantSearchId });
+              localStorage.setItem("plant-history", JSON.stringify(history.slice(0, 20)));
+            }
+            return prev;
+          });
         } catch {
-          // localStorage full or unavailable — ignore
+          // localStorage full or unavailable
         }
       }
     } catch (e) {
@@ -186,7 +181,7 @@ export function usePlantIdentifier() {
   return { identify, isLoading, result, error, setResult };
 }
 
-function fileToBase64(file: File): Promise<string> {
+function fileToBase64(file: File | Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
