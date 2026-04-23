@@ -7,14 +7,11 @@
 
 ### Android Nativo
 
-- [x] **ANDR-01
-**: La app se empaqueta con Capacitor y genera un APK/AAB funcional
+- [x] **ANDR-01**: La app se empaqueta con Capacitor y genera un APK/AAB funcional
 - [x] **ANDR-02**: La cámara funciona en el WebView de Android vía @capacitor/camera
-- [x] **ANDR-03
-**: El service worker se desactiva en el build de Android para no interferir con plugins nativos
+- [x] **ANDR-03**: El service worker se desactiva en el build de Android para no interferir con plugins nativos
 - [x] **ANDR-04**: Las imágenes base64 se migran a Supabase Storage para evitar OOM en WebView
-- [x] **ANDR-05
-**: El build de Android usa paths relativos (base: './') para que los assets carguen correctamente
+- [x] **ANDR-05**: El build de Android usa paths relativos (base: './') para que los assets carguen correctamente
 - [x] **ANDR-06**: Los permisos de cámara incluyen rationale string y manejo de denegación
 - [x] **ANDR-07**: El APK/AAB cumple requisitos de Play Store (targetSdk, permisos, iconos)
 - [x] **ANDR-08**: Splash screen y status bar configurados con branding de la app
@@ -37,6 +34,12 @@
 
 - [ ] **ONBR-01**: Intro de 3 pantallas swipeable y skip-able en primer uso (sin bloquear cámara)
 - [ ] **ONBR-02**: Tooltip contextual post-identificación invitando a añadir planta al jardín
+
+### Performance
+
+- [ ] **PERF-01**: La edge function usa Promise.race para devolver el primer modelo valido via SSE en lugar de esperar a los tres
+- [ ] **PERF-02**: El cliente consume la respuesta como stream SSE via raw fetch() en lugar de supabase.functions.invoke() buffered
+- [ ] **PERF-03**: La compresion de imagen usa browser-image-compression con Web Worker (no bloquea main thread) a 800px max
 
 ## v2 Requirements
 
@@ -79,11 +82,14 @@
 | RIEG-06 | Fase 3 | Pendiente |
 | ONBR-01 | Fase 4 | Pendiente |
 | ONBR-02 | Fase 4 | Pendiente |
+| PERF-01 | Fase 5 | Pendiente |
+| PERF-02 | Fase 5 | Pendiente |
+| PERF-03 | Fase 5 | Pendiente |
 
 **Cobertura:**
-- v1 requirements: 18 total
-- Mapeados a fases: 18
-- Sin mapear: 0 ✓
+- v1 requirements: 21 total
+- Mapeados a fases: 21
+- Sin mapear: 0
 
 ---
 *Requirements definidos: 2026-04-22*

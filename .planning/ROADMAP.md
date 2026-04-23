@@ -3,7 +3,7 @@
 **Milestone:** Android + Calendario de Riego
 **Creado:** 2026-04-22
 **Granularidad:** Coarse
-**Cobertura:** 18/18 requirements v1 mapeados
+**Cobertura:** 21/21 requirements v1 mapeados
 
 ---
 
@@ -13,6 +13,7 @@
 - [ ] **Phase 2: Prompt Optimization** — Mejorar precision de IA y devolver watering_interval_days estructurado
 - [ ] **Phase 3: Watering Calendar** — Coleccion de plantas del usuario con lista diaria "Hoy toca regar"
 - [ ] **Phase 4: Onboarding** — Guiar nuevos usuarios sin bloquear la camara
+- [ ] **Phase 5: Response Time Optimization** — Reducir latencia percibida del analisis de plantas
 
 ---
 
@@ -69,6 +70,21 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
+### Phase 5: Response Time Optimization
+**Goal**: El usuario percibe el resultado de identificacion en ~3-5 segundos en lugar de ~15-25 segundos, gracias a streaming SSE y seleccion first-winner del modelo de IA
+**Depends on**: Phase 1
+**Requirements**: PERF-01, PERF-02, PERF-03
+**Success Criteria**:
+  1. La edge function devuelve el primer resultado valido de IA via SSE sin esperar a los otros dos modelos
+  2. El cliente renderiza el resultado al recibir el evento SSE "result", antes de que terminen storage y DB
+  3. La compresion de imagen usa Web Worker (no bloquea el hilo principal)
+  4. Las 3 filas de model_evaluations siguen insertandose (analytics no se rompe)
+  5. Tests del hook de identificacion pasan con el nuevo flujo SSE
+**Plans:** 2 plans
+Plans:
+- [ ] 05-01-PLAN.md — Edge function: Promise.race first-winner + SSE streaming response
+- [ ] 05-02-PLAN.md — Client hook: SSE reader + browser-image-compression + test update
+
 ---
 
 ## Progress
@@ -79,6 +95,7 @@ Plans:
 | 2. Prompt Optimization | 0/? | Not started | - |
 | 3. Watering Calendar | 0/? | Not started | - |
 | 4. Onboarding | 0/? | Not started | - |
+| 5. Response Time Optimization | 0/2 | Not started | - |
 
 ---
 
