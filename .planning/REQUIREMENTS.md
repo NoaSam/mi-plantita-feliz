@@ -9,15 +9,15 @@
 
 - [x] **ANDR-01
 **: La app se empaqueta con Capacitor y genera un APK/AAB funcional
-- [ ] **ANDR-02**: La cámara funciona en el WebView de Android vía @capacitor/camera
+- [x] **ANDR-02**: La cámara funciona en el WebView de Android vía @capacitor/camera
 - [x] **ANDR-03
 **: El service worker se desactiva en el build de Android para no interferir con plugins nativos
-- [ ] **ANDR-04**: Las imágenes base64 se migran a Supabase Storage para evitar OOM en WebView
+- [x] **ANDR-04**: Las imágenes base64 se migran a Supabase Storage para evitar OOM en WebView
 - [x] **ANDR-05
 **: El build de Android usa paths relativos (base: './') para que los assets carguen correctamente
-- [ ] **ANDR-06**: Los permisos de cámara incluyen rationale string y manejo de denegación
-- [ ] **ANDR-07**: El APK/AAB cumple requisitos de Play Store (targetSdk, permisos, iconos)
-- [ ] **ANDR-08**: Splash screen y status bar configurados con branding de la app
+- [x] **ANDR-06**: Los permisos de cámara incluyen rationale string y manejo de denegación
+- [x] **ANDR-07**: El APK/AAB cumple requisitos de Play Store (targetSdk, permisos, iconos)
+- [x] **ANDR-08**: Splash screen y status bar configurados con branding de la app
 
 ### Calendario de Riego
 
@@ -61,14 +61,14 @@
 
 | Requirement | Fase | Estado |
 |-------------|------|--------|
-| ANDR-01 | Fase 1 | Pendiente |
-| ANDR-02 | Fase 1 | Pendiente |
-| ANDR-03 | Fase 1 | Pendiente |
-| ANDR-04 | Fase 1 | Pendiente |
-| ANDR-05 | Fase 1 | Pendiente |
-| ANDR-06 | Fase 1 | Pendiente |
-| ANDR-07 | Fase 1 | Pendiente |
-| ANDR-08 | Fase 1 | Pendiente |
+| ANDR-01 | Fase 1 | Completo |
+| ANDR-02 | Fase 1 | Completo |
+| ANDR-03 | Fase 1 | Completo |
+| ANDR-04 | Fase 1 | Completo |
+| ANDR-05 | Fase 1 | Completo |
+| ANDR-06 | Fase 1 | Completo |
+| ANDR-07 | Fase 1 | Completo |
+| ANDR-08 | Fase 1 | Completo |
 | PROM-01 | Fase 2 | Pendiente |
 | PROM-02 | Fase 2 | Pendiente |
 | RIEG-01 | Fase 3 | Pendiente |
