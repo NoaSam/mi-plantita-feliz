@@ -65,7 +65,7 @@ progress:
 
 ### Blockers
 
-- Ninguno aún
+- Plan 01-05 bloqueado: requiere Android Studio con SDK API 36 (`brew install --cask android-studio`)
 
 ---
 
@@ -73,7 +73,7 @@ progress:
 
 Para resumir: leer `.planning/ROADMAP.md` y `.planning/REQUIREMENTS.md`.
 Última sesión: 2026-04-23 — Completados Plans 01-01 a 01-04 (Waves 1-2).
-Siguiente acción: Ejecutar 01-05-PLAN.md (Wave 3: Android build + verification).
+Siguiente acción: Instalar Android Studio con SDK API 36, luego ejecutar 01-05-PLAN.md (Wave 3: Android build + verification).
 
 ---
 
