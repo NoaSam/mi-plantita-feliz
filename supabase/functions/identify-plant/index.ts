@@ -279,6 +279,39 @@ async function callModelTimed(
   }
 }
 
+// ─── Race models ───────────────────────────────────────────────────────────────
+
+async function raceModels(
+  base64Data: string,
+  mediaType: string
+): Promise<{ winner: ModelResult | null; allPromises: Promise<ModelResult>[] }> {
+  const allPromises = [
+    callModelTimed("claude", () => callClaude(base64Data, mediaType)),
+    callModelTimed("gemini", () => callGemini(base64Data, mediaType)),
+    callModelTimed("gpt4o",  () => callOpenAI(base64Data, mediaType)),
+  ];
+
+  const winner = await new Promise<ModelResult | null>((resolve) => {
+    let won = false;
+    for (const p of allPromises) {
+      p.then((r) => {
+        if (!won && r.success) { won = true; resolve(r); }
+      });
+    }
+    // Fallback: if all settle without a winner, resolve with best effort or null
+    Promise.allSettled(allPromises).then((settled) => {
+      if (!won) {
+        const results = settled
+          .filter((s): s is PromiseFulfilledResult<ModelResult> => s.status === "fulfilled")
+          .map((s) => s.value);
+        resolve(results.find((r) => r.success) ?? null);
+      }
+    });
+  });
+
+  return { winner, allPromises };
+}
+
 // ─── Handler ───────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -295,160 +328,160 @@ Deno.serve(async (req) => {
     const mediaType = match[1];
     const base64Data = match[2];
 
-    // Service role client — bypasses RLS
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Call all 3 models in parallel
-    const allResults = await Promise.all([
-      callModelTimed("claude", () => callClaude(base64Data, mediaType)),
-      callModelTimed("gemini", () => callGemini(base64Data, mediaType)),
-      callModelTimed("gpt4o", () => callOpenAI(base64Data, mediaType)),
-    ]);
-
-    // Compute consensus first — winner selection uses it
-    const consensusGroups = computeConsensus(allResults);
-
-    // Pick winner: prefer consensus models, then fastest
-    const successful = allResults.filter((r) => r.success);
-    const consensusWinners = successful
-      .filter((r) => consensusGroups.get(r.model)?.verdict === "correct")
-      .sort((a, b) => a.responseMs - b.responseMs);
-    const winner = consensusWinners[0]
-      ?? successful.sort((a, b) => a.responseMs - b.responseMs)[0]
-      ?? null;
-
-    if (!winner) {
-      const isRateLimit = allResults.some((r) => r.errorMessage?.startsWith("RATE_LIMIT:"));
-      return new Response(
-        JSON.stringify({
-          error: isRateLimit
-            ? "Demasiadas consultas. Espera un momento y vuelve a intentarlo."
-            : "No se pudo identificar la planta. Inténtalo de nuevo.",
-        }),
-        {
-          status: isRateLimit ? 429 : 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+    const encoder = new TextEncoder();
+    const send = (
+      ctrl: ReadableStreamDefaultController,
+      event: string,
+      data: unknown
+    ) => {
+      ctrl.enqueue(
+        encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
       );
-    }
+    };
 
-    // Upload image to Supabase Storage (replaces storing base64 in DB)
-    // Use user_id as folder prefix, or "anonymous" for non-authenticated users
-    const folderPrefix = user_id ?? "anonymous";
-    const fileName = `${folderPrefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+    const readable = new ReadableStream({
+      async start(controller) {
+        // STEP 1: Race models — return first valid winner
+        const { winner, allPromises } = await raceModels(base64Data, mediaType);
 
-    let imageUrl = image; // fallback to original base64 if upload fails
+        if (!winner) {
+          // Check if rate-limited
+          const settled = await Promise.allSettled(allPromises);
+          const results = settled
+            .filter((s): s is PromiseFulfilledResult<ModelResult> => s.status === "fulfilled")
+            .map((s) => s.value);
+          const isRateLimit = results.some((r) => r.errorMessage?.startsWith("RATE_LIMIT:"));
 
-    try {
-      // Convert base64 to binary
-      const binaryStr = atob(base64Data);
-      const bytes = new Uint8Array(binaryStr.length);
-      for (let i = 0; i < binaryStr.length; i++) {
-        bytes[i] = binaryStr.charCodeAt(i);
-      }
+          send(controller, "error", {
+            error: isRateLimit
+              ? "Demasiadas consultas. Espera un momento y vuelve a intentarlo."
+              : "No se pudo identificar la planta. Intentalo de nuevo.",
+          });
+          controller.close();
+          return;
+        }
 
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from("plant-images")
-        .upload(fileName, bytes, {
-          contentType: mediaType,
-          cacheControl: "31536000", // 1 year — images are immutable
-          upsert: false,
+        // STEP 2: Send result to client IMMEDIATELY
+        send(controller, "result", {
+          name:        winner.plantInfo!.name,
+          description: winner.plantInfo!.description,
+          care:        winner.plantInfo!.care,
+          diagnosis:   winner.plantInfo!.diagnosis,
+          model:       winner.model,
         });
 
-      if (!uploadError) {
-        const { data: urlData } = supabaseAdmin.storage
-          .from("plant-images")
-          .getPublicUrl(fileName);
-        imageUrl = urlData.publicUrl;
-      } else {
-        console.error("Storage upload error:", uploadError);
-        // Non-fatal: fall back to base64 in DB (worse for Android but doesn't break functionality)
-      }
-    } catch (e) {
-      console.error("Storage upload exception:", e);
-      // Non-fatal: fall back to base64
-    }
+        // STEP 3: Background work — client already has the result
 
-    // Write plant_searches row
-    const { data: searchRow, error: searchError } = await supabaseAdmin
-      .from("plant_searches")
-      .insert({
-        name: winner.plantInfo!.name,
-        description: winner.plantInfo!.description,
-        care: winner.plantInfo!.care,
-        diagnosis: winner.plantInfo!.diagnosis,
-        image_url: imageUrl,
-        model: winner.model,
-        ...(user_id ? { user_id } : { user_id: null, anonymous_id: anonymous_id ?? null }),
-        ...(typeof lat === "number" && isFinite(lat) && lat >= -90 && lat <= 90 &&
-           typeof lng === "number" && isFinite(lng) && lng >= -180 && lng <= 180
-          ? { lat, lng } : {}),
-      })
-      .select("id, created_at")
-      .single();
+        // 3a. Storage upload
+        const folderPrefix = user_id ?? "anonymous";
+        const fileName = `${folderPrefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+        let imageUrl = image;
 
-    if (searchError) {
-      console.error("plant_searches insert error:", searchError);
-      throw new Error("No se pudo guardar el resultado. Inténtalo de nuevo.");
-    }
+        try {
+          const binaryStr = atob(base64Data);
+          const bytes = new Uint8Array(binaryStr.length);
+          for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
 
-    // Write model_evaluations rows (3 rows, one per model)
-    const evaluationRows = allResults.map((r) => {
-      const consensus = r.success ? (consensusGroups.get(r.model) ?? null) : null;
-      return {
-        plant_search_id: searchRow.id,
-        model: r.model,
-        raw_name: r.rawName,
-        scientific_name: r.scientificName,
-        description: r.plantInfo?.description ?? null,
-        care: r.plantInfo?.care ?? null,
-        diagnosis: r.plantInfo?.diagnosis ?? null,
-        response_ms: r.responseMs,
-        success: r.success,
-        error_message: r.errorMessage,
-        is_winner: r.model === winner.model,
-        consensus_group: consensus?.verdict ?? null,
-        consensus_match_level: consensus?.matchLevel ?? null,
-      };
+          const { error: uploadError } = await supabaseAdmin.storage
+            .from("plant-images")
+            .upload(fileName, bytes, {
+              contentType: mediaType,
+              cacheControl: "31536000",
+              upsert: false,
+            });
+
+          if (!uploadError) {
+            const { data: urlData } = supabaseAdmin.storage
+              .from("plant-images").getPublicUrl(fileName);
+            imageUrl = urlData.publicUrl;
+          } else {
+            console.error("Storage upload error:", uploadError);
+          }
+        } catch (e) {
+          console.error("Storage upload exception:", e);
+        }
+
+        // 3b. DB insert — plant_searches
+        const { data: searchRow, error: searchError } = await supabaseAdmin
+          .from("plant_searches")
+          .insert({
+            name:        winner.plantInfo!.name,
+            description: winner.plantInfo!.description,
+            care:        winner.plantInfo!.care,
+            diagnosis:   winner.plantInfo!.diagnosis,
+            image_url:   imageUrl,
+            model:       winner.model,
+            ...(user_id ? { user_id } : { user_id: null, anonymous_id: anonymous_id ?? null }),
+            ...(typeof lat === "number" && isFinite(lat) && lat >= -90 && lat <= 90 &&
+               typeof lng === "number" && isFinite(lng) && lng >= -180 && lng <= 180
+              ? { lat, lng } : {}),
+          })
+          .select("id, created_at")
+          .single();
+
+        if (searchError) {
+          console.error("plant_searches insert error:", searchError);
+        }
+
+        // 3c. Send done event with DB id
+        send(controller, "done", {
+          plant_search_id: searchRow?.id ?? null,
+          created_at:      searchRow?.created_at ?? null,
+        });
+
+        // 3d. Analytics — wait for all models to complete, then insert model_evaluations
+        const settled = await Promise.allSettled(allPromises);
+        const allResults = settled
+          .filter((s): s is PromiseFulfilledResult<ModelResult> => s.status === "fulfilled")
+          .map((s) => s.value);
+
+        if (searchRow && allResults.length > 0) {
+          const consensusGroups = computeConsensus(allResults);
+          const evaluationRows = allResults.map((r) => {
+            const consensus = r.success ? (consensusGroups.get(r.model) ?? null) : null;
+            return {
+              plant_search_id: searchRow.id,
+              model: r.model,
+              raw_name: r.rawName,
+              scientific_name: r.scientificName,
+              description: r.plantInfo?.description ?? null,
+              care: r.plantInfo?.care ?? null,
+              diagnosis: r.plantInfo?.diagnosis ?? null,
+              response_ms: r.responseMs,
+              success: r.success,
+              error_message: r.errorMessage,
+              is_winner: r.model === winner.model,
+              consensus_group: consensus?.verdict ?? null,
+              consensus_match_level: consensus?.matchLevel ?? null,
+            };
+          });
+
+          const { error: evalError } = await supabaseAdmin
+            .from("model_evaluations")
+            .insert(evaluationRows);
+
+          if (evalError) {
+            console.error("model_evaluations insert error:", evalError);
+          }
+        }
+
+        controller.close();
+      },
     });
 
-    const { error: evalError } = await supabaseAdmin
-      .from("model_evaluations")
-      .insert(evaluationRows);
-
-    if (evalError) {
-      // Non-fatal: user still gets their result
-      console.error("model_evaluations insert error:", evalError);
-    }
-
-    const modelsSummary = allResults.map((r) => {
-      const consensus = consensusGroups.get(r.model);
-      return {
-        model: r.model,
-        success: r.success,
-        response_ms: r.responseMs,
-        consensus_group: consensus?.verdict ?? "no_consensus",
-        consensus_match_level: consensus?.matchLevel ?? null,
-        error_message: r.errorMessage,
-      };
+    return new Response(readable, {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
     });
-
-    return new Response(
-      JSON.stringify({
-        name: winner.plantInfo!.name,
-        description: winner.plantInfo!.description,
-        care: winner.plantInfo!.care,
-        diagnosis: winner.plantInfo!.diagnosis,
-        model: winner.model,
-        plant_search_id: searchRow.id,
-        created_at: searchRow.created_at,
-        models: modelsSummary,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
   } catch (e) {
     console.error("identify-plant error:", e);
     return new Response(
