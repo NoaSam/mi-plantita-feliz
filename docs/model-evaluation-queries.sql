@@ -47,10 +47,13 @@ ORDER BY p50_ms ASC;
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 3. TASA DE CONSENSO POR MODELO
--- consensus_group = 'correct'     → coincidió con al menos otro modelo
+-- 3. TASA DE CONSENSO POR MODELO (con niveles de match)
+-- consensus_group = 'correct'      → coincidió con al menos otro modelo
 -- consensus_group = 'no_consensus' → respondió pero con nombre diferente
 -- consensus_group IS NULL          → el modelo falló (success = false)
+-- consensus_match_level = 'exact'      → nombre científico idéntico
+-- consensus_match_level = 'normalized' → idéntico tras quitar cultivar/var./híbrido
+-- consensus_match_level = 'genus'      → mismo género, distinta especie
 -- ─────────────────────────────────────────────────────────────────────────────
 
 SELECT
@@ -58,6 +61,9 @@ SELECT
   COUNT(*)                                                          AS total_llamadas,
   COUNT(*) FILTER (WHERE success = true)                            AS respuestas_validas,
   COUNT(*) FILTER (WHERE consensus_group = 'correct')               AS en_consenso,
+  COUNT(*) FILTER (WHERE consensus_match_level = 'exact')           AS consenso_exacto,
+  COUNT(*) FILTER (WHERE consensus_match_level = 'normalized')      AS consenso_normalizado,
+  COUNT(*) FILTER (WHERE consensus_match_level = 'genus')           AS consenso_genero,
   COUNT(*) FILTER (WHERE consensus_group = 'no_consensus')          AS discrepante,
   COUNT(*) FILTER (WHERE success = false)                           AS fallo_total,
   ROUND(
@@ -94,6 +100,9 @@ SELECT
     1
   )                                                         AS win_rate_pct,
   COUNT(*) FILTER (WHERE me.is_winner = true AND me.consensus_group = 'correct')      AS victorias_consenso,
+  COUNT(*) FILTER (WHERE me.is_winner = true AND me.consensus_match_level = 'exact')  AS victorias_exacto,
+  COUNT(*) FILTER (WHERE me.is_winner = true AND me.consensus_match_level = 'normalized') AS victorias_normalizado,
+  COUNT(*) FILTER (WHERE me.is_winner = true AND me.consensus_match_level = 'genus')  AS victorias_genero,
   COUNT(*) FILTER (WHERE me.is_winner = true AND me.consensus_group = 'no_consensus') AS victorias_fallback
 FROM model_evaluations me
 CROSS JOIN totals t
@@ -146,6 +155,7 @@ ORDER BY semana DESC, me.model;
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 7. SCORECARD COMBINADO — RANKING FINAL
 -- Pesos: éxito 30%, consenso 35%, win rate 25%, velocidad 10%
+-- Usa consenso amplio (incluye exact + normalized + genus).
 -- Ajustar los pesos en el CTE "scored" según prioridades.
 -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -228,3 +238,100 @@ WHERE success = true
   AND raw_name = 'Planta no identificada'
 GROUP BY model
 ORDER BY falsos_positivos DESC;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- DIAGNÓSTICO DE CONSENSO
+-- Queries para investigar la tasa de no_consensus y sus causas.
+-- Usadas para diseñar el consenso por niveles (exact/normalized/genus).
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 8. TASA GENERAL DE CONSENSO vs NO_CONSENSUS
+-- Vista rápida del % de evaluaciones exitosas en cada grupo.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+SELECT
+  consensus_group,
+  COUNT(*) AS total,
+  ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 1) AS pct
+FROM model_evaluations
+WHERE success = true
+GROUP BY consensus_group
+ORDER BY total DESC;
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 9. BÚSQUEDAS DONDE LOS 3 MODELOS RESPONDIERON OK PERO NINGUNO LLEGÓ A CONSENSO
+-- Los casos más interesantes para diagnosticar: todos respondieron pero discrepan.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+SELECT
+  ps.id,
+  ps.name AS winner_name,
+  me.model,
+  me.scientific_name,
+  me.consensus_group
+FROM plant_searches ps
+JOIN model_evaluations me ON me.plant_search_id = ps.id
+WHERE ps.id IN (
+  SELECT plant_search_id
+  FROM model_evaluations
+  WHERE success = true
+  GROUP BY plant_search_id
+  HAVING COUNT(*) = 3
+    AND COUNT(*) FILTER (WHERE consensus_group = 'correct') = 0
+)
+ORDER BY ps.id DESC, me.model;
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 10. NOMBRES CIENTÍFICOS QUE CASI COINCIDEN
+-- Muestra los nombres que cada modelo devolvió para buscar patrones de
+-- desacuerdo por variación nomenclatural (cultivar, especie, género).
+-- ─────────────────────────────────────────────────────────────────────────────
+
+SELECT
+  ps.id,
+  array_agg(me.model || ': ' || COALESCE(me.scientific_name, 'NULL') ORDER BY me.model) AS names
+FROM plant_searches ps
+JOIN model_evaluations me ON me.plant_search_id = ps.id
+WHERE me.success = true
+GROUP BY ps.id
+HAVING COUNT(DISTINCT me.scientific_name) > 1
+ORDER BY ps.id DESC
+LIMIT 20;
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 11. QUÉ MODELO DISIENTE MÁS
+-- Ranking de modelos por tasa de discrepancia (no_consensus sobre éxitos).
+-- ─────────────────────────────────────────────────────────────────────────────
+
+SELECT
+  model,
+  COUNT(*) AS total,
+  COUNT(*) FILTER (WHERE consensus_group = 'correct') AS en_consenso,
+  COUNT(*) FILTER (WHERE consensus_group = 'no_consensus') AS disidente,
+  ROUND(100.0 * COUNT(*) FILTER (WHERE consensus_group = 'no_consensus') / COUNT(*), 1) AS pct_disidente
+FROM model_evaluations
+WHERE success = true
+GROUP BY model
+ORDER BY pct_disidente DESC;
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 12. DESGLOSE POR NIVEL DE MATCH (post-implementación del consenso por niveles)
+-- Solo tendrá datos después de desplegar el consenso por niveles.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+SELECT
+  consensus_match_level,
+  COUNT(*) AS total,
+  ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 1) AS pct
+FROM model_evaluations
+WHERE consensus_group = 'correct'
+  AND consensus_match_level IS NOT NULL
+GROUP BY consensus_match_level
+ORDER BY total DESC;

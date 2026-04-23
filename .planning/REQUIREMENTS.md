@@ -7,11 +7,14 @@
 
 ### Android Nativo
 
-- [ ] **ANDR-01**: La app se empaqueta con Capacitor y genera un APK/AAB funcional
+- [x] **ANDR-01
+**: La app se empaqueta con Capacitor y genera un APK/AAB funcional
 - [ ] **ANDR-02**: La cámara funciona en el WebView de Android vía @capacitor/camera
-- [ ] **ANDR-03**: El service worker se desactiva en el build de Android para no interferir con plugins nativos
+- [x] **ANDR-03
+**: El service worker se desactiva en el build de Android para no interferir con plugins nativos
 - [ ] **ANDR-04**: Las imágenes base64 se migran a Supabase Storage para evitar OOM en WebView
-- [ ] **ANDR-05**: El build de Android usa paths relativos (base: './') para que los assets carguen correctamente
+- [x] **ANDR-05
+**: El build de Android usa paths relativos (base: './') para que los assets carguen correctamente
 - [ ] **ANDR-06**: Los permisos de cámara incluyen rationale string y manejo de denegación
 - [ ] **ANDR-07**: El APK/AAB cumple requisitos de Play Store (targetSdk, permisos, iconos)
 - [ ] **ANDR-08**: Splash screen y status bar configurados con branding de la app

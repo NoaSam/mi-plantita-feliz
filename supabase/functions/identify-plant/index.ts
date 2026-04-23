@@ -1,4 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  type ModelName,
+  extractScientificName,
+  computeConsensus,
+} from "./consensus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -52,8 +57,6 @@ interface PlantInfo {
   care: string;
   diagnosis: string;
 }
-
-type ModelName = "claude" | "gemini" | "gpt4o";
 
 interface ModelResult {
   model: ModelName;
@@ -237,47 +240,7 @@ function parseAIResponse(text: string): PlantInfo | null {
   };
 }
 
-function extractScientificName(name: string): string | null {
-  const match = name.match(/\(([^)]+)\)/);
-  return match ? match[1].trim().toLowerCase() : null;
-}
-
-// ─── Consensus logic ───────────────────────────────────────────────────────────
-
-function computeConsensus(
-  results: ModelResult[]
-): Map<ModelName, "correct" | "no_consensus"> {
-  const groups = new Map<ModelName, "correct" | "no_consensus">();
-  const successful = results.filter((r) => r.success && r.scientificName);
-
-  if (successful.length < 2) {
-    for (const r of results) groups.set(r.model, "no_consensus");
-    return groups;
-  }
-
-  // Count occurrences of each scientific name
-  const nameCounts = new Map<string, number>();
-  for (const r of successful) {
-    nameCounts.set(r.scientificName!, (nameCounts.get(r.scientificName!) ?? 0) + 1);
-  }
-
-  // Names that appear 2+ times
-  const majorityNames = new Set(
-    [...nameCounts.entries()].filter(([, c]) => c >= 2).map(([n]) => n)
-  );
-
-  for (const r of results) {
-    if (!r.success || !r.scientificName) {
-      groups.set(r.model, "no_consensus");
-    } else if (majorityNames.has(r.scientificName)) {
-      groups.set(r.model, "correct");
-    } else {
-      groups.set(r.model, "no_consensus");
-    }
-  }
-
-  return groups;
-}
+// extractScientificName and computeConsensus imported from ./consensus.ts
 
 // ─── Timed model caller ────────────────────────────────────────────────────────
 
@@ -351,7 +314,7 @@ Deno.serve(async (req) => {
     // Pick winner: prefer consensus models, then fastest
     const successful = allResults.filter((r) => r.success);
     const consensusWinners = successful
-      .filter((r) => consensusGroups.get(r.model) === "correct")
+      .filter((r) => consensusGroups.get(r.model)?.verdict === "correct")
       .sort((a, b) => a.responseMs - b.responseMs);
     const winner = consensusWinners[0]
       ?? successful.sort((a, b) => a.responseMs - b.responseMs)[0]
@@ -433,20 +396,24 @@ Deno.serve(async (req) => {
     }
 
     // Write model_evaluations rows (3 rows, one per model)
-    const evaluationRows = allResults.map((r) => ({
-      plant_search_id: searchRow.id,
-      model: r.model,
-      raw_name: r.rawName,
-      scientific_name: r.scientificName,
-      description: r.plantInfo?.description ?? null,
-      care: r.plantInfo?.care ?? null,
-      diagnosis: r.plantInfo?.diagnosis ?? null,
-      response_ms: r.responseMs,
-      success: r.success,
-      error_message: r.errorMessage,
-      is_winner: r.model === winner.model,
-      consensus_group: r.success ? (consensusGroups.get(r.model) ?? "no_consensus") : null,
-    }));
+    const evaluationRows = allResults.map((r) => {
+      const consensus = r.success ? (consensusGroups.get(r.model) ?? null) : null;
+      return {
+        plant_search_id: searchRow.id,
+        model: r.model,
+        raw_name: r.rawName,
+        scientific_name: r.scientificName,
+        description: r.plantInfo?.description ?? null,
+        care: r.plantInfo?.care ?? null,
+        diagnosis: r.plantInfo?.diagnosis ?? null,
+        response_ms: r.responseMs,
+        success: r.success,
+        error_message: r.errorMessage,
+        is_winner: r.model === winner.model,
+        consensus_group: consensus?.verdict ?? null,
+        consensus_match_level: consensus?.matchLevel ?? null,
+      };
+    });
 
     const { error: evalError } = await supabaseAdmin
       .from("model_evaluations")
@@ -457,13 +424,17 @@ Deno.serve(async (req) => {
       console.error("model_evaluations insert error:", evalError);
     }
 
-    const modelsSummary = allResults.map((r) => ({
-      model: r.model,
-      success: r.success,
-      response_ms: r.responseMs,
-      consensus_group: consensusGroups.get(r.model) ?? "no_consensus",
-      error_message: r.errorMessage,
-    }));
+    const modelsSummary = allResults.map((r) => {
+      const consensus = consensusGroups.get(r.model);
+      return {
+        model: r.model,
+        success: r.success,
+        response_ms: r.responseMs,
+        consensus_group: consensus?.verdict ?? "no_consensus",
+        consensus_match_level: consensus?.matchLevel ?? null,
+        error_message: r.errorMessage,
+      };
+    });
 
     return new Response(
       JSON.stringify({

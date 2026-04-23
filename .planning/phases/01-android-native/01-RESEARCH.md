@@ -663,27 +663,23 @@ android/keystore.properties
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **App ID (appId)**
+1. **App ID (appId)** (RESOLVED)
    - What we know: Must be a unique reverse-domain string for Play Store
-   - What's unclear: Does the owner have a domain registered? `com.mijardin.app` is used in examples here but needs confirmation
-   - Recommendation: Confirm with product owner before first `npx cap add android`; changing appId after Play Store submission requires a new app listing
+   - Resolution: User decided on `com.miplantitafeliz.app` as the appId. App name: "Mi jardin". Confirmed during planning discussion.
 
-2. **Image Storage for Anonymous Users**
+2. **Image Storage for Anonymous Users** (RESOLVED)
    - What we know: Anonymous identifications use `anonymous_id` instead of `user_id`; the Storage bucket RLS uses `user_id` as folder prefix
-   - What's unclear: Should anonymous images go to a separate public folder? Or skip Storage and keep base64 for anonymous users only?
-   - Recommendation: Use `anonymous_id` as folder prefix for anonymous uploads; add separate RLS policy. This keeps the code path consistent.
+   - Resolution: Use "anonymous" as folder prefix for anonymous uploads. The edge function uses service role key which bypasses RLS, so anonymous uploads work through the service role client. An additional RLS policy for the "anonymous" folder is added as defense-in-depth.
 
-3. **Existing base64 Records in plant_searches**
+3. **Existing base64 Records in plant_searches** (RESOLVED)
    - What we know: Current production DB has existing rows with `image_url = "data:image/jpeg;base64,..."` strings
-   - What's unclear: Do these need backfilling to Storage, or can the app gracefully handle both URL and data: URI formats?
-   - Recommendation: Handle both in `<img src={imageUrl}>` — browsers and WebViews render data URIs natively. New writes go to Storage; old records remain as-is. This avoids a data migration.
+   - Resolution: Handle both formats in `<img src={imageUrl}>` -- browsers and WebViews render data URIs natively. New writes go to Storage; old records remain as-is. No data migration needed. Per user decision, only NEW images go to Storage.
 
-4. **Google Play Developer Account**
+4. **Google Play Developer Account** (RESOLVED)
    - What we know: A $25 one-time fee is required to create a Google Play Developer account
-   - What's unclear: Does the owner have an existing Play Developer account?
-   - Recommendation: Confirm before starting ANDR-07 tasks; the account setup is outside of code
+   - Resolution: Play Store distribution is out of scope for Phase 1. Phase 1 delivers APK-first distribution (direct install via `adb install` or file sharing). Play Store upload is a future step after the APK is validated.
 
 ---
 
