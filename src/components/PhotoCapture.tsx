@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import LocationConsentModal from "@/components/LocationConsentModal";
 import { useGeolocation, isBrowserPermissionGranted, type Coords } from "@/hooks/use-geolocation";
 import { shouldAskForLocation, hasAcceptedLocation, recordAccept, recordDecline } from "@/lib/geo-permission";
-import { isIOS } from "@/lib/platform";
+import { isIOS, isNative } from "@/lib/platform";
 
 interface PhotoCaptureProps {
   onCapture: (file: File, coords: Coords | null) => void;
@@ -16,7 +16,9 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
   const galleryRef = useRef<HTMLInputElement>(null);
   const pendingFile = useRef<File | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [permissionDenied, setPermissionDenied] = useState(false);
   const { getLocation, getLocationSilently } = useGeolocation();
+  const native = isNative();
   const ios = isIOS();
 
   const handleCameraClick = () => cameraRef.current?.click();
@@ -45,6 +47,57 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
     }
   };
 
+  const handleNativeCapture = async () => {
+    try {
+      const { Camera: CapCamera, CameraResultType, CameraSource } = await import("@capacitor/camera");
+
+      // Check and request camera permission
+      const permStatus = await CapCamera.checkPermissions();
+      if (permStatus.camera === "denied") {
+        setPermissionDenied(true);
+        return;
+      }
+      if (permStatus.camera !== "granted") {
+        const requested = await CapCamera.requestPermissions({ permissions: ["camera"] });
+        if (requested.camera !== "granted") {
+          return;
+        }
+      }
+
+      const photo = await CapCamera.getPhoto({
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Prompt,
+        quality: 70,
+      });
+
+      if (!photo.dataUrl) return;
+
+      // Convert DataUrl to File to keep the onCapture(File, Coords) contract frozen
+      const res = await fetch(photo.dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], "plant-photo.jpg", { type: "image/jpeg" });
+
+      // Follow the same location consent flow as handleChange
+      if (shouldAskForLocation()) {
+        pendingFile.current = file;
+        setModalOpen(true);
+      } else if (hasAcceptedLocation()) {
+        const granted = await isBrowserPermissionGranted();
+        if (granted) {
+          const coords = await getLocationSilently();
+          onCapture(file, coords);
+        } else {
+          pendingFile.current = file;
+          setModalOpen(true);
+        }
+      } else {
+        onCapture(file, null);
+      }
+    } catch {
+      // User cancelled or plugin error — swallow silently
+    }
+  };
+
   const handleAccept = async () => {
     recordAccept();
     setModalOpen(false);
@@ -67,44 +120,64 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
 
   return (
     <>
-      {ios ? (
-        <input
-          ref={cameraRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleChange}
-        />
-      ) : (
+      {permissionDenied && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+          <p className="font-medium">Permiso de cámara necesario</p>
+          <p className="mt-1">
+            Para identificar plantas, necesitamos acceso a tu cámara.
+            Ve a Ajustes &gt; Aplicaciones &gt; Mi jardín &gt; Permisos para activarlo.
+          </p>
+          <button
+            type="button"
+            onClick={() => setPermissionDenied(false)}
+            className="mt-2 text-xs underline"
+          >
+            Entendido
+          </button>
+        </div>
+      )}
+      {!native && (
         <>
-          <input
-            ref={cameraRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={handleChange}
-          />
-          <input
-            ref={galleryRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleChange}
-          />
+          {ios ? (
+            <input
+              ref={cameraRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleChange}
+            />
+          ) : (
+            <>
+              <input
+                ref={cameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleChange}
+              />
+              <input
+                ref={galleryRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleChange}
+              />
+            </>
+          )}
         </>
       )}
       <Button
         variant="hero"
         size="xl"
-        onClick={handleCameraClick}
+        onClick={native ? handleNativeCapture : handleCameraClick}
         disabled={isLoading}
         style={{ boxShadow: "var(--shadow-press)" }}
       >
         <Camera className="!size-10" />
         Hacer foto ahora
       </Button>
-      {!ios && (
+      {!native && !ios && (
         <button
           type="button"
           onClick={handleGalleryClick}
