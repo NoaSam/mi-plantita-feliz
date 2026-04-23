@@ -15,7 +15,7 @@ vi.mock("@/lib/geo-permission", () => ({
   recordDecline: vi.fn(),
 }));
 
-vi.mock("@/lib/platform", () => ({ isIOS: vi.fn() }));
+vi.mock("@/lib/platform", () => ({ isIOS: vi.fn(), isNative: vi.fn().mockReturnValue(false) }));
 
 import { isIOS } from "@/lib/platform";
 const mockIsIOS = vi.mocked(isIOS);
