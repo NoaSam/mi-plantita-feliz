@@ -372,6 +372,43 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Upload image to Supabase Storage (replaces storing base64 in DB)
+    // Use user_id as folder prefix, or "anonymous" for non-authenticated users
+    const folderPrefix = user_id ?? "anonymous";
+    const fileName = `${folderPrefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+
+    let imageUrl = image; // fallback to original base64 if upload fails
+
+    try {
+      // Convert base64 to binary
+      const binaryStr = atob(base64Data);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from("plant-images")
+        .upload(fileName, bytes, {
+          contentType: mediaType,
+          cacheControl: "31536000", // 1 year — images are immutable
+          upsert: false,
+        });
+
+      if (!uploadError) {
+        const { data: urlData } = supabaseAdmin.storage
+          .from("plant-images")
+          .getPublicUrl(fileName);
+        imageUrl = urlData.publicUrl;
+      } else {
+        console.error("Storage upload error:", uploadError);
+        // Non-fatal: fall back to base64 in DB (worse for Android but doesn't break functionality)
+      }
+    } catch (e) {
+      console.error("Storage upload exception:", e);
+      // Non-fatal: fall back to base64
+    }
+
     // Write plant_searches row
     const { data: searchRow, error: searchError } = await supabaseAdmin
       .from("plant_searches")
@@ -380,7 +417,7 @@ Deno.serve(async (req) => {
         description: winner.plantInfo!.description,
         care: winner.plantInfo!.care,
         diagnosis: winner.plantInfo!.diagnosis,
-        image_url: image,
+        image_url: imageUrl,
         model: winner.model,
         ...(user_id ? { user_id } : { user_id: null, anonymous_id: anonymous_id ?? null }),
         ...(typeof lat === "number" && isFinite(lat) && lat >= -90 && lat <= 90 &&
