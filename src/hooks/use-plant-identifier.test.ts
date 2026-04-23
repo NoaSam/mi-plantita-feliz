@@ -1,11 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 
-// Mock supabase client
+// Mock supabase client (auth only -- functions.invoke no longer used)
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    auth: { getSession: vi.fn() },
-    functions: { invoke: vi.fn() },
+    auth: { getSession: vi.fn().mockResolvedValue({ data: { session: null } }) },
   },
 }));
 
@@ -17,6 +16,11 @@ vi.mock("@/lib/anonymous-id", () => ({
   getAnonymousId: vi.fn(() => "test-anon-id"),
 }));
 
+// Mock browser-image-compression
+vi.mock("browser-image-compression", () => ({
+  default: vi.fn().mockResolvedValue(new Blob(["fake-compressed"], { type: "image/jpeg" })),
+}));
+
 import { usePlantIdentifier } from "./use-plant-identifier";
 
 function createMockFile(type: string, sizeBytes: number, name = "photo.jpg"): File {
@@ -24,10 +28,34 @@ function createMockFile(type: string, sizeBytes: number, name = "photo.jpg"): Fi
   return new File([buffer], name, { type });
 }
 
+function createSSEStream(events: Array<{ event: string; data: unknown }>): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      for (const e of events) {
+        controller.enqueue(encoder.encode(`event: ${e.event}\ndata: ${JSON.stringify(e.data)}\n\n`));
+      }
+      controller.close();
+    },
+  });
+}
+
 describe("usePlantIdentifier", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      body: createSSEStream([
+        { event: "result", data: { name: "Potus (Epipremnum aureum)", description: "Una planta tropical", care: "Riego moderado", diagnosis: "Se ve sana", model: "claude" } },
+        { event: "done", data: { plant_search_id: "test-uuid-123", created_at: "2026-04-23T10:00:00Z" } },
+      ]),
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe("input validation", () => {
@@ -107,6 +135,77 @@ describe("usePlantIdentifier", () => {
     it("exposes setResult to allow external reset", () => {
       const { result } = renderHook(() => usePlantIdentifier());
       expect(typeof result.current.setResult).toBe("function");
+    });
+  });
+
+  describe("SSE streaming", () => {
+    it("processes SSE stream and sets result on 'result' event", async () => {
+      const { result } = renderHook(() => usePlantIdentifier());
+      const imageFile = createMockFile("image/jpeg", 1024, "plant.jpg");
+
+      await act(async () => {
+        await result.current.identify(imageFile);
+      });
+
+      expect(result.current.error).toBeNull();
+      expect(result.current.result).not.toBeNull();
+      expect(result.current.result!.name).toBe("Potus (Epipremnum aureum)");
+      expect(result.current.result!.model).toBe("claude");
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    it("handles SSE error event", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        body: createSSEStream([
+          { event: "error", data: { error: "No se pudo identificar la planta." } },
+        ]),
+      });
+
+      const { result } = renderHook(() => usePlantIdentifier());
+      const imageFile = createMockFile("image/jpeg", 1024, "plant.jpg");
+
+      await act(async () => {
+        await result.current.identify(imageFile);
+      });
+
+      expect(result.current.error).toBe("No se pudo identificar la planta.");
+      expect(result.current.result).toBeNull();
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    it("handles HTTP error from edge function", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: vi.fn().mockResolvedValue({ error: "Internal Server Error" }),
+      });
+
+      const { result } = renderHook(() => usePlantIdentifier());
+      const imageFile = createMockFile("image/jpeg", 1024, "plant.jpg");
+
+      await act(async () => {
+        await result.current.identify(imageFile);
+      });
+
+      expect(result.current.error).toBe("Internal Server Error");
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    it("sends correct headers in fetch call", async () => {
+      const { result } = renderHook(() => usePlantIdentifier());
+      const imageFile = createMockFile("image/jpeg", 1024, "plant.jpg");
+
+      await act(async () => {
+        await result.current.identify(imageFile);
+      });
+
+      const [calledUrl, calledOptions] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(calledUrl).toContain("functions/v1/identify-plant");
+      expect(calledOptions.method).toBe("POST");
+      expect(calledOptions.headers["Content-Type"]).toBe("application/json");
+      expect(calledOptions.headers).toHaveProperty("apikey");
+      expect(calledOptions.headers).toHaveProperty("Authorization");
     });
   });
 });
