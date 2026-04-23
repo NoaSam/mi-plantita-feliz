@@ -9,7 +9,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Android Native** — Empaquetar la app con Capacitor y generar APK funcional para Android
+- [x] **Phase 1: Android Native** — Empaquetar la app con Capacitor y generar APK funcional para Android
 - [ ] **Phase 2: Prompt Optimization** — Mejorar precision de IA y devolver watering_interval_days estructurado
 - [ ] **Phase 3: Watering Calendar** — Coleccion de plantas del usuario con lista diaria "Hoy toca regar"
 - [ ] **Phase 4: Onboarding** — Guiar nuevos usuarios sin bloquear la camara
@@ -34,7 +34,7 @@ Plans:
 - [x] 01-02-PLAN.md — Native plugins: Camera with permissions, Geolocation, Preferences auth adapter
 - [x] 01-03-PLAN.md — Image Storage migration: Supabase bucket + edge function upload
 - [x] 01-04-PLAN.md — Android assets: icon and splash screen source images + generation
-- [ ] 01-05-PLAN.md — Android build: generate project, build APK, end-to-end verification
+- [x] 01-05-PLAN.md — Android build: generate project, build APK, end-to-end verification
 **UI hint**: yes
 
 ### Phase 2: Prompt Optimization
