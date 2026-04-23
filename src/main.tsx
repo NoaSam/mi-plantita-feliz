@@ -29,4 +29,13 @@ if ("serviceWorker" in navigator && !isCapacitor) {
   });
 }
 
+// Initialize native StatusBar styling
+if (isCapacitor) {
+  import("@capacitor/status-bar").then(({ StatusBar, Style }) => {
+    StatusBar.setBackgroundColor({ color: "#2D5A27" });
+    StatusBar.setStyle({ style: Style.Dark });
+    StatusBar.setOverlaysWebView({ overlay: false });
+  }).catch(() => {});
+}
+
 createRoot(document.getElementById("root")!).render(<App />);
