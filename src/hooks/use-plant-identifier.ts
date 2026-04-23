@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { track } from "@/lib/track";
 import { getAnonymousId } from "@/lib/anonymous-id";
@@ -18,7 +18,8 @@ export interface PlantResult {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const COMPRESS_TIMEOUT_MS = 10_000;
-const INVOKE_TIMEOUT_MS = 60_000;
+const INVOKE_TIMEOUT_MS = 30_000;
+const SAFETY_TIMEOUT_MS = 45_000;
 
 function compressImage(
   dataUrl: string,
@@ -71,6 +72,23 @@ export function usePlantIdentifier() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<PlantResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const safetyTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  // Safety net: if isLoading stays true for too long, force-reset.
+  // This catches ANY hang — even ones the Promise timeouts miss.
+  useEffect(() => {
+    if (isLoading) {
+      safetyTimer.current = setTimeout(() => {
+        console.error("[identify] SAFETY TIMEOUT — forcing isLoading=false after", SAFETY_TIMEOUT_MS, "ms");
+        setError("La identificación tardó demasiado. Comprueba tu conexión e inténtalo de nuevo.");
+        setIsLoading(false);
+      }, SAFETY_TIMEOUT_MS);
+    } else {
+      clearTimeout(safetyTimer.current);
+    }
+    return () => clearTimeout(safetyTimer.current);
+  }, [isLoading]);
+
   const identify = useCallback(async (imageFile: File, coords?: Coords | null) => {
     setIsLoading(true);
     setError(null);
@@ -84,10 +102,12 @@ export function usePlantIdentifier() {
         throw new Error("La imagen no puede superar los 10 MB");
       }
 
+      console.log("[identify] step 1: fileToBase64");
       const rawBase64 = await fileToBase64(imageFile);
+      console.log("[identify] step 2: compressImage");
       const compressed = await compressImage(rawBase64);
 
-      // Resolve identity — edge function handles the DB write
+      console.log("[identify] step 3: getSession");
       const { data: { session } } = await supabase.auth.getSession();
       const loggedIn = !!session?.user;
 
@@ -99,11 +119,13 @@ export function usePlantIdentifier() {
         ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
       };
 
+      console.log("[identify] step 4: invoke edge function");
       const { data: rawData, error: fnError } = await withTimeout(
         supabase.functions.invoke("identify-plant", { body: requestBody }),
         INVOKE_TIMEOUT_MS,
         "La identificación está tardando demasiado. Comprueba tu conexión e inténtalo de nuevo."
       );
+      console.log("[identify] step 5: got response, fnError=", fnError, "dataType=", typeof rawData);
 
       // Extract actual error from edge function response body when possible
       if (fnError) {
@@ -137,6 +159,7 @@ export function usePlantIdentifier() {
         model,
       };
 
+      console.log("[identify] step 6: setResult");
       setResult(plantResult);
 
       // Keep localStorage write for anonymous UX (history page reads from here)
@@ -151,9 +174,11 @@ export function usePlantIdentifier() {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error desconocido";
+      console.error("[identify] ERROR:", msg);
       setError(msg);
       track("plant_identification_failed", { error: msg });
     } finally {
+      console.log("[identify] finally: setIsLoading(false)");
       setIsLoading(false);
     }
   }, []);
