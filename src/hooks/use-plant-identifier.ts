@@ -17,14 +17,22 @@ export interface PlantResult {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
+const COMPRESS_TIMEOUT_MS = 10_000;
+const INVOKE_TIMEOUT_MS = 60_000;
+
 function compressImage(
   dataUrl: string,
   maxWidth = 400,
   quality = 0.7
 ): Promise<string> {
   return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error("Timeout al procesar la imagen. Inténtalo de nuevo."));
+    }, COMPRESS_TIMEOUT_MS);
+
     const img = new Image();
     img.onload = () => {
+      clearTimeout(timer);
       const ratio = Math.min(maxWidth / img.width, 1);
       const width = Math.round(img.width * ratio);
       const height = Math.round(img.height * ratio);
@@ -42,9 +50,21 @@ function compressImage(
       ctx.drawImage(img, 0, 0, width, height);
       resolve(canvas.toDataURL("image/jpeg", quality));
     };
-    img.onerror = () => reject(new Error("No se pudo cargar la imagen"));
+    img.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error("No se pudo cargar la imagen"));
+    };
     img.src = dataUrl;
   });
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(msg)), ms)
+    ),
+  ]);
 }
 
 export function usePlantIdentifier() {
@@ -79,9 +99,10 @@ export function usePlantIdentifier() {
         ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
       };
 
-      const { data: rawData, error: fnError } = await supabase.functions.invoke(
-        "identify-plant",
-        { body: requestBody }
+      const { data: rawData, error: fnError } = await withTimeout(
+        supabase.functions.invoke("identify-plant", { body: requestBody }),
+        INVOKE_TIMEOUT_MS,
+        "La identificación está tardando demasiado. Comprueba tu conexión e inténtalo de nuevo."
       );
 
       // Extract actual error from edge function response body when possible
