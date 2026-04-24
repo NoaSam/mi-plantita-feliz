@@ -13,7 +13,9 @@ const ERROR_MAP: Record<string, string> = {
 };
 
 function normalizeError(message: string): string {
-  return ERROR_MAP[message] ?? "Algo ha ido mal. Inténtalo de nuevo.";
+  const mapped = ERROR_MAP[message];
+  if (!mapped) console.error("[auth] unmapped error:", message);
+  return mapped ?? "Algo ha ido mal. Inténtalo de nuevo.";
 }
 
 export async function claimAnonymousSearches(): Promise<void> {

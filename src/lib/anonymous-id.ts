@@ -20,7 +20,10 @@ export function getAnonymousId(): string {
       return cached;
     }
   } catch { /* localStorage unavailable */ }
-  cached = crypto.randomUUID();
+  cached = globalThis.crypto?.randomUUID?.()
+    ?? Array.from(crypto.getRandomValues(new Uint8Array(16)))
+        .map((b, i) => ([4,6,8,10].includes(i) ? "-" : "") + b.toString(16).padStart(2, "0"))
+        .join("");
   try { localStorage.setItem(STORAGE_KEY, cached); } catch { /* ignore */ }
   return cached;
 }
