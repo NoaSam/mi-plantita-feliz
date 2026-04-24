@@ -79,7 +79,7 @@ export function usePlantIdentifier() {
         ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
       };
 
-      console.log("[identify] step 4: fetch edge function (SSE)");
+      console.log("[identify] step 4: fetch edge function");
       const response = await fetch(EDGE_URL, {
         method: "POST",
         headers: {
@@ -91,78 +91,38 @@ export function usePlantIdentifier() {
         signal: AbortSignal.timeout(INVOKE_TIMEOUT_MS),
       });
 
+      const data = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body?.error || `HTTP ${response.status}`);
+        throw new Error(data?.error || `HTTP ${response.status}`);
       }
 
-      const reader = response.body!.getReader();
-      const decoder = new TextDecoder();
-      let sseBuffer = "";
-      let plantSearchId: string | null = null;
+      console.log("[identify] step 5: setResult");
+      const plantResult: PlantResult = {
+        id: data.plant_search_id ?? "",
+        name: data.name,
+        description: data.description,
+        care: data.care,
+        diagnosis: data.diagnosis,
+        imageUrl: compressed,
+        date: data.created_at ?? new Date().toISOString(),
+        model: data.model,
+      };
+      setResult(plantResult);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        sseBuffer += decoder.decode(value, { stream: true });
-        const events = sseBuffer.split("\n\n");
-        sseBuffer = events.pop() ?? "";
+      track("plant_identified", {
+        plant_name: data.name,
+        logged_in: loggedIn,
+        winning_model: data.model,
+        has_location: !!coords,
+      });
 
-        for (const raw of events) {
-          const eventName = raw.match(/^event: (.+)$/m)?.[1];
-          const dataLine = raw.match(/^data: (.+)$/m)?.[1];
-          if (!dataLine) continue;
-          const payload = JSON.parse(dataLine);
-
-          if (eventName === "result") {
-            const plantResult: PlantResult = {
-              id: "",  // will be updated when "done" event arrives
-              name: payload.name,
-              description: payload.description,
-              care: payload.care,
-              diagnosis: payload.diagnosis,
-              imageUrl: compressed,
-              date: new Date().toISOString(),
-              model: payload.model,
-            };
-            console.log("[identify] step 5: setResult (from SSE result event)");
-            setResult(plantResult);
-
-            track("plant_identified", {
-              plant_name: payload.name,
-              logged_in: loggedIn,
-              winning_model: payload.model,
-              has_location: !!coords,
-            });
-          }
-
-          if (eventName === "error") {
-            throw new Error(payload.error);
-          }
-
-          if (eventName === "done") {
-            plantSearchId = payload.plant_search_id;
-            // Update result with DB id and created_at
-            setResult((prev) => prev ? {
-              ...prev,
-              id: payload.plant_search_id ?? prev.id,
-              date: payload.created_at ?? prev.date,
-            } : prev);
-          }
-        }
-      }
-
-      // localStorage for anonymous history (after done event provides the id)
-      if (!session?.user && plantSearchId) {
+      // localStorage for anonymous history
+      if (!session?.user && data.plant_search_id) {
         try {
-          setResult((prev) => {
-            if (prev) {
-              const history = JSON.parse(localStorage.getItem("plant-history") || "[]");
-              history.unshift({ ...prev, id: plantSearchId });
-              localStorage.setItem("plant-history", JSON.stringify(history.slice(0, 20)));
-            }
-            return prev;
-          });
+          const history = JSON.parse(localStorage.getItem("plant-history") || "[]");
+          history.unshift(plantResult);
+          localStorage.setItem("plant-history", JSON.stringify(history.slice(0, 20)));
         } catch {
           // localStorage full or unavailable
         }

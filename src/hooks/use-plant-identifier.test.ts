@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 
-// Mock supabase client (auth only -- functions.invoke no longer used)
+// Mock supabase client (auth only)
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     auth: { getSession: vi.fn().mockResolvedValue({ data: { session: null } }) },
@@ -28,17 +28,15 @@ function createMockFile(type: string, sizeBytes: number, name = "photo.jpg"): Fi
   return new File([buffer], name, { type });
 }
 
-function createSSEStream(events: Array<{ event: string; data: unknown }>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
-  return new ReadableStream({
-    start(controller) {
-      for (const e of events) {
-        controller.enqueue(encoder.encode(`event: ${e.event}\ndata: ${JSON.stringify(e.data)}\n\n`));
-      }
-      controller.close();
-    },
-  });
-}
+const MOCK_JSON_RESPONSE = {
+  name: "Potus (Epipremnum aureum)",
+  description: "Una planta tropical",
+  care: "Riego moderado",
+  diagnosis: "Se ve sana",
+  model: "claude",
+  plant_search_id: "test-uuid-123",
+  created_at: "2026-04-23T10:00:00Z",
+};
 
 describe("usePlantIdentifier", () => {
   beforeEach(() => {
@@ -47,10 +45,7 @@ describe("usePlantIdentifier", () => {
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      body: createSSEStream([
-        { event: "result", data: { name: "Potus (Epipremnum aureum)", description: "Una planta tropical", care: "Riego moderado", diagnosis: "Se ve sana", model: "claude" } },
-        { event: "done", data: { plant_search_id: "test-uuid-123", created_at: "2026-04-23T10:00:00Z" } },
-      ]),
+      json: vi.fn().mockResolvedValue(MOCK_JSON_RESPONSE),
     });
   });
 
@@ -138,8 +133,8 @@ describe("usePlantIdentifier", () => {
     });
   });
 
-  describe("SSE streaming", () => {
-    it("processes SSE stream and sets result on 'result' event", async () => {
+  describe("successful identification", () => {
+    it("fetches JSON and sets result", async () => {
       const { result } = renderHook(() => usePlantIdentifier());
       const imageFile = createMockFile("image/jpeg", 1024, "plant.jpg");
 
@@ -151,26 +146,7 @@ describe("usePlantIdentifier", () => {
       expect(result.current.result).not.toBeNull();
       expect(result.current.result!.name).toBe("Potus (Epipremnum aureum)");
       expect(result.current.result!.model).toBe("claude");
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    it("handles SSE error event", async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        body: createSSEStream([
-          { event: "error", data: { error: "No se pudo identificar la planta." } },
-        ]),
-      });
-
-      const { result } = renderHook(() => usePlantIdentifier());
-      const imageFile = createMockFile("image/jpeg", 1024, "plant.jpg");
-
-      await act(async () => {
-        await result.current.identify(imageFile);
-      });
-
-      expect(result.current.error).toBe("No se pudo identificar la planta.");
-      expect(result.current.result).toBeNull();
+      expect(result.current.result!.id).toBe("test-uuid-123");
       expect(result.current.isLoading).toBe(false);
     });
 
