@@ -66,7 +66,7 @@ test.describe("Visual regression", () => {
       fs.writeFileSync(TEST_IMAGE_PATH, png);
     }
 
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('input[type="file"]').first();
     await fileInput.setInputFiles(TEST_IMAGE_PATH);
 
     // Dismiss location modal if it appears

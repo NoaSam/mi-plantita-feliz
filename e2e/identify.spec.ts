@@ -27,7 +27,7 @@ test.describe("Plant identification flow", () => {
     await page.goto("/");
 
     // Upload a photo via the hidden file input
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('input[type="file"]').first();
     await fileInput.setInputFiles(TEST_IMAGE_PATH);
 
     // Location consent modal may appear — dismiss it
@@ -61,17 +61,17 @@ test.describe("Plant identification flow", () => {
     page,
     asAnonymous,
   }) => {
-    // Override the identify-plant mock to return an error in the body
+    // Override the identify-plant mock to return an error (non-200 triggers error path)
     await page.route("**/functions/v1/identify-plant", (route) =>
       route.fulfill({
-        status: 200,
+        status: 429,
         json: { error: "Demasiadas consultas. Espera unos minutos." },
       }),
     );
 
     await page.goto("/");
 
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('input[type="file"]').first();
     await fileInput.setInputFiles(TEST_IMAGE_PATH);
 
     // Dismiss location modal if it appears

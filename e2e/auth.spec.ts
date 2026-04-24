@@ -97,6 +97,20 @@ test.describe("Authentication", () => {
     ).toBeVisible({ timeout: 5000 });
   });
 
+  test("login validates empty email and short password", async ({
+    page,
+    asAnonymous,
+  }) => {
+    await page.goto("/mis-plantas");
+
+    // Submit with empty email and short password (empty bypasses HTML5 type="email" validation)
+    await page.getByLabel("Contraseña").fill("123");
+    await page.getByRole("button", { name: "Entrar" }).click();
+
+    await expect(page.getByText("Email no válido")).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText("Mínimo 6 caracteres")).toBeVisible();
+  });
+
   test("register form validates matching passwords", async ({
     page,
     asAnonymous,
@@ -106,10 +120,11 @@ test.describe("Authentication", () => {
     // Switch to register tab
     await page.getByRole("tab", { name: "Crear cuenta" }).click();
 
-    // Fill with mismatched passwords
+    // Fill with mismatched passwords and accept terms
     await page.getByLabel("Email").fill("new@plantita.dev");
     await page.locator("#register-password").fill("password123");
     await page.getByLabel("Repetir contraseña").fill("different456");
+    await page.locator("#inline-register-terms").click();
     await page.getByRole("button", { name: "Crear cuenta" }).click();
 
     // Should show validation error
@@ -147,9 +162,9 @@ test.describe("Authentication", () => {
     await page.getByRole("tab", { name: "Crear cuenta" }).click();
 
     await page.getByLabel("Email").fill("new@plantita.dev");
-    // Use exact match to avoid matching "Repetir contraseña" label
     await page.locator("#register-password").fill("password123");
     await page.getByLabel("Repetir contraseña").fill("password123");
+    await page.locator("#inline-register-terms").click();
     await page.getByRole("button", { name: "Crear cuenta" }).click();
 
     // Should show email confirmation screen

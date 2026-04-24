@@ -153,6 +153,16 @@ async function mockClaimSearches(page: Page) {
   );
 }
 
+/** Dismiss the cookie consent banner by pre-setting consent in localStorage. */
+async function dismissCookieConsent(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "plantita_consent",
+      JSON.stringify({ analytics: false, sessionRecording: false }),
+    );
+  });
+}
+
 /** Block PostHog and other analytics. */
 async function blockAnalytics(page: Page) {
   await page.route("**/*posthog*/**", (route) => route.abort());
@@ -173,6 +183,7 @@ type Fixtures = {
 export const test = base.extend<Fixtures>({
   asAnonymous: [
     async ({ page }, use) => {
+      await dismissCookieConsent(page);
       await blockAnalytics(page);
       await mockSupabaseAnonymous(page);
       await mockIdentifyPlant(page);
@@ -183,6 +194,7 @@ export const test = base.extend<Fixtures>({
 
   asAuthenticated: [
     async ({ page }, use) => {
+      await dismissCookieConsent(page);
       await blockAnalytics(page);
       await mockSupabaseAuthenticated(page);
       await mockIdentifyPlant(page);
