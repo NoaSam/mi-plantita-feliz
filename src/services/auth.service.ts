@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { track } from "@/lib/track";
 import { hasAnonymousId, getAnonymousId, clearAnonymousId } from "@/lib/anonymous-id";
+import { isNative } from "@/lib/platform";
+
+const PRODUCTION_URL = "https://mi-plantita-feliz.vercel.app";
 
 const ERROR_MAP: Record<string, string> = {
   "Invalid login credentials": "Email o contraseña incorrectos",
@@ -47,7 +50,7 @@ export async function signUp(email: string, password: string) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: window.location.origin + "/mis-plantas?email_confirmed=true" },
+    options: { emailRedirectTo: (isNative() ? PRODUCTION_URL : window.location.origin) + "/mis-plantas?email_confirmed=true" },
   });
   if (data.user && !error) track("user_signed_up");
   return {
