@@ -21,8 +21,8 @@ export default function BottomTabBar() {
   const tabs = user ? authTabs : publicTabs;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t-2 border-foreground/10 h-16">
-      <div className="max-w-md mx-auto h-full flex items-center justify-around">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t-2 border-foreground/10 pb-safe">
+      <div className="max-w-md mx-auto h-16 flex items-center justify-around">
         {tabs.map(({ path, label, icon: Icon }) => {
           const isActive = location.pathname === path;
           return (

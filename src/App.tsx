@@ -1,4 +1,11 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AuthProvider from "@/contexts/AuthContext";
 import AppLayout from "@/layouts/AppLayout";
@@ -16,6 +23,7 @@ const App = () => (
   <AuthProvider>
     <TooltipProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<AppLayout><Index /></AppLayout>} />
           <Route path="/mis-plantas" element={<AppLayout><History /></AppLayout>} />

@@ -7,8 +7,9 @@ App móvil para identificar plantas a partir de fotos. El usuario sube o toma un
 - **Frontend:** React + Vite + TypeScript + Tailwind CSS + shadcn/ui
 - **AI:** API de Claude (Anthropic) para análisis de imagen de plantas
 - **Almacenamiento:** Supabase (auth + base de datos para historial de búsquedas y fotos)
-- **Despliegue:** Vercel
-- **Distribución:** PWA instalable (manifest.json + service worker). Sin coste, sin stores.
+- **Despliegue:** Vercel (mi-plantita-feliz.vercel.app)
+- **iOS:** PWA instalable (manifest.json + service worker). Sin store.
+- **Android:** App nativa con Capacitor (en beta). AppID: `com.miplantitafeliz.app`. Build: `npm run android`.
 
 ## Origen del código
 Código generado inicialmente en Lovable y migrado a este repo vía GitHub. Se está refactorizando para calidad de producción.

@@ -1,4 +1,16 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
+
+const safeArea = plugin(({ addUtilities }) => {
+  addUtilities({
+    ".pt-safe": { paddingTop: "env(safe-area-inset-top, 0px)" },
+    ".pb-safe": { paddingBottom: "env(safe-area-inset-bottom, 0px)" },
+    ".pl-safe": { paddingLeft: "env(safe-area-inset-left, 0px)" },
+    ".pr-safe": { paddingRight: "env(safe-area-inset-right, 0px)" },
+    ".mb-safe": { marginBottom: "env(safe-area-inset-bottom, 0px)" },
+    ".mt-safe": { marginTop: "env(safe-area-inset-top, 0px)" },
+  });
+});
 
 export default {
   darkMode: ["class"],
@@ -89,5 +101,5 @@ export default {
     },
   },
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography"), safeArea],
 } satisfies Config;
