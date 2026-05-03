@@ -44,4 +44,4 @@ Y confirmar con la dueña del producto si la columna se llama `context` o algún
 
 ## Estado
 
-Pendiente. **Bloquea** la planificación de la fase A. Hacerlo antes de `/gsd-spec-phase` para Foundations.
+**Resuelto: 2026-05-03.** Audit completo en `.planning/phases/02.1-foundations-classification-result-actions-reveal/02.1-SCHEMA-AUDIT.md`. La planificación de Phase 02.1 ya no está bloqueada.
