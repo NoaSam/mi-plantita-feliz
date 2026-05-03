@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: milestone_complete
-last_updated: "2026-04-23T17:30:42.752Z"
+status: completed
+last_updated: "2026-05-03T19:02:45.672Z"
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 2
   total_plans: 7
-  completed_plans: 5
-  percent: 40
+  completed_plans: 7
+  percent: 100
 ---
 
 # State: Mi Plantita Feliz
@@ -64,6 +64,9 @@ Plan: 1 of 2
 ### Roadmap Evolution
 
 - Phase 5 added: Optimizar el tiempo de respuesta del análisis de plantas — reducir la latencia percibida desde que el usuario hace/sube una foto hasta que recibe el resultado de identificación y cuidados
+- Phase 02.1 inserted after Phase 2: Foundations: Classification + Result Actions + Reveal (URGENT)
+- Phase 3 edited: Watering Calendar rebajada a Calendar v0 — lista minima de Mis plantas con frecuencia, sin 'Hoy toca regar', recordatorios, apodos ni edicion. Defer a v1+.
+- Phase 03.1 inserted after Phase 3: Plant Map v0 (URGENT)
 
 ### Todos
 
