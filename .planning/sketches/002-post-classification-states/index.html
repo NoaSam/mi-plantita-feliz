@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sketch 002 — Post-classification states</title>
+  <link href="../themes/default.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-body);
+      font-size: 18px;
+      line-height: 1.6;
+      background: #e9e9e6;
+      color: hsl(var(--foreground));
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Sketch toolbar ─── */
+    .sketch-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: hsl(var(--foreground));
+      color: hsl(var(--primary-foreground));
+      padding: 0.75rem 1rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .sketch-toolbar .label {
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-right: 0.5rem;
+    }
+    .sketch-toolbar button {
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 0.5rem 0.875rem;
+      background: transparent;
+      color: hsl(var(--primary-foreground));
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 0.5rem;
+      cursor: pointer;
+    }
+    .sketch-toolbar button:hover { background: rgba(255,255,255,0.1); }
+    .sketch-toolbar button.active {
+      background: hsl(var(--accent));
+      border-color: hsl(var(--accent));
+    }
+    .sketch-toolbar .winner-mark {
+      margin-left: auto;
+      font-size: 0.75rem;
+      opacity: 0.6;
+    }
+
+    /* ─── Phone viewport ─── */
+    .phones-stage {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 2rem 1rem;
+      flex-wrap: wrap;
+    }
+    .phone-with-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .phone-state-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+      color: hsl(100 30% 25%);
+      text-align: center;
+    }
+    .phone-state-label small {
+      display: block;
+      font-size: 0.625rem;
+      opacity: 0.65;
+      margin-top: 2px;
+      text-transform: none;
+      letter-spacing: normal;
+      font-weight: 400;
+    }
+    .phone-frame {
+      width: 320px;
+      background: hsl(var(--background));
+      box-shadow: 0 0 30px rgba(0,0,0,0.1);
+      border-radius: 1.25rem;
+      overflow: hidden;
+      position: relative;
+    }
+    .phone-status {
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1rem;
+      font-size: 0.6875rem;
+      font-weight: 600;
+    }
+    .phone-status .dots { display: flex; gap: 3px; }
+    .phone-status .dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: hsl(var(--foreground));
+    }
+
+    .phone-content {
+      padding: 0.25rem 1rem 4rem;
+      position: relative;
+    }
+
+    /* ─── Top bar ─── */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      padding: 0.25rem 0 1rem;
+    }
+    .icon-button {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 2px solid hsl(var(--foreground));
+      background: hsl(var(--background));
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      box-shadow: var(--shadow-press);
+    }
+
+    /* ─── Hero ─── */
+    .hero {
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 2px solid hsl(var(--foreground));
+      aspect-ratio: 4/3;
+      background: hsl(var(--muted));
+      margin-bottom: 1rem;
+      box-shadow: var(--shadow-press);
+    }
+    .hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .plant-name {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.125rem;
+    }
+    .plant-scientific {
+      font-style: italic;
+      font-size: 0.8125rem;
+      color: hsl(var(--muted-foreground));
+      margin-bottom: 1.25rem;
+    }
+
+    .section-eyebrow {
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+      color: hsl(var(--muted-foreground));
+      margin-bottom: 0.625rem;
+      padding-left: 0.125rem;
+    }
+
+    /* ─── Action cards (winner from 001) ─── */
+    .action-card {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem 1rem;
+      background: hsl(var(--card));
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-align: left;
+      box-shadow: var(--shadow-press);
+      font-family: inherit;
+      color: inherit;
+    }
+    .action-card .icon { font-size: 1.5rem; line-height: 1; flex-shrink: 0; }
+    .action-card .content { flex: 1; min-width: 0; }
+    .action-card .title {
+      font-family: var(--font-display);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: 0.0625rem;
+    }
+    .action-card .subtitle {
+      font-size: 0.6875rem;
+      line-height: 1.3;
+      color: hsl(var(--muted-foreground));
+    }
+    .action-card .chevron {
+      font-size: 0.875rem;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+
+    .action-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+      margin-bottom: 1rem;
+    }
+
+    /* ─── Status banner (after classification, persistent) ─── */
+    /* ─── VARIANT A flavour ─── */
+    .status-banner-a {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.75rem 0.875rem;
+      background: hsl(var(--secondary));
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-press);
+      margin-bottom: 1rem;
+      font-family: inherit;
+    }
+    .status-banner-a .icon { font-size: 1.25rem; flex-shrink: 0; }
+    .status-banner-a .text {
+      flex: 1;
+      font-family: var(--font-display);
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    .status-banner-a .change {
+      background: transparent;
+      border: 0;
+      font-family: var(--font-body);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: hsl(var(--primary));
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    /* ─── VARIANT B flavour: chip ─── */
+    .status-banner-b {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem 0.5rem 0.625rem;
+      background: hsl(var(--background));
+      border: 2px solid hsl(var(--foreground));
+      border-radius: 999px;
+      box-shadow: var(--shadow-press);
+      margin-bottom: 1rem;
+      font-family: inherit;
+      font-size: 0.75rem;
+    }
+    .status-banner-b .icon { font-size: 1rem; }
+    .status-banner-b .text {
+      font-family: var(--font-display);
+      font-weight: 600;
+    }
+    .status-banner-b .change {
+      background: transparent;
+      border: 0;
+      color: hsl(var(--primary));
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-size: 0.75rem;
+      padding: 0;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    /* ─── VARIANT C: inline morph card ─── */
+    .morph-card {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem 1rem;
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-press);
+      font-family: inherit;
+      margin-bottom: 0.625rem;
+    }
+    .morph-card .icon { font-size: 1.5rem; line-height: 1; }
+    .morph-card .content { flex: 1; }
+    .morph-card .title {
+      font-family: var(--font-display);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      margin-bottom: 0.0625rem;
+    }
+    .morph-card .subtitle {
+      font-size: 0.6875rem;
+      opacity: 0.85;
+    }
+    .morph-card .undo {
+      background: transparent;
+      border: 0;
+      color: hsl(var(--primary-foreground));
+      font-family: var(--font-body);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      padding: 0 0.25rem;
+    }
+    .action-disabled {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    /* ─── TOAST — variant A (top, dark) ─── */
+    .toast-top-dark {
+      position: absolute;
+      top: 36px;
+      left: 1rem;
+      right: 1rem;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.75rem 0.875rem;
+      background: hsl(var(--foreground));
+      color: hsl(var(--primary-foreground));
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-press);
+      animation: slideDown 0.4s ease-out;
+    }
+    .toast-top-dark .icon {
+      font-size: 1.125rem;
+      width: 24px;
+      height: 24px;
+      background: hsl(var(--accent));
+      color: hsl(var(--accent-foreground));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+    .toast-top-dark .text {
+      flex: 1;
+      font-size: 0.8125rem;
+      font-weight: 500;
+    }
+    .toast-top-dark .undo {
+      background: transparent;
+      border: 0;
+      color: hsl(var(--accent));
+      font-family: var(--font-body);
+      font-size: 0.8125rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      padding: 0.25rem 0.5rem;
+    }
+
+    /* ─── TOAST — variant B (bottom, coral) ─── */
+    .toast-bottom-coral {
+      position: absolute;
+      bottom: 1rem;
+      left: 1rem;
+      right: 1rem;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.875rem 1rem;
+      background: hsl(var(--accent));
+      color: hsl(var(--accent-foreground));
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-press);
+      animation: slideUp 0.4s ease-out;
+    }
+    .toast-bottom-coral .icon {
+      font-size: 1.125rem;
+      flex-shrink: 0;
+    }
+    .toast-bottom-coral .text {
+      flex: 1;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      font-family: var(--font-display);
+    }
+    .toast-bottom-coral .undo {
+      background: hsl(var(--accent-foreground));
+      color: hsl(var(--accent));
+      border: 0;
+      font-family: var(--font-body);
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0.375rem 0.75rem;
+      border-radius: 999px;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-120%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes slideUp {
+      from { transform: translateY(120%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* ─── Accordion ─── */
+    .accordion-section {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.75rem 1rem;
+      background: hsl(var(--secondary) / 0.5);
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-press);
+      margin-bottom: 0.625rem;
+      opacity: 0.85;
+    }
+    .accordion-section .icon { font-size: 1rem; }
+    .accordion-section .label {
+      font-family: var(--font-display);
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    .accordion-section .chevron { margin-left: auto; opacity: 0.5; font-size: 0.875rem; }
+
+    /* ─── Variant switching ─── */
+    .variant { display: none; }
+    .variant.active { display: block; }
+
+    .variant-caption {
+      max-width: 1100px;
+      margin: 0 auto 1.5rem;
+      padding: 1rem 1.5rem;
+      font-size: 0.875rem;
+      color: hsl(100 10% 25%);
+      text-align: center;
+      background: hsl(var(--secondary));
+      border-radius: var(--radius);
+      max-width: 720px;
+    }
+    .variant-caption strong {
+      color: hsl(var(--foreground));
+      font-weight: 600;
+    }
+    .variant-caption .pros {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      margin-top: 0.5rem;
+      font-size: 0.8125rem;
+      flex-wrap: wrap;
+    }
+    .variant-caption .pros span { white-space: nowrap; }
+
+    /* responsive: stack phones on narrow screens */
+    @media (max-width: 1100px) {
+      .phones-stage { flex-direction: column; align-items: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================== -->
+  <!-- SKETCH TOOLBAR -->
+  <!-- ============================== -->
+  <div class="sketch-toolbar">
+    <span class="label">Sketch 002</span>
+    <button data-variant="a" onclick="showVariant('a')">A · Toast oscuro arriba</button>
+    <button data-variant="b" onclick="showVariant('b')">B · Toast coral abajo</button>
+    <button data-variant="c" class="active" onclick="showVariant('c')">★ C · Inline morph</button>
+    <span class="winner-mark" id="winner-mark">winner: C</span>
+  </div>
+
+  <!-- ============================== -->
+  <!-- VARIANT A — Top dark toast + cream banner -->
+  <!-- ============================== -->
+  <div class="variant variant-a" id="variant-a">
+    <div class="phones-stage">
+
+      <!-- State A: sin clasificar -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Estado 1 · Sin clasificar<small>El usuario decide qué hacer</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="top-bar"><button class="icon-button">←</button></div>
+            <div class="hero"><img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=600&q=80" alt="Potos"></div>
+            <h1 class="plant-name">Potos dorado</h1>
+            <div class="plant-scientific">Epipremnum aureum</div>
+            <div class="section-eyebrow">¿Qué hacemos con esta planta?</div>
+            <div class="action-stack">
+              <button class="action-card">
+                <span class="icon">🪴</span>
+                <span class="content">
+                  <span class="title">Añadir a mis plantas</span>
+                  <span class="subtitle">Aparecerá en tu jardín con su frecuencia de riego.</span>
+                </span>
+                <span class="chevron">›</span>
+              </button>
+              <button class="action-card">
+                <span class="icon">📍</span>
+                <span class="content">
+                  <span class="title">Guardar descubrimiento</span>
+                  <span class="subtitle">Aparecerá en tu mapa con la ubicación.</span>
+                </span>
+                <span class="chevron">›</span>
+              </button>
+            </div>
+            <div class="section-eyebrow" style="margin-top: 0.5rem;">Más sobre esta planta</div>
+            <div class="accordion-section"><span class="icon">🌱</span><span class="label">Qué es</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">💧</span><span class="label">Cómo cuidarla</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">🔍</span><span class="label">Qué le pasa</span><span class="chevron">›</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- State B: recién clasificada -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Estado 2 · Recién clasificada<small>Toast 5–7 s + banner persistente</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <!-- Toast -->
+          <div class="toast-top-dark">
+            <span class="icon">✓</span>
+            <span class="text">Añadida a Mi jardín</span>
+            <button class="undo">Deshacer</button>
+          </div>
+          <div class="phone-content">
+            <div class="top-bar"><button class="icon-button">←</button></div>
+            <div class="hero"><img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=600&q=80" alt="Potos"></div>
+            <h1 class="plant-name">Potos dorado</h1>
+            <div class="plant-scientific">Epipremnum aureum</div>
+            <!-- Banner reemplazó las 2 acciones -->
+            <div class="status-banner-a">
+              <span class="icon">🪴</span>
+              <span class="text">Está en tu jardín</span>
+              <button class="change">Cambiar</button>
+            </div>
+            <div class="section-eyebrow" style="margin-top: 0.5rem;">Más sobre esta planta</div>
+            <div class="accordion-section"><span class="icon">🌱</span><span class="label">Qué es</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">💧</span><span class="label">Cómo cuidarla</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">🔍</span><span class="label">Qué le pasa</span><span class="chevron">›</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- State C: ya clasificada (e.g. visited from history) -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Estado 3 · Ya clasificada<small>Toast desapareció. Banner queda.</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="top-bar"><button class="icon-button">←</button></div>
+            <div class="hero"><img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=600&q=80" alt="Potos"></div>
+            <h1 class="plant-name">Potos dorado</h1>
+            <div class="plant-scientific">Epipremnum aureum</div>
+            <div class="status-banner-a">
+              <span class="icon">🪴</span>
+              <span class="text">Está en tu jardín</span>
+              <button class="change">Cambiar</button>
+            </div>
+            <div class="section-eyebrow" style="margin-top: 0.5rem;">Más sobre esta planta</div>
+            <div class="accordion-section"><span class="icon">🌱</span><span class="label">Qué es</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">💧</span><span class="label">Cómo cuidarla</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">🔍</span><span class="label">Qué le pasa</span><span class="chevron">›</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="variant-caption">
+      <strong>Variante A · Toast oscuro arriba + banner cream.</strong><br>
+      Toast slide-down con fondo verde profundo y "Deshacer" en coral. Donde estaban los 2 botones, queda un banner persistente "Está en tu jardín · Cambiar" en cream con borde sticker. El "Cambiar" abre las 2 opciones de nuevo.
+      <div class="pros"><span>✓ Patrón Gmail/Things</span><span>✓ Toast efímero, banner permanente</span><span>✓ Coherente con design system</span></div>
+    </div>
+  </div>
+
+  <!-- ============================== -->
+  <!-- VARIANT B — Bottom coral toast + chip banner -->
+  <!-- ============================== -->
+  <div class="variant variant-b" id="variant-b">
+    <div class="phones-stage">
+
+      <!-- State 1 -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Estado 1 · Sin clasificar<small>El usuario decide qué hacer</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="top-bar"><button class="icon-button">←</button></div>
+            <div class="hero"><img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=600&q=80" alt="Potos"></div>
+            <h1 class="plant-name">Potos dorado</h1>
+            <div class="plant-scientific">Epipremnum aureum</div>
+            <div class="section-eyebrow">¿Qué hacemos con esta planta?</div>
+            <div class="action-stack">
+              <button class="action-card">
+                <span class="icon">🪴</span>
+                <span class="content">
+                  <span class="title">Añadir a mis plantas</span>
+                  <span class="subtitle">Aparecerá en tu jardín con su frecuencia de riego.</span>
+                </span>
+                <span class="chevron">›</span>
+              </button>
+              <button class="action-card">
+                <span class="icon">📍</span>
+                <span class="content">
+                  <span class="title">Guardar descubrimiento</span>
+                  <span class="subtitle">Aparecerá en tu mapa con la ubicación.</span>
+                </span>
+                <span class="chevron">›</span>
+              </button>
+            </div>
+            <div class="section-eyebrow" style="margin-top: 0.5rem;">Más sobre esta planta</div>
+            <div class="accordion-section"><span class="icon">🌱</span><span class="label">Qué es</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">💧</span><span class="label">Cómo cuidarla</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">🔍</span><span class="label">Qué le pasa</span><span class="chevron">›</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- State 2 -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Estado 2 · Recién clasificada<small>Toast coral abajo + chip arriba</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="top-bar"><button class="icon-button">←</button></div>
+            <div class="hero"><img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=600&q=80" alt="Potos"></div>
+            <h1 class="plant-name">Potos dorado</h1>
+            <div class="plant-scientific">Epipremnum aureum</div>
+            <div class="status-banner-b">
+              <span class="icon">🪴</span>
+              <span class="text">En tu jardín</span>
+              <button class="change">Cambiar</button>
+            </div>
+            <div class="section-eyebrow" style="margin-top: 0.5rem;">Más sobre esta planta</div>
+            <div class="accordion-section"><span class="icon">🌱</span><span class="label">Qué es</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">💧</span><span class="label">Cómo cuidarla</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">🔍</span><span class="label">Qué le pasa</span><span class="chevron">›</span></div>
+          </div>
+          <!-- Toast bottom coral -->
+          <div class="toast-bottom-coral">
+            <span class="icon">🪴</span>
+            <span class="text">¡Añadida a tu jardín!</span>
+            <button class="undo">Deshacer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- State 3 -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Estado 3 · Ya clasificada<small>Solo el chip permanece</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="top-bar"><button class="icon-button">←</button></div>
+            <div class="hero"><img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=600&q=80" alt="Potos"></div>
+            <h1 class="plant-name">Potos dorado</h1>
+            <div class="plant-scientific">Epipremnum aureum</div>
+            <div class="status-banner-b">
+              <span class="icon">🪴</span>
+              <span class="text">En tu jardín</span>
+              <button class="change">Cambiar</button>
+            </div>
+            <div class="section-eyebrow" style="margin-top: 0.5rem;">Más sobre esta planta</div>
+            <div class="accordion-section"><span class="icon">🌱</span><span class="label">Qué es</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">💧</span><span class="label">Cómo cuidarla</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">🔍</span><span class="label">Qué le pasa</span><span class="chevron">›</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="variant-caption">
+      <strong>Variante B · Toast coral abajo + chip arriba.</strong><br>
+      Toast slide-up coral con celebración ("¡Añadida a tu jardín!"). Estado persistente reducido a un chip-pill pequeño "🪴 En tu jardín · Cambiar" — más sutil, ocupa menos espacio. Más festivo, menos clínico.
+      <div class="pros"><span>✓ Coral del system aprovechado</span><span>✓ Chip = menos peso visual</span><span>! Más copy decorativo</span></div>
+    </div>
+  </div>
+
+  <!-- ============================== -->
+  <!-- VARIANT C — Inline morph, no toast -->
+  <!-- ============================== -->
+  <div class="variant variant-c active" id="variant-c">
+    <div class="phones-stage">
+
+      <!-- State 1 -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Estado 1 · Sin clasificar<small>El usuario decide qué hacer</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="top-bar"><button class="icon-button">←</button></div>
+            <div class="hero"><img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=600&q=80" alt="Potos"></div>
+            <h1 class="plant-name">Potos dorado</h1>
+            <div class="plant-scientific">Epipremnum aureum</div>
+            <div class="section-eyebrow">¿Qué hacemos con esta planta?</div>
+            <div class="action-stack">
+              <button class="action-card">
+                <span class="icon">🪴</span>
+                <span class="content">
+                  <span class="title">Añadir a mis plantas</span>
+                  <span class="subtitle">Aparecerá en tu jardín con su frecuencia de riego.</span>
+                </span>
+                <span class="chevron">›</span>
+              </button>
+              <button class="action-card">
+                <span class="icon">📍</span>
+                <span class="content">
+                  <span class="title">Guardar descubrimiento</span>
+                  <span class="subtitle">Aparecerá en tu mapa con la ubicación.</span>
+                </span>
+                <span class="chevron">›</span>
+              </button>
+            </div>
+            <div class="section-eyebrow" style="margin-top: 0.5rem;">Más sobre esta planta</div>
+            <div class="accordion-section"><span class="icon">🌱</span><span class="label">Qué es</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">💧</span><span class="label">Cómo cuidarla</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">🔍</span><span class="label">Qué le pasa</span><span class="chevron">›</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- State 2 -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Estado 2 · Recién clasificada<small>Card morphs en sitio · sin toast</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="top-bar"><button class="icon-button">←</button></div>
+            <div class="hero"><img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=600&q=80" alt="Potos"></div>
+            <h1 class="plant-name">Potos dorado</h1>
+            <div class="plant-scientific">Epipremnum aureum</div>
+            <!-- La card pulsada se transforma in-place -->
+            <div class="action-stack">
+              <div class="morph-card">
+                <span class="icon">✓</span>
+                <span class="content">
+                  <span class="title">Añadida a tu jardín</span>
+                  <span class="subtitle">Aparecerá con su frecuencia de riego.</span>
+                </span>
+                <button class="undo">Deshacer</button>
+              </div>
+              <button class="action-card action-disabled">
+                <span class="icon">📍</span>
+                <span class="content">
+                  <span class="title">Guardar descubrimiento</span>
+                  <span class="subtitle">Aparecerá en tu mapa con la ubicación.</span>
+                </span>
+                <span class="chevron">›</span>
+              </button>
+            </div>
+            <div class="section-eyebrow" style="margin-top: 0.5rem;">Más sobre esta planta</div>
+            <div class="accordion-section"><span class="icon">🌱</span><span class="label">Qué es</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">💧</span><span class="label">Cómo cuidarla</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">🔍</span><span class="label">Qué le pasa</span><span class="chevron">›</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- State 3 -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Estado 3 · Ya clasificada<small>Las 2 cards colapsan al banner pequeño</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="top-bar"><button class="icon-button">←</button></div>
+            <div class="hero"><img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=600&q=80" alt="Potos"></div>
+            <h1 class="plant-name">Potos dorado</h1>
+            <div class="plant-scientific">Epipremnum aureum</div>
+            <div class="status-banner-a">
+              <span class="icon">🪴</span>
+              <span class="text">Está en tu jardín</span>
+              <button class="change">Cambiar</button>
+            </div>
+            <div class="section-eyebrow" style="margin-top: 0.5rem;">Más sobre esta planta</div>
+            <div class="accordion-section"><span class="icon">🌱</span><span class="label">Qué es</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">💧</span><span class="label">Cómo cuidarla</span><span class="chevron">›</span></div>
+            <div class="accordion-section"><span class="icon">🔍</span><span class="label">Qué le pasa</span><span class="chevron">›</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="variant-caption">
+      <strong>Variante C · Inline morph, sin toast.</strong><br>
+      Tras tap, la card pulsada se transforma en sitio en una card de confirmación verde con "Deshacer" inline. La otra card se atenúa. Tras 5 s sin deshacer, las 2 cards colapsan al banner pequeño "Está en tu jardín · Cambiar".
+      <div class="pros"><span>✓ Sin overlay flotante</span><span>✓ Transformación en sitio</span><span>! Más complejo de animar</span></div>
+    </div>
+  </div>
+
+  <script>
+    function showVariant(letter) {
+      document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+      document.getElementById('variant-' + letter).classList.add('active');
+      document.querySelectorAll('.sketch-toolbar button').forEach(b => b.classList.remove('active'));
+      document.querySelector(`.sketch-toolbar button[data-variant="${letter}"]`).classList.add('active');
+    }
+    document.addEventListener('keydown', (e) => {
+      const map = { '1': 'a', '2': 'b', '3': 'c', 'a': 'a', 'b': 'b', 'c': 'c' };
+      const letter = map[e.key.toLowerCase()];
+      if (letter) showVariant(letter);
+    });
+  </script>
+</body>
+</html>

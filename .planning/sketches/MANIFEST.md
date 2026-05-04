@@ -16,8 +16,9 @@ El design system está implementado en `tailwind.config.ts` + `src/index.css`, y
 | # | Name | Design Question | Winner | Tags |
 |---|------|----------------|--------|------|
 | 001 | result-screen-actions | ¿Cómo se presentan las 2 acciones de clasificación (Mis plantas / Descubrimiento) en la pantalla de resultado? | **A · Pedagógica vertical** — cards apiladas con icono + título + descripción que comunica la consecuencia | phase-02.1, foundations, classification, result-screen |
+| 002 | post-classification-states | ¿Cómo se ve el feedback inmediato + el estado persistente tras tocar una de las 2 acciones? | **C · Inline morph** — la card pulsada se transforma en sitio en una card primary verde con ✓ + Deshacer; sin overlay flotante. Tras 5s colapsa al banner pequeño "Está en tu jardín · Cambiar". | phase-02.1, foundations, classification, post-tap, no-toast, inline-morph |
 
 ## Pending
 
-- **002 · reveal-banner** — ¿Cómo entra el aviso a usuarios existentes en primera apertura post-update sin ser intrusivo?
-- **003 · reclassify-from-detail** — ¿Cómo reaparecen las acciones cuando entras al detalle de una planta vieja con `context = 'unclassified'`?
+- **003 · reveal-banner** — ¿Cómo entra el aviso a usuarios existentes en primera apertura post-update sin ser intrusivo?
+- **004 · reclassify-from-detail** — ¿Cómo reaparecen las acciones cuando entras al detalle de una planta vieja con `context = 'unclassified'`?
