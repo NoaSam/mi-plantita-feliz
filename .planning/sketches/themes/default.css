@@ -1,0 +1,58 @@
+/* Mi Plantita Feliz — design tokens (extracted from src/index.css + tailwind.config.ts) */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Outfit:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Colors — HSL components, used as `hsl(var(--primary))` */
+  --background: 48 50% 98%;        /* warm cream off-white */
+  --foreground: 100 70% 10%;       /* deep dark olive green — text + borders */
+  --card: 48 50% 98%;
+  --card-foreground: 100 70% 10%;
+  --primary: 115 38% 25%;          /* rich olive green — main accent */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 48 30% 92%;         /* muted warm cream */
+  --secondary-foreground: 100 70% 10%;
+  --muted: 48 30% 92%;
+  --muted-foreground: 100 10% 35%;
+  --accent: 16 76% 61%;            /* warm coral — alerts, accents, "discovery" */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 16 76% 61%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 100 70% 10%;
+  --input: 100 70% 10%;
+  --ring: 115 38% 25%;
+
+  /* Shape */
+  --radius: 1rem;                  /* 16px — rounded everything */
+
+  /* Sticker / neo-brutalist soft shadow — flat, hard, dark green offset */
+  --shadow-press: 4px 4px 0px 0px hsl(100 70% 10%);
+  --shadow-press-pressed: 2px 2px 0px 0px hsl(100 70% 10%);
+
+  /* Typography */
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Outfit', sans-serif;
+}
+
+/* Helper utility classes for sketches */
+.bg-background { background-color: hsl(var(--background)); }
+.bg-card { background-color: hsl(var(--card)); }
+.bg-primary { background-color: hsl(var(--primary)); }
+.bg-secondary { background-color: hsl(var(--secondary)); }
+.bg-accent { background-color: hsl(var(--accent)); }
+.bg-muted { background-color: hsl(var(--muted)); }
+
+.text-foreground { color: hsl(var(--foreground)); }
+.text-primary { color: hsl(var(--primary)); }
+.text-primary-foreground { color: hsl(var(--primary-foreground)); }
+.text-accent { color: hsl(var(--accent)); }
+.text-accent-foreground { color: hsl(var(--accent-foreground)); }
+.text-muted-foreground { color: hsl(var(--muted-foreground)); }
+
+.border-foreground { border-color: hsl(var(--foreground)); }
+
+.font-display { font-family: var(--font-display); }
+.font-body { font-family: var(--font-body); }
+
+.shadow-press { box-shadow: var(--shadow-press); }
+.shadow-press-pressed { box-shadow: var(--shadow-press-pressed); }
