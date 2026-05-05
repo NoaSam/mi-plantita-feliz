@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sketch 003 — Reveal + history classification</title>
+  <link href="../themes/default.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-body);
+      font-size: 18px;
+      line-height: 1.6;
+      background: #e9e9e6;
+      color: hsl(var(--foreground));
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Sketch toolbar ─── */
+    .sketch-toolbar {
+      position: sticky; top: 0; z-index: 100;
+      background: hsl(var(--foreground));
+      color: hsl(var(--primary-foreground));
+      padding: 0.75rem 1rem;
+      display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;
+    }
+    .sketch-toolbar .label {
+      font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase;
+      opacity: 0.7; margin-right: 0.5rem;
+    }
+    .sketch-toolbar button {
+      font-family: var(--font-body); font-size: 0.875rem; font-weight: 500;
+      padding: 0.5rem 0.875rem;
+      background: transparent; color: hsl(var(--primary-foreground));
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 0.5rem; cursor: pointer;
+    }
+    .sketch-toolbar button:hover { background: rgba(255,255,255,0.1); }
+    .sketch-toolbar button.active {
+      background: hsl(var(--accent)); border-color: hsl(var(--accent));
+    }
+    .sketch-toolbar .winner-mark {
+      margin-left: auto; font-size: 0.75rem; opacity: 0.6;
+    }
+
+    /* ─── Stage ─── */
+    .phones-stage {
+      display: flex; gap: 1.75rem;
+      justify-content: center; align-items: flex-start;
+      padding: 2rem 1rem; flex-wrap: wrap;
+    }
+    .phone-with-label {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 0.75rem;
+    }
+    .phone-state-label {
+      font-size: 0.75rem; text-transform: uppercase;
+      letter-spacing: 0.1em; font-weight: 600;
+      color: hsl(100 30% 25%); text-align: center;
+    }
+    .phone-state-label small {
+      display: block; font-size: 0.625rem; opacity: 0.65;
+      margin-top: 2px; text-transform: none;
+      letter-spacing: normal; font-weight: 400;
+    }
+
+    /* ─── Phone frame ─── */
+    .phone-frame {
+      width: 340px;
+      background: hsl(var(--background));
+      box-shadow: 0 0 30px rgba(0,0,0,0.1);
+      border-radius: 1.25rem;
+      overflow: hidden;
+      position: relative;
+      min-height: 600px;
+    }
+    .phone-status {
+      height: 28px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1rem; font-size: 0.6875rem; font-weight: 600;
+    }
+    .phone-status .dots { display: flex; gap: 3px; }
+    .phone-status .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: hsl(var(--foreground));
+    }
+
+    .phone-content {
+      padding: 0.5rem 1.25rem 4rem;
+      position: relative;
+    }
+
+    /* ─── Real home structure (matching src/pages/Index.tsx) ─── */
+    .home-hero {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 2rem 0 1.5rem;
+      gap: 1.25rem;
+    }
+    .home-leaf-icon {
+      width: 72px; height: 72px;
+      color: hsl(var(--primary));
+      stroke-width: 1.2;
+    }
+    .home-greeting {
+      font-family: var(--font-display);
+      font-size: 1.5rem; font-weight: 700;
+      line-height: 1.2; text-align: center;
+      letter-spacing: -0.01em;
+    }
+    .home-subtitle {
+      font-size: 0.875rem; line-height: 1.5;
+      color: hsl(var(--muted-foreground));
+      text-align: center;
+    }
+    .home-camera-button {
+      width: 100%;
+      padding: 1.125rem;
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+      font-family: var(--font-display);
+      font-size: 1.0625rem;
+      font-weight: 700;
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-press);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.625rem;
+    }
+    .home-camera-button .icon { font-size: 1.25rem; }
+
+    .home-or {
+      text-align: center;
+      font-size: 0.75rem;
+      color: hsl(var(--muted-foreground));
+      margin: 0.875rem 0 0.75rem;
+      letter-spacing: 0.04em;
+    }
+    .home-secondary-button {
+      width: 100%;
+      padding: 0.875rem;
+      background: transparent;
+      color: hsl(var(--foreground));
+      font-family: var(--font-body);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      cursor: pointer;
+    }
+
+    /* ─── VARIANT A: sticky home section "Sin clasificar" ─── */
+    .unclassified-section {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 2px dashed hsl(var(--foreground) / 0.18);
+    }
+    .unclassified-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 0.875rem;
+    }
+    .unclassified-title {
+      font-family: var(--font-display);
+      font-size: 1rem; font-weight: 700;
+    }
+    .unclassified-title .count {
+      color: hsl(var(--accent));
+      font-weight: 700;
+    }
+    .unclassified-link {
+      font-size: 0.75rem; font-weight: 600;
+      color: hsl(var(--primary));
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      cursor: pointer;
+    }
+    .unclassified-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+    }
+    .thumb {
+      aspect-ratio: 1;
+      border: 2px solid hsl(var(--foreground));
+      border-radius: 0.75rem;
+      overflow: hidden;
+      box-shadow: var(--shadow-press-pressed);
+      background: hsl(var(--muted));
+      position: relative;
+      cursor: pointer;
+    }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .thumb .badge {
+      position: absolute;
+      top: 4px; right: 4px;
+      width: 14px; height: 14px;
+      background: hsl(var(--accent));
+      border: 1.5px solid hsl(var(--foreground));
+      border-radius: 50%;
+    }
+    .unclassified-hint {
+      margin-top: 0.875rem;
+      font-size: 0.75rem;
+      color: hsl(var(--muted-foreground));
+      text-align: center;
+      font-style: italic;
+    }
+
+    /* ─── VARIANT B: top banner + bulk flow ─── */
+    .reveal-banner {
+      background: hsl(var(--secondary));
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-press);
+      padding: 0.875rem 1rem;
+      margin: 0 0 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+      position: relative;
+    }
+    .reveal-banner .top-row {
+      display: flex; align-items: flex-start; gap: 0.625rem;
+    }
+    .reveal-banner .icon {
+      font-size: 1.375rem; line-height: 1; flex-shrink: 0;
+    }
+    .reveal-banner .copy {
+      flex: 1;
+    }
+    .reveal-banner .title {
+      font-family: var(--font-display);
+      font-size: 0.9375rem; font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 0.25rem;
+    }
+    .reveal-banner .body {
+      font-size: 0.8125rem;
+      color: hsl(var(--muted-foreground));
+      line-height: 1.4;
+    }
+    .reveal-banner .body strong {
+      color: hsl(var(--foreground));
+      font-weight: 600;
+    }
+    .reveal-banner .close-x {
+      position: absolute;
+      top: 0.5rem; right: 0.5rem;
+      width: 22px; height: 22px;
+      background: transparent; border: 0;
+      cursor: pointer; opacity: 0.5;
+      font-size: 1rem; line-height: 1;
+    }
+    .reveal-banner .actions {
+      display: flex; gap: 0.5rem;
+    }
+    .reveal-banner .cta-primary {
+      flex: 1;
+      padding: 0.5rem 0.75rem;
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+      border: 2px solid hsl(var(--foreground));
+      border-radius: 0.625rem;
+      font-family: var(--font-body);
+      font-size: 0.8125rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .reveal-banner .cta-secondary {
+      padding: 0.5rem 0.75rem;
+      background: transparent;
+      border: 0;
+      font-family: var(--font-body);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: hsl(var(--muted-foreground));
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    /* ─── Bulk classification flow ─── */
+    .bulk-progress {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 0 1rem;
+      font-size: 0.75rem;
+      color: hsl(var(--muted-foreground));
+    }
+    .bulk-progress .bar {
+      flex: 1;
+      height: 6px;
+      background: hsl(var(--secondary));
+      border: 1.5px solid hsl(var(--foreground));
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bulk-progress .bar-fill {
+      height: 100%;
+      width: 14%;
+      background: hsl(var(--primary));
+    }
+    .bulk-progress .count-text {
+      font-weight: 700;
+      color: hsl(var(--foreground));
+      font-family: var(--font-display);
+      font-size: 0.875rem;
+    }
+    .bulk-skip {
+      width: 100%;
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: transparent;
+      border: 0;
+      color: hsl(var(--muted-foreground));
+      font-family: var(--font-body);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .bulk-hero {
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 2px solid hsl(var(--foreground));
+      aspect-ratio: 4/3;
+      background: hsl(var(--muted));
+      margin-bottom: 0.875rem;
+      box-shadow: var(--shadow-press);
+    }
+    .bulk-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .bulk-name {
+      font-family: var(--font-display);
+      font-size: 1.375rem; font-weight: 700;
+      line-height: 1.1; margin-bottom: 0.125rem;
+    }
+    .bulk-scientific {
+      font-style: italic; font-size: 0.8125rem;
+      color: hsl(var(--muted-foreground));
+      margin-bottom: 1.125rem;
+    }
+    .bulk-eyebrow {
+      font-size: 0.6875rem; text-transform: uppercase;
+      letter-spacing: 0.1em; font-weight: 600;
+      color: hsl(var(--muted-foreground));
+      margin-bottom: 0.5rem; padding-left: 0.125rem;
+    }
+    .bulk-cards {
+      display: flex; flex-direction: column; gap: 0.625rem;
+    }
+    .action-card {
+      width: 100%;
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.875rem 1rem;
+      background: hsl(var(--card));
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-align: left;
+      box-shadow: var(--shadow-press);
+      font-family: inherit; color: inherit;
+    }
+    .action-card .icon { font-size: 1.5rem; flex-shrink: 0; }
+    .action-card .content { flex: 1; }
+    .action-card .title {
+      font-family: var(--font-display);
+      font-size: 0.9375rem; font-weight: 600;
+      margin-bottom: 0.0625rem;
+    }
+    .action-card .subtitle {
+      font-size: 0.6875rem;
+      line-height: 1.3;
+      color: hsl(var(--muted-foreground));
+    }
+    .action-card .chevron { font-size: 0.875rem; opacity: 0.5; }
+
+    /* ─── VARIANT C: welcome modal ─── */
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 4;
+      display: flex;
+      align-items: flex-end;
+    }
+    .modal-sheet {
+      width: 100%;
+      background: hsl(var(--background));
+      border-top: 2px solid hsl(var(--foreground));
+      border-radius: 1.5rem 1.5rem 0 0;
+      padding: 1.5rem 1.5rem 2rem;
+      animation: sheetUp 0.4s ease-out;
+    }
+    @keyframes sheetUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-handle {
+      width: 36px;
+      height: 4px;
+      background: hsl(var(--foreground) / 0.25);
+      border-radius: 999px;
+      margin: 0 auto 1.25rem;
+    }
+    .modal-illustration {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-bottom: 1.25rem;
+    }
+    .modal-illustration .pill {
+      padding: 0.625rem 0.875rem;
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-press-pressed);
+      background: hsl(var(--background));
+      display: flex; align-items: center; gap: 0.5rem;
+      font-family: var(--font-display);
+      font-weight: 600; font-size: 0.875rem;
+    }
+    .modal-illustration .pill .emoji { font-size: 1.25rem; }
+    .modal-illustration .pill.primary {
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+    }
+    .modal-illustration .pill.accent {
+      background: hsl(var(--accent));
+      color: hsl(var(--accent-foreground));
+    }
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 1.375rem; font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+      text-align: center;
+      margin-bottom: 0.625rem;
+    }
+    .modal-body {
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      color: hsl(var(--muted-foreground));
+      text-align: center;
+      margin-bottom: 1.25rem;
+    }
+    .modal-body strong {
+      color: hsl(var(--foreground));
+      font-weight: 600;
+    }
+    .modal-cta {
+      width: 100%;
+      padding: 0.875rem;
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-press);
+      font-family: var(--font-display);
+      font-size: 1rem; font-weight: 700;
+      cursor: pointer;
+    }
+    .modal-detail {
+      margin-top: 0.875rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: hsl(var(--muted-foreground));
+    }
+    .modal-detail strong { color: hsl(var(--foreground)); }
+
+    /* ─── Variant switching ─── */
+    .variant { display: none; }
+    .variant.active { display: block; }
+
+    .variant-caption {
+      max-width: 760px;
+      margin: 0 auto 1.5rem;
+      padding: 1rem 1.5rem;
+      font-size: 0.875rem;
+      color: hsl(100 10% 25%);
+      text-align: center;
+      background: hsl(var(--secondary));
+      border-radius: var(--radius);
+    }
+    .variant-caption strong { color: hsl(var(--foreground)); font-weight: 600; }
+    .variant-caption .pros {
+      display: flex; gap: 1.25rem; justify-content: center;
+      margin-top: 0.5rem; font-size: 0.8125rem; flex-wrap: wrap;
+    }
+    .variant-caption .pros span { white-space: nowrap; }
+
+    @media (max-width: 800px) {
+      .phones-stage { flex-direction: column; align-items: center; }
+    }
+
+    /* ─── VARIANT D additions ─── */
+
+    /* Plant detail (ficha completa) */
+    .detail-hero {
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 2px solid hsl(var(--foreground));
+      aspect-ratio: 4/3;
+      box-shadow: var(--shadow-press);
+      margin-bottom: 0.875rem;
+    }
+    .detail-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .detail-name {
+      font-family: var(--font-display);
+      font-size: 1.375rem; font-weight: 700;
+      line-height: 1.1; margin-bottom: 0.125rem;
+    }
+    .detail-scientific {
+      font-style: italic; font-size: 0.8125rem;
+      color: hsl(var(--muted-foreground));
+      margin-bottom: 1rem;
+    }
+    .detail-eyebrow {
+      font-size: 0.6875rem; text-transform: uppercase;
+      letter-spacing: 0.1em; font-weight: 600;
+      color: hsl(var(--muted-foreground));
+      margin-bottom: 0.5rem; padding-left: 0.125rem;
+    }
+    .detail-cards {
+      display: flex; flex-direction: column;
+      gap: 0.625rem; margin-bottom: 1.25rem;
+    }
+    .detail-info {
+      display: flex; align-items: center; gap: 0.625rem;
+      padding: 0.75rem 1rem;
+      background: hsl(var(--secondary) / 0.5);
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-press);
+      margin-bottom: 0.5rem;
+      opacity: 0.9;
+    }
+    .detail-info .icon { font-size: 1rem; }
+    .detail-info .label {
+      font-family: var(--font-display);
+      font-size: 0.8125rem; font-weight: 600;
+    }
+    .detail-info .chevron { margin-left: auto; opacity: 0.5; font-size: 0.875rem; }
+
+    /* History list */
+    .history-header {
+      display: flex; align-items: center; padding: 0.5rem 0 0.25rem;
+    }
+    .history-header .title {
+      font-family: var(--font-display);
+      font-size: 1.25rem; font-weight: 700;
+      margin-left: 0.625rem;
+    }
+    .history-summary {
+      font-size: 0.75rem;
+      color: hsl(var(--muted-foreground));
+      padding: 0.625rem 0.75rem;
+      background: hsl(var(--secondary));
+      border-radius: 0.625rem;
+      margin: 0.875rem 0;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .history-summary .accent-text {
+      color: hsl(var(--foreground)); font-weight: 700;
+    }
+    .history-list {
+      display: flex; flex-direction: column; gap: 0.625rem;
+    }
+    .history-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.625rem;
+      background: hsl(var(--card));
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-press-pressed);
+      cursor: pointer;
+    }
+    .history-item .thumb {
+      width: 56px; height: 56px;
+      border-radius: 0.625rem;
+      overflow: hidden;
+      border: 1.5px solid hsl(var(--foreground));
+      flex-shrink: 0;
+    }
+    .history-item .thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .history-item .meta { flex: 1; min-width: 0; }
+    .history-item .name {
+      font-family: var(--font-display);
+      font-size: 0.9375rem; font-weight: 600;
+      line-height: 1.15;
+    }
+    .history-item .date {
+      font-size: 0.6875rem;
+      color: hsl(var(--muted-foreground));
+      margin-top: 1px;
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      font-family: var(--font-body);
+      flex-shrink: 0;
+      border: 1.5px solid hsl(var(--foreground));
+    }
+    .chip-unclassified {
+      background: hsl(var(--accent) / 0.18);
+      color: hsl(var(--foreground));
+    }
+    .chip-unclassified::before {
+      content: "•";
+      color: hsl(var(--accent));
+      font-size: 1rem;
+      line-height: 0;
+      margin-top: 2px;
+    }
+    .chip-home {
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+      border-color: hsl(var(--foreground));
+    }
+    .chip-wild {
+      background: hsl(var(--accent));
+      color: hsl(var(--accent-foreground));
+    }
+
+    /* Login wall sheet (small variant of modal-sheet) */
+    .login-wall-modal {
+      border-top: 2px solid hsl(var(--foreground));
+      border-radius: 1.5rem 1.5rem 0 0;
+      padding: 1.5rem;
+      background: hsl(var(--background));
+    }
+    .login-wall-icon {
+      width: 56px; height: 56px;
+      margin: 0 auto 0.875rem;
+      border-radius: 50%;
+      border: 2px solid hsl(var(--foreground));
+      background: hsl(var(--secondary));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.625rem;
+      box-shadow: var(--shadow-press);
+    }
+    .login-wall-title {
+      font-family: var(--font-display);
+      font-size: 1.125rem; font-weight: 700;
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+    .login-wall-body {
+      font-size: 0.875rem;
+      color: hsl(var(--muted-foreground));
+      text-align: center;
+      margin-bottom: 1.125rem;
+      line-height: 1.45;
+    }
+    .login-wall-buttons {
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .login-wall-buttons .btn-primary {
+      padding: 0.75rem;
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-press);
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.9375rem;
+      cursor: pointer;
+    }
+    .login-wall-buttons .btn-secondary {
+      padding: 0.625rem;
+      background: transparent;
+      border: 2px solid hsl(var(--foreground));
+      border-radius: var(--radius);
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .login-wall-buttons .btn-text {
+      padding: 0.5rem;
+      background: transparent;
+      border: 0;
+      font-family: var(--font-body);
+      font-size: 0.8125rem;
+      color: hsl(var(--muted-foreground));
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    /* Anonymous indicator on home (subtle) */
+    .anon-hint {
+      margin-top: 1.5rem;
+      padding: 0.625rem 0.875rem;
+      background: hsl(var(--secondary));
+      border: 1.5px dashed hsl(var(--foreground) / 0.3);
+      border-radius: 0.75rem;
+      font-size: 0.75rem;
+      color: hsl(var(--muted-foreground));
+      text-align: center;
+    }
+    .anon-hint strong { color: hsl(var(--foreground)); }
+  </style>
+</head>
+<body>
+
+  <div class="sketch-toolbar">
+    <span class="label">Sketch 003</span>
+    <button data-variant="a" onclick="showVariant('a')">A · Sección sticky en home</button>
+    <button data-variant="b" onclick="showVariant('b')">B · Banner + bulk flow</button>
+    <button data-variant="c" onclick="showVariant('c')">C · Modal único + lazy</button>
+    <button data-variant="d" class="active" onclick="showVariant('d')">★ D · Síntesis (refined A)</button>
+    <span class="winner-mark" id="winner-mark">winner: D</span>
+  </div>
+
+  <!-- ============================== -->
+  <!-- VARIANT A — Sticky home section -->
+  <!-- ============================== -->
+  <div class="variant variant-a" id="variant-a">
+    <div class="phones-stage">
+
+      <!-- Screen 1: home with section -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Home con sección "Sin clasificar"<small>23 plantas en historial sin contexto</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="home-hero">
+              <svg class="home-leaf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              <h1 class="home-greeting">Hola,<br>¿qué planta quieres ver hoy?</h1>
+              <p class="home-subtitle">Haz una foto y te diremos qué planta es, cómo cuidarla y si le pasa algo.</p>
+            </div>
+            <button class="home-camera-button"><span class="icon">📷</span>Identificar planta</button>
+
+            <div class="unclassified-section">
+              <div class="unclassified-header">
+                <span class="unclassified-title">Sin clasificar <span class="count">(23)</span></span>
+                <span class="unclassified-link">Ver todas ›</span>
+              </div>
+              <div class="unclassified-strip">
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=200&q=70" alt=""><span class="badge"></span></div>
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1525498128493-380d1990a112?w=200&q=70" alt=""><span class="badge"></span></div>
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1591958911259-bee2173bdccc?w=200&q=70" alt=""><span class="badge"></span></div>
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1604762524889-3e2fcc145683?w=200&q=70" alt=""><span class="badge"></span></div>
+              </div>
+              <div class="unclassified-hint">Toca una planta para añadirla a tu jardín o guardarla como descubrimiento.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screen 2: after classifying one, count went down -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Tras clasificar 1<small>El conteo baja, sin interrupciones</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:42</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="home-hero">
+              <svg class="home-leaf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              <h1 class="home-greeting">Hola,<br>¿qué planta quieres ver hoy?</h1>
+              <p class="home-subtitle">Haz una foto y te diremos qué planta es, cómo cuidarla y si le pasa algo.</p>
+            </div>
+            <button class="home-camera-button"><span class="icon">📷</span>Identificar planta</button>
+
+            <div class="unclassified-section">
+              <div class="unclassified-header">
+                <span class="unclassified-title">Sin clasificar <span class="count">(22)</span></span>
+                <span class="unclassified-link">Ver todas ›</span>
+              </div>
+              <div class="unclassified-strip">
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1525498128493-380d1990a112?w=200&q=70" alt=""><span class="badge"></span></div>
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1591958911259-bee2173bdccc?w=200&q=70" alt=""><span class="badge"></span></div>
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1604762524889-3e2fcc145683?w=200&q=70" alt=""><span class="badge"></span></div>
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1620027411089-3e9988bdac8e?w=200&q=70" alt=""><span class="badge"></span></div>
+              </div>
+              <div class="unclassified-hint">Toca una planta para añadirla a tu jardín o guardarla como descubrimiento.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="variant-caption">
+      <strong>Variante A · Sección sticky en home.</strong><br>
+      Sin banner flotante. La home gana una sección "Sin clasificar (N)" con thumbnails. Toca una → vas al detalle de esa planta y clasificas con el patrón del sketch 002C. La sección se queda hasta llegar a 0 (o el usuario la oculta desde Settings — opcional).
+      <div class="pros"><span>✓ Cero interrupción</span><span>✓ Discoverable y persistente</span><span>! Asume que el usuario hace scroll en la home</span></div>
+    </div>
+  </div>
+
+  <!-- ============================== -->
+  <!-- VARIANT B — Banner + bulk flow -->
+  <!-- ============================== -->
+  <div class="variant variant-b" id="variant-b">
+    <div class="phones-stage">
+
+      <!-- Screen 1: home with banner -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Home con banner reveal<small>Aparece una sola vez tras el update</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="reveal-banner">
+              <button class="close-x">×</button>
+              <div class="top-row">
+                <span class="icon">✨</span>
+                <div class="copy">
+                  <div class="title">Novedad: organiza tus plantas</div>
+                  <div class="body">Ahora cada planta puede ir a tu <strong>jardín</strong> 🪴 o a tu <strong>mapa</strong> 📍. Tienes <strong>23 sin clasificar</strong>.</div>
+                </div>
+              </div>
+              <div class="actions">
+                <button class="cta-primary">Empezar</button>
+                <button class="cta-secondary">Más tarde</button>
+              </div>
+            </div>
+
+            <div class="home-hero" style="padding: 1rem 0;">
+              <svg class="home-leaf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              <h1 class="home-greeting" style="font-size: 1.25rem;">Hola,<br>¿qué planta quieres ver hoy?</h1>
+            </div>
+            <button class="home-camera-button"><span class="icon">📷</span>Identificar planta</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screen 2: bulk flow -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Tap "Empezar" → bulk flow<small>Una planta a la vez · saltar / pausar</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div style="display: flex; align-items: center; padding: 0.5rem 0 0.25rem;">
+              <button style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid hsl(var(--foreground)); background: hsl(var(--background)); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; box-shadow: var(--shadow-press);">×</button>
+              <span style="margin-left: auto; font-size: 0.6875rem; color: hsl(var(--muted-foreground)); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;">Organizar plantas</span>
+            </div>
+            <div class="bulk-progress">
+              <span class="count-text">3 / 23</span>
+              <div class="bar"><div class="bar-fill" style="width: 13%;"></div></div>
+            </div>
+
+            <div class="bulk-hero"><img src="https://images.unsplash.com/photo-1591958911259-bee2173bdccc?w=600&q=80" alt=""></div>
+            <h1 class="bulk-name">Cinta</h1>
+            <div class="bulk-scientific">Chlorophytum comosum</div>
+
+            <div class="bulk-eyebrow">¿Dónde la guardas?</div>
+            <div class="bulk-cards">
+              <button class="action-card">
+                <span class="icon">🪴</span>
+                <span class="content">
+                  <span class="title">Añadir a mis plantas</span>
+                  <span class="subtitle">A tu jardín, con frecuencia de riego.</span>
+                </span>
+                <span class="chevron">›</span>
+              </button>
+              <button class="action-card">
+                <span class="icon">📍</span>
+                <span class="content">
+                  <span class="title">Guardar descubrimiento</span>
+                  <span class="subtitle">A tu mapa, con la ubicación.</span>
+                </span>
+                <span class="chevron">›</span>
+              </button>
+            </div>
+
+            <button class="bulk-skip">Saltar esta · Hacerlo más tarde</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="variant-caption">
+      <strong>Variante B · Banner reveal + bulk flow guiado.</strong><br>
+      El banner aparece una vez tras el update. Tap "Empezar" → flow dedicado con progress bar y las 2 cards del sketch 001A para cada planta. "Saltar" salta esta planta, "× cerrar" abandona el flow (puede retomarse desde Settings). El banner también se puede cerrar con la X y se acabó (la sección de variante A NO existe aquí).
+      <div class="pros"><span>✓ Camino claro y guiado</span><span>✓ Una sola vez</span><span>! Más fricción si el usuario solo quería identificar y largarse</span></div>
+    </div>
+  </div>
+
+  <!-- ============================== -->
+  <!-- VARIANT C — Welcome modal once -->
+  <!-- ============================== -->
+  <div class="variant variant-c" id="variant-c">
+    <div class="phones-stage">
+
+      <!-- Screen 1: home with modal overlay -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Modal en primera apertura<small>1 sola vez tras update</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content" style="filter: blur(0.5px);">
+            <div class="home-hero">
+              <svg class="home-leaf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              <h1 class="home-greeting">Hola,<br>¿qué planta quieres ver hoy?</h1>
+              <p class="home-subtitle">Haz una foto y te diremos qué planta es, cómo cuidarla y si le pasa algo.</p>
+            </div>
+            <button class="home-camera-button"><span class="icon">📷</span>Identificar planta</button>
+          </div>
+          <!-- Modal sheet -->
+          <div class="modal-backdrop">
+            <div class="modal-sheet">
+              <div class="modal-handle"></div>
+              <div class="modal-illustration">
+                <div class="pill primary"><span class="emoji">🪴</span> Mi jardín</div>
+                <div class="pill accent"><span class="emoji">📍</span> Descubrimientos</div>
+              </div>
+              <h2 class="modal-title">Ahora puedes organizar tus plantas</h2>
+              <p class="modal-body">Cada planta que identifiques puede ir a tu <strong>jardín</strong> (con su frecuencia de riego) o a tu <strong>mapa</strong> (como descubrimiento). Cuando te apetezca, las clasificas desde cada una.</p>
+              <button class="modal-cta">Entendido</button>
+              <div class="modal-detail">Tienes <strong>23 plantas</strong> en tu historial sin clasificar.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screen 2: home post-modal, clean -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">Tras "Entendido"<small>Home igual que siempre · clasificación lazy</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="home-hero">
+              <svg class="home-leaf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              <h1 class="home-greeting">Hola,<br>¿qué planta quieres ver hoy?</h1>
+              <p class="home-subtitle">Haz una foto y te diremos qué planta es, cómo cuidarla y si le pasa algo.</p>
+            </div>
+            <button class="home-camera-button"><span class="icon">📷</span>Identificar planta</button>
+
+            <div class="home-or">o</div>
+            <button class="home-secondary-button">Ver mi historial</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="variant-caption">
+      <strong>Variante C · Modal único + clasificación lazy.</strong><br>
+      Bottom sheet en la primera apertura post-update. Una sola pantalla con la idea clave y un único CTA. Después: la home queda limpia. Para clasificar, el usuario va al historial y abre cada planta — el detalle muestra las 2 cards (eso será el sketch 004). NO hay banner sticky, NO hay flow guiado, NO hay sección en home.
+      <div class="pros"><span>✓ Más respetuoso del scroll del usuario</span><span>! Riesgo: usuarios que no entran al historial nunca descubren las features</span></div>
+    </div>
+  </div>
+
+  <!-- ============================== -->
+  <!-- VARIANT D — Synthesis (refined A) -->
+  <!-- ============================== -->
+  <div class="variant variant-d active" id="variant-d">
+    <div class="phones-stage">
+
+      <!-- Phone 1: Home logged-in con sección -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">1 · Home logged-in con plantas sin clasificar<small>Sección visible solo cuando count > 0</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="home-hero">
+              <svg class="home-leaf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              <h1 class="home-greeting">Hola,<br>¿qué planta quieres ver hoy?</h1>
+              <p class="home-subtitle">Haz una foto y te diremos qué planta es, cómo cuidarla y si le pasa algo.</p>
+            </div>
+            <button class="home-camera-button"><span class="icon">📷</span>Identificar planta</button>
+
+            <div class="unclassified-section">
+              <div class="unclassified-header">
+                <span class="unclassified-title">Sin clasificar <span class="count">(23)</span></span>
+                <span class="unclassified-link">Ver todas ›</span>
+              </div>
+              <div class="unclassified-strip">
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=200&q=70" alt=""><span class="badge"></span></div>
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1525498128493-380d1990a112?w=200&q=70" alt=""><span class="badge"></span></div>
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1591958911259-bee2173bdccc?w=200&q=70" alt=""><span class="badge"></span></div>
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1604762524889-3e2fcc145683?w=200&q=70" alt=""><span class="badge"></span></div>
+              </div>
+              <div class="unclassified-hint">Toca una planta para añadirla a tu jardín o guardarla como descubrimiento.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phone 2: Home limpia (count=0 OR anonymous) -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">2 · Home limpia<small>count = 0 (todo clasificado) · O usuario anónimo siempre</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="home-hero">
+              <svg class="home-leaf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              <h1 class="home-greeting">Hola,<br>¿qué planta quieres ver hoy?</h1>
+              <p class="home-subtitle">Haz una foto y te diremos qué planta es, cómo cuidarla y si le pasa algo.</p>
+            </div>
+            <button class="home-camera-button"><span class="icon">📷</span>Identificar planta</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phone 3: Plant detail (ficha) — info original + cards -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">3 · Ficha de planta sin clasificar<small>Acciones + info original (Qué es / Cómo cuidarla / Qué le pasa)</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div style="display: flex; align-items: center; padding: 0.5rem 0 1rem;">
+              <button style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid hsl(var(--foreground)); background: hsl(var(--background)); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; box-shadow: var(--shadow-press);">←</button>
+            </div>
+            <div class="detail-hero"><img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=600&q=80" alt=""></div>
+            <h1 class="detail-name">Potos dorado</h1>
+            <div class="detail-scientific">Epipremnum aureum</div>
+
+            <div class="detail-eyebrow">¿Qué hacemos con esta planta?</div>
+            <div class="detail-cards">
+              <button class="action-card">
+                <span class="icon">🪴</span>
+                <span class="content">
+                  <span class="title">Añadir a mis plantas</span>
+                  <span class="subtitle">Aparecerá en tu jardín con su frecuencia de riego.</span>
+                </span>
+                <span class="chevron">›</span>
+              </button>
+              <button class="action-card">
+                <span class="icon">📍</span>
+                <span class="content">
+                  <span class="title">Guardar descubrimiento</span>
+                  <span class="subtitle">Aparecerá en tu mapa con la ubicación.</span>
+                </span>
+                <span class="chevron">›</span>
+              </button>
+            </div>
+
+            <div class="detail-eyebrow" style="margin-top: 0.5rem;">Más sobre esta planta</div>
+            <div class="detail-info"><span class="icon">🌱</span><span class="label">Qué es</span><span class="chevron">›</span></div>
+            <div class="detail-info"><span class="icon">💧</span><span class="label">Cómo cuidarla</span><span class="chevron">›</span></div>
+            <div class="detail-info"><span class="icon">🔍</span><span class="label">Qué le pasa</span><span class="chevron">›</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phone 4: Histórico con chips -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">4 · Historial completo (solo logged-in)<small>Chips por estado · clasificación accesible aquí también</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content">
+            <div class="history-header">
+              <button style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid hsl(var(--foreground)); background: hsl(var(--background)); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; box-shadow: var(--shadow-press);">←</button>
+              <span class="title">Mi historial</span>
+            </div>
+
+            <div class="history-summary">
+              <span>📊</span>
+              <span>De <strong class="accent-text">28 plantas</strong>: <strong class="accent-text">5</strong> en jardín · <strong class="accent-text">0</strong> descubrimientos · <strong class="accent-text">23</strong> sin clasificar</span>
+            </div>
+
+            <div class="history-list">
+              <div class="history-item">
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=200&q=70" alt=""></div>
+                <div class="meta">
+                  <div class="name">Potos dorado</div>
+                  <div class="date">Hace 2 días</div>
+                </div>
+                <span class="chip chip-unclassified">Sin clasificar</span>
+              </div>
+              <div class="history-item">
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1525498128493-380d1990a112?w=200&q=70" alt=""></div>
+                <div class="meta">
+                  <div class="name">Monstera</div>
+                  <div class="date">Hace 4 días</div>
+                </div>
+                <span class="chip chip-home">🪴 Jardín</span>
+              </div>
+              <div class="history-item">
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1591958911259-bee2173bdccc?w=200&q=70" alt=""></div>
+                <div class="meta">
+                  <div class="name">Cinta</div>
+                  <div class="date">Hace 1 semana</div>
+                </div>
+                <span class="chip chip-unclassified">Sin clasificar</span>
+              </div>
+              <div class="history-item">
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1604762524889-3e2fcc145683?w=200&q=70" alt=""></div>
+                <div class="meta">
+                  <div class="name">Lavanda</div>
+                  <div class="date">Hace 1 semana</div>
+                </div>
+                <span class="chip chip-unclassified">Sin clasificar</span>
+              </div>
+              <div class="history-item">
+                <div class="thumb"><img src="https://images.unsplash.com/photo-1620027411089-3e9988bdac8e?w=200&q=70" alt=""></div>
+                <div class="meta">
+                  <div class="name">Sansevieria</div>
+                  <div class="date">Hace 2 semanas</div>
+                </div>
+                <span class="chip chip-home">🪴 Jardín</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phone 5: Login wall (anonymous, post-identification) -->
+      <div class="phone-with-label">
+        <div class="phone-state-label">5 · Anónimo: foto → identificación → tap card → wall<small>Solo desde el resultado de su identificación · No hay historial para anónimos</small></div>
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>
+          <div class="phone-content" style="filter: blur(0.5px);">
+            <div style="display: flex; align-items: center; padding: 0.5rem 0 1rem;">
+              <button style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid hsl(var(--foreground)); background: hsl(var(--background)); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; box-shadow: var(--shadow-press);">←</button>
+            </div>
+            <div class="detail-hero"><img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=600&q=80" alt=""></div>
+            <h1 class="detail-name">Potos dorado</h1>
+            <div class="detail-scientific">Epipremnum aureum</div>
+            <div class="detail-eyebrow">¿Qué hacemos con esta planta?</div>
+            <div class="detail-cards">
+              <button class="action-card">
+                <span class="icon">🪴</span>
+                <span class="content">
+                  <span class="title">Añadir a mis plantas</span>
+                  <span class="subtitle">Aparecerá en tu jardín con su frecuencia de riego.</span>
+                </span>
+                <span class="chevron">›</span>
+              </button>
+            </div>
+          </div>
+          <div class="modal-backdrop">
+            <div class="modal-sheet login-wall-modal">
+              <div class="modal-handle"></div>
+              <div class="login-wall-icon">🔒</div>
+              <h2 class="login-wall-title">Necesitas una cuenta</h2>
+              <p class="login-wall-body">Para guardar esta planta en tu jardín o como descubrimiento, crea una cuenta o inicia sesión. <strong>No perderás esta identificación</strong> — al iniciar sesión, la planta aparecerá ya clasificada en tu historial.</p>
+              <div class="login-wall-buttons">
+                <button class="btn-primary">Crear cuenta</button>
+                <button class="btn-secondary">Iniciar sesión</button>
+                <button class="btn-text">Volver sin guardar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="variant-caption">
+      <strong>Variante D · Síntesis refinada de A.</strong><br>
+      <strong>Logged-in:</strong> sección "Sin clasificar" en home solo cuando count &gt; 0. Ficha conserva la info original (Qué es / Cómo cuidarla / Qué le pasa) y añade las 2 cards arriba cuando está sin clasificar. Clasificación accesible también desde el historial (chips por estado).<br>
+      <strong>Anónimo:</strong> NO tiene historial ni sección en home. Las 2 cards solo aparecen en el resultado de su identificación recién hecha; al tocar una se abre el wall de login/registro. <code>claim_anonymous_searches</code> preserva la identificación al hacer alta y la deja ya clasificada.
+      <div class="pros"><span>✓ Cero ruido cuando no hace falta</span><span>✓ Multi-entrada para logged-in (home + historial + result)</span><span>✓ Anónimo: el wall solo aparece en el momento natural (post-identificación)</span></div>
+    </div>
+  </div>
+
+  <script>
+    function showVariant(letter) {
+      document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+      document.getElementById('variant-' + letter).classList.add('active');
+      document.querySelectorAll('.sketch-toolbar button').forEach(b => b.classList.remove('active'));
+      document.querySelector(`.sketch-toolbar button[data-variant="${letter}"]`).classList.add('active');
+    }
+    document.addEventListener('keydown', (e) => {
+      const map = { '1': 'a', '2': 'b', '3': 'c', 'a': 'a', 'b': 'b', 'c': 'c' };
+      const letter = map[e.key.toLowerCase()];
+      if (letter) showVariant(letter);
+    });
+  </script>
+</body>
+</html>
