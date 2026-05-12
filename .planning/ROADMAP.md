@@ -50,13 +50,25 @@ Plans:
 
 ### Phase 02.1: Foundations: Classification + Result Actions + Reveal (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
-**Requirements**: TBD
+**Goal:** Las identificaciones de plantas se pueden etiquetar como `home` (calendar v0) o `wild` (map v0) desde el resultado, el detalle accedido vía historial y desde la sección "Sin clasificar" en home; los usuarios anónimos ven la opción pero la acción está protegida por un wall de login que preserva su intención y la ejecuta automáticamente tras el alta.
+**Requirements**: SPEC-1..SPEC-10 (locked en `phases/02.1-foundations-classification-result-actions-reveal/02.1-SPEC.md`)
 **Depends on:** Phase 2
-**Plans:** 0 plans
+**Plans:** 7 plans (3 waves)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 02.1 to break down)
+
+**Wave 1 — Data foundation**
+- [ ] 02.1-01: Migración SQL `add context to plant_searches` + supabase db push [BLOCKING] + regenerate types + extend `usePlantHistory` + mount Sonner `<Toaster />`
+
+**Wave 2 — UI primitives + hooks + auth chain** *(blocked on Wave 1)*
+- [ ] 02.1-02: Hooks `useClassifyPlant` + `useUnclassifiedCount` + `usePlantById` + `src/lib/pending-classification.ts` (sessionStorage helper)
+- [ ] 02.1-03: Auth chain — `claimAnonymousSearches` count + `anon_searches_claimed` event + `AuthContext.onAuthStateChange` chains `processPendingClassification` + dispatch `mp:pending-classification-resolved`
+- [ ] 02.1-04: `ClassificationCards` + `ClassificationMorph` + `PersistentClassificationBanner`
+- [ ] 02.1-05: `UnclassifiedSection` + `HistorySummary` + `ContextChip`
+- [ ] 02.1-06: `AnonClassificationWall` (bottom sheet)
+
+**Wave 3 — Integration + tracking sweep** *(blocked on Wave 2 completion)*
+- [ ] 02.1-07: `PlantDetail` page + modify `PlantResultView`/`Index`/`History`/`App` + register `/planta/:id` route + window listener for `mp:pending-classification-resolved` + verify all 10 PostHog events
 
 ### Phase 3: Calendar v0
 **Goal**: Los usuarios ven una lista simple de "Mis plantas" con la frecuencia de riego sugerida por la IA, condicional a haber clasificado al menos una planta como casa
