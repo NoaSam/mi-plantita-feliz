@@ -16,50 +16,52 @@ export function usePlantHistory() {
   const [history, setHistory] = useState<PlantResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  // Single source of truth for the row shape — used by both the initial
+  // useEffect and the public refetch. When the row mapping changes, only
+  // this callback needs updating (D-11).
+  const fetchHistory = useCallback(async () => {
     if (!user) {
       setHistory(readLocalHistory());
       setIsLoading(false);
       return;
     }
 
-    let cancelled = false;
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from("plant_searches")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
-    async function fetchHistory() {
-      const { data, error } = await supabase
-        .from("plant_searches")
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: false });
-
-      if (cancelled) return;
-
-      if (error) {
-        console.error("Error fetching history:", error.message);
-        setHistory([]);
-      } else {
-        setHistory(
-          data.map((row) => ({
-            id: row.id,
-            name: row.name,
-            description: row.description,
-            care: row.care,
-            diagnosis: row.diagnosis,
-            imageUrl: row.image_url,
-            date: row.created_at,
-          })),
-        );
-      }
-
+    if (error) {
+      console.error("Error fetching history:", error.message);
+      setHistory([]);
       setIsLoading(false);
+      return;
     }
 
-    fetchHistory();
-
-    return () => {
-      cancelled = true;
-    };
+    setHistory(
+      data.map((row) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        care: row.care,
+        diagnosis: row.diagnosis,
+        imageUrl: row.image_url,
+        date: row.created_at,
+        context: row.context as 'home' | 'wild' | 'unclassified',
+      })),
+    );
+    setIsLoading(false);
   }, [user]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  // Public refetch — same callback exposed for parent-driven refresh
+  // after classify mutations (D-12: no Supabase realtime; manual refetch).
+  const refetch = fetchHistory;
 
   const deletePlants = useCallback(async (ids: string[]) => {
     if (!user || ids.length === 0) return;
@@ -77,5 +79,5 @@ export function usePlantHistory() {
     setHistory((prev) => prev.filter((p) => !ids.includes(p.id)));
   }, [user]);
 
-  return { history, isLoading, deletePlants };
+  return { history, isLoading, deletePlants, refetch };
 }
