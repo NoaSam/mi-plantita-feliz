@@ -53,12 +53,12 @@ Plans:
 **Goal:** Las identificaciones de plantas se pueden etiquetar como `home` (calendar v0) o `wild` (map v0) desde el resultado, el detalle accedido vía historial y desde la sección "Sin clasificar" en home; los usuarios anónimos ven la opción pero la acción está protegida por un wall de login que preserva su intención y la ejecuta automáticamente tras el alta.
 **Requirements**: SPEC-1..SPEC-10 (locked en `phases/02.1-foundations-classification-result-actions-reveal/02.1-SPEC.md`)
 **Depends on:** Phase 2
-**Plans:** 7 plans (3 waves)
+**Plans:** 1/7 plans executed
 
 Plans:
 
 **Wave 1 — Data foundation**
-- [ ] 02.1-01: Migración SQL `add context to plant_searches` + supabase db push [BLOCKING] + regenerate types + extend `usePlantHistory` + mount Sonner `<Toaster />`
+- [x] 02.1-01: Migración SQL `add context to plant_searches` + supabase db push [BLOCKING] + regenerate types + extend `usePlantHistory` + mount Sonner `<Toaster />`
 
 **Wave 2 — UI primitives + hooks + auth chain** *(blocked on Wave 1)*
 - [ ] 02.1-02: Hooks `useClassifyPlant` + `useUnclassifiedCount` + `usePlantById` + `src/lib/pending-classification.ts` (sessionStorage helper)
@@ -116,7 +116,7 @@ Plans:
 |-------|---------------|--------|-----------|
 | 1. Android Native | 5/5 | Complete | - |
 | 2. Prompt Optimization | 0/? | Not started | - |
-| 02.1. Foundations | 0/? | Not started | - |
+| 02.1. Foundations | 1/7 | In Progress|  |
 | 3. Calendar v0 | 0/? | Not started | - |
 | 03.1. Plant Map v0 | 0/? | Not started | - |
 | 4. Response Time Optimization | 2/2 | Complete | 2004-04-28 |
