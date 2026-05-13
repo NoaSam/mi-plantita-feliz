@@ -3,7 +3,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.miplantitafeliz.app",
+  appId: "app.mijardin.plantas",
   appName: "Mi jardin",
   webDir: "dist",
   android: {
