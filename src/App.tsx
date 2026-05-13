@@ -7,6 +7,7 @@ function ScrollToTop() {
   return null;
 }
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 import AuthProvider from "@/contexts/AuthContext";
 import AppLayout from "@/layouts/AppLayout";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
@@ -22,6 +23,7 @@ import TermsOfService from "./pages/legal/TermsOfService";
 const App = () => (
   <AuthProvider>
     <TooltipProvider>
+      <Toaster richColors closeButton position="top-center" />
       <BrowserRouter>
         <ScrollToTop />
         <Routes>

@@ -14,6 +14,7 @@ export interface PlantResult {
   imageUrl: string;
   date: string;
   model?: string;
+  context?: 'home' | 'wild' | 'unclassified';
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
