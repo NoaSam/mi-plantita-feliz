@@ -10,81 +10,61 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.4"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
-      profiles: {
-        Row: {
-          id: string
-          created_at: string
-        }
-        Insert: {
-          id: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       model_evaluations: {
         Row: {
-          id: string
-          plant_search_id: string
-          model: string
-          raw_name: string | null
-          scientific_name: string | null
-          description: string | null
           care: string | null
-          diagnosis: string | null
-          response_ms: number | null
-          success: boolean
-          error_message: string | null
-          is_winner: boolean
           consensus_group: string | null
+          consensus_match_level: string | null
           created_at: string
+          description: string | null
+          diagnosis: string | null
+          error_message: string | null
+          id: string
+          is_winner: boolean
+          model: string
+          plant_search_id: string
+          raw_name: string | null
+          response_ms: number | null
+          scientific_name: string | null
+          success: boolean
         }
         Insert: {
-          id?: string
-          plant_search_id: string
-          model: string
-          raw_name?: string | null
-          scientific_name?: string | null
-          description?: string | null
           care?: string | null
-          diagnosis?: string | null
-          response_ms?: number | null
-          success?: boolean
-          error_message?: string | null
-          is_winner?: boolean
           consensus_group?: string | null
+          consensus_match_level?: string | null
           created_at?: string
+          description?: string | null
+          diagnosis?: string | null
+          error_message?: string | null
+          id?: string
+          is_winner?: boolean
+          model: string
+          plant_search_id: string
+          raw_name?: string | null
+          response_ms?: number | null
+          scientific_name?: string | null
+          success?: boolean
         }
         Update: {
-          id?: string
-          plant_search_id?: string
-          model?: string
-          raw_name?: string | null
-          scientific_name?: string | null
-          description?: string | null
           care?: string | null
-          diagnosis?: string | null
-          response_ms?: number | null
-          success?: boolean
-          error_message?: string | null
-          is_winner?: boolean
           consensus_group?: string | null
+          consensus_match_level?: string | null
           created_at?: string
+          description?: string | null
+          diagnosis?: string | null
+          error_message?: string | null
+          id?: string
+          is_winner?: boolean
+          model?: string
+          plant_search_id?: string
+          raw_name?: string | null
+          response_ms?: number | null
+          scientific_name?: string | null
+          success?: boolean
         }
         Relationships: [
           {
@@ -93,61 +73,71 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "plant_searches"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       plant_searches: {
         Row: {
-          id: string
-          user_id: string | null
           anonymous_id: string | null
-          name: string
-          description: string
           care: string
-          diagnosis: string
-          image_url: string
+          context: string
           created_at: string
-          model: string | null
+          description: string
+          diagnosis: string
+          id: string
+          image_url: string
           lat: number | null
           lng: number | null
+          model: string | null
+          name: string
+          user_id: string | null
         }
         Insert: {
-          id?: string
-          user_id?: string | null
           anonymous_id?: string | null
-          name: string
-          description: string
           care: string
-          diagnosis: string
-          image_url: string
+          context?: string
           created_at?: string
-          model?: string | null
+          description: string
+          diagnosis: string
+          id?: string
+          image_url: string
           lat?: number | null
           lng?: number | null
+          model?: string | null
+          name: string
+          user_id?: string | null
         }
         Update: {
-          id?: string
-          user_id?: string | null
           anonymous_id?: string | null
-          name?: string
-          description?: string
           care?: string
-          diagnosis?: string
-          image_url?: string
+          context?: string
           created_at?: string
-          model?: string | null
+          description?: string
+          diagnosis?: string
+          id?: string
+          image_url?: string
           lat?: number | null
           lng?: number | null
+          model?: string | null
+          name?: string
+          user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "plant_searches_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
@@ -155,9 +145,7 @@ export type Database = {
     }
     Functions: {
       claim_anonymous_searches: {
-        Args: {
-          p_anonymous_id: string
-        }
+        Args: { p_anonymous_id: string }
         Returns: undefined
       }
     }
