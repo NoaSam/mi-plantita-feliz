@@ -21,17 +21,36 @@ function normalizeError(message: string): string {
   return mapped ?? "Algo ha ido mal. Inténtalo de nuevo.";
 }
 
-export async function claimAnonymousSearches(): Promise<void> {
-  if (!hasAnonymousId()) return;
+export async function claimAnonymousSearches(): Promise<{ count: number }> {
+  if (!hasAnonymousId()) return { count: 0 };
   const anonymousId = getAnonymousId();
+
+  // Count BEFORE the RPC — RPC doesn't return count, and after RPC the rows are
+  // owned by user_id so a count by anonymous_id would return 0.
+  const { count, error: countError } = await supabase
+    .from("plant_searches")
+    .select("*", { count: "exact", head: true })
+    .eq("anonymous_id", anonymousId);
+
+  if (countError) {
+    console.warn("count anonymous searches failed:", countError.message);
+  }
+
   const { error } = await supabase.rpc("claim_anonymous_searches", {
     p_anonymous_id: anonymousId,
   });
   if (error) {
     console.warn("claim_anonymous_searches failed:", error.message);
-    return;
+    return { count: 0 };
   }
+
   clearAnonymousId();
+
+  const claimedCount = count ?? 0;
+  if (claimedCount > 0) {
+    track("anon_searches_claimed", { count: claimedCount });
+  }
+  return { count: claimedCount };
 }
 
 export async function signIn(email: string, password: string) {
