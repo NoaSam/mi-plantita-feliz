@@ -1,6 +1,7 @@
 import { createContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { claimAnonymousSearches } from "@/services/auth.service";
+import { processPendingClassification } from "@/lib/pending-classification";
 import { identifyUser, resetPostHog } from "@/lib/track";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -45,7 +46,20 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       // query (triggered by setUser) sees the claimed rows.
       if (event === "SIGNED_IN" && session?.user) {
         identifyUser(session.user.id, { email: session.user.email });
+        // Order matters: claim transfers rows to the user (sets user_id) BEFORE
+        // the UPDATE of context runs in processPendingClassification (which is
+        // gated by RLS on user_id = auth.uid()). Per D-13.
         await claimAnonymousSearches();
+        const processed = await processPendingClassification();
+        if (processed) {
+          // Notify the app to navigate to the result screen for the just-classified plant.
+          // Listened to in src/App.tsx (Plan 07) via window.addEventListener('mp:pending-classification-resolved', …).
+          window.dispatchEvent(
+            new CustomEvent("mp:pending-classification-resolved", {
+              detail: { plant_search_id: processed.plant_search_id, action: processed.action },
+            }),
+          );
+        }
       }
 
       setSession(session);
