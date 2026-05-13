@@ -6,8 +6,14 @@ import { isAnalyticsAllowed } from "@/hooks/use-consent";
 // ---------------------------------------------------------------------------
 
 const PH_KEY = "phc_p3FGSVLkKb7iQPUb5cyVQ2BCWfs2o488wzdofj4tZDsh";
+// Capacitor serves the WebView from https://localhost on Android, so the
+// hostname check alone would incorrectly flag native builds as dev environment.
+const isCapacitor = !!(
+  window as Window & { Capacitor?: { isNativePlatform?: () => boolean } }
+).Capacitor?.isNativePlatform?.();
 const isLocalhost =
-  location.hostname === "localhost" || location.hostname === "127.0.0.1";
+  !isCapacitor &&
+  (location.hostname === "localhost" || location.hostname === "127.0.0.1");
 
 // ---------------------------------------------------------------------------
 // State
