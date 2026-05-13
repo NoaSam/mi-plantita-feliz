@@ -114,6 +114,8 @@ export function usePlantIdentifier() {
         plant_name: data.name,
         logged_in: loggedIn,
         winning_model: data.model,
+        models: data.models,
+        consensus_reached: data.consensus_reached,
         has_location: !!coords,
       });
 

@@ -404,8 +404,8 @@ Deno.serve(async (req) => {
     }
 
     // STEP 5: Analytics — insert model_evaluations (fire-and-forget)
+    const consensusGroups = computeConsensus(allResults);
     if (searchRow && allResults.length > 0) {
-      const consensusGroups = computeConsensus(allResults);
       const evaluationRows = allResults.map((r) => {
         const consensus = r.success ? (consensusGroups.get(r.model) ?? null) : null;
         return {
@@ -435,15 +435,31 @@ Deno.serve(async (req) => {
     }
 
     // STEP 6: Return JSON
+    const modelsSummary = allResults.map((r) => {
+      const consensus = r.success ? (consensusGroups.get(r.model) ?? null) : null;
+      return {
+        model: r.model,
+        success: r.success,
+        scientific_name: r.scientificName,
+        response_ms: r.responseMs,
+        is_winner: r.model === winner.model,
+        consensus_verdict: consensus?.verdict ?? null,
+      };
+    });
+    const consensusReached =
+      consensusGroups.get(winner.model)?.verdict === "correct";
+
     return new Response(
       JSON.stringify({
-        name:            winner.plantInfo!.name,
-        description:     winner.plantInfo!.description,
-        care:            winner.plantInfo!.care,
-        diagnosis:       winner.plantInfo!.diagnosis,
-        model:           winner.model,
-        plant_search_id: searchRow?.id ?? null,
-        created_at:      searchRow?.created_at ?? null,
+        name:              winner.plantInfo!.name,
+        description:       winner.plantInfo!.description,
+        care:              winner.plantInfo!.care,
+        diagnosis:         winner.plantInfo!.diagnosis,
+        model:             winner.model,
+        plant_search_id:   searchRow?.id ?? null,
+        created_at:        searchRow?.created_at ?? null,
+        models:            modelsSummary,
+        consensus_reached: consensusReached,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
