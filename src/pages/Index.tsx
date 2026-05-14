@@ -2,11 +2,14 @@ import { Leaf } from "lucide-react";
 import PhotoCapture from "@/components/PhotoCapture";
 import LoadingScreen from "@/components/LoadingScreen";
 import PlantResultView from "@/components/PlantResultView";
+import UnclassifiedSection from "@/components/UnclassifiedSection";
 import { usePlantIdentifier } from "@/hooks/use-plant-identifier";
+import { useAuth } from "@/hooks/use-auth";
 import { track } from "@/lib/track";
 
 export default function Index() {
   const { identify, isLoading, result, error, setResult } = usePlantIdentifier();
+  const { user } = useAuth();
 
   const handleReset = () => {
     track("search_completed");
@@ -24,7 +27,7 @@ export default function Index() {
   if (result) {
     return (
       <div className="px-6 py-8">
-        <PlantResultView result={result} onReset={handleReset} />
+        <PlantResultView plant={result} onReset={handleReset} />
       </div>
     );
   }
@@ -48,6 +51,8 @@ export default function Index() {
       <div className="w-full">
         <PhotoCapture onCapture={(file, coords) => identify(file, coords)} isLoading={isLoading} />
       </div>
+
+      {user && <UnclassifiedSection />}
     </div>
   );
 }
