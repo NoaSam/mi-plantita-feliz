@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Leaf, Search, Trash2 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +15,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { usePlantHistory } from "@/hooks/use-plant-history";
 import { track } from "@/lib/track";
 import RequireAuth from "@/components/auth/RequireAuth";
+import HistorySummary from "@/components/HistorySummary";
+import ContextChip from "@/components/ContextChip";
 import type { PlantResult } from "@/hooks/use-plant-identifier";
 
 const MONTHS = [
@@ -30,21 +32,44 @@ function getHealthPreview(diagnosis: string): string {
 }
 
 export default function HistoryPage() {
-  const { history, isLoading, deletePlants } = usePlantHistory();
+  const { history, isLoading, deletePlants, refetch } = usePlantHistory();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const contextParam = searchParams.get("context");
   const [search, setSearch] = useState("");
   const [monthFilter, setMonthFilter] = useState(0);
-  const [expanded, setExpanded] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // Refetch on mount + on every navigation back to /mis-plantas (D-12).
+  useEffect(() => {
+    refetch();
+  }, [location.pathname, refetch]);
+
+  // Refetch when an anon→auth flow auto-classifies a plant elsewhere.
+  useEffect(() => {
+    const handler = () => refetch();
+    window.addEventListener("mp:pending-classification-resolved", handler);
+    return () => window.removeEventListener("mp:pending-classification-resolved", handler);
+  }, [refetch]);
 
   const filtered = useMemo(() => {
     return history.filter((item: PlantResult) => {
       const matchesSearch = !search || item.name.toLowerCase().includes(search.toLowerCase());
       const matchesMonth = monthFilter === 0 || new Date(item.date).getMonth() + 1 === monthFilter;
-      return matchesSearch && matchesMonth;
+      const matchesContext = contextParam !== "unclassified" || item.context === "unclassified";
+      return matchesSearch && matchesMonth && matchesContext;
     });
-  }, [history, search, monthFilter]);
+  }, [history, search, monthFilter, contextParam]);
+
+  const counts = useMemo(() => ({
+    totalCount: history.length,
+    homeCount: history.filter((p) => p.context === "home").length,
+    wildCount: history.filter((p) => p.context === "wild").length,
+    unclassifiedCount: history.filter((p) => p.context === "unclassified" || !p.context).length,
+  }), [history]);
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -110,6 +135,16 @@ export default function HistoryPage() {
           ))}
         </select>
 
+        {/* Summary strip */}
+        {!isLoading && history.length > 0 && (
+          <HistorySummary
+            totalCount={counts.totalCount}
+            homeCount={counts.homeCount}
+            wildCount={counts.wildCount}
+            unclassifiedCount={counts.unclassifiedCount}
+          />
+        )}
+
         {/* List */}
         {isLoading ? (
           <div className="flex justify-center py-12">
@@ -121,7 +156,7 @@ export default function HistoryPage() {
           </p>
         ) : (
           <div className="flex flex-col gap-4">
-            {filtered.map((item: PlantResult) => (
+            {filtered.map((item: PlantResult, index: number) => (
               <motion.div
                 key={item.id}
                 layout
@@ -135,7 +170,9 @@ export default function HistoryPage() {
                     if (editMode) {
                       toggleSelect(item.id);
                     } else {
-                      setExpanded(expanded === item.id ? null : item.id);
+                      // Contract per docs/posthog-events.md § Phase 02.1: { context, position }
+                      track("history_item_clicked", { context: item.context, position: index });
+                      navigate(`/planta/${item.id}`);
                     }
                   }}
                 >
@@ -171,34 +208,12 @@ export default function HistoryPage() {
                       })}
                     </p>
                   </div>
-                </div>
 
-                {/* Expanded detail */}
-                {!editMode && expanded === item.id && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="border-t-2 border-foreground p-4 space-y-4"
-                  >
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-full rounded-xl border-2 border-foreground"
-                    />
-                    <div>
-                      <h3 className="font-display text-lg font-semibold mb-1">🌱 Qué es</h3>
-                      <div className="prose prose-sm max-w-none"><ReactMarkdown>{item.description}</ReactMarkdown></div>
-                    </div>
-                    <div>
-                      <h3 className="font-display text-lg font-semibold mb-1">💧 Cuidados</h3>
-                      <div className="prose prose-sm max-w-none"><ReactMarkdown>{item.care}</ReactMarkdown></div>
-                    </div>
-                    <div>
-                      <h3 className="font-display text-lg font-semibold mb-1">🔍 Diagnóstico</h3>
-                      <div className="prose prose-sm max-w-none"><ReactMarkdown>{item.diagnosis}</ReactMarkdown></div>
-                    </div>
-                  </motion.div>
-                )}
+                  {/* Context chip */}
+                  {!editMode && (
+                    <ContextChip context={item.context ?? "unclassified"} />
+                  )}
+                </div>
               </motion.div>
             ))}
           </div>
