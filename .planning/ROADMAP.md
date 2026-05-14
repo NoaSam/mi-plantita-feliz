@@ -53,7 +53,7 @@ Plans:
 **Goal:** Las identificaciones de plantas se pueden etiquetar como `home` (calendar v0) o `wild` (map v0) desde el resultado, el detalle accedido vía historial y desde la sección "Sin clasificar" en home; los usuarios anónimos ven la opción pero la acción está protegida por un wall de login que preserva su intención y la ejecuta automáticamente tras el alta.
 **Requirements**: SPEC-1..SPEC-10 (locked en `phases/02.1-foundations-classification-result-actions-reveal/02.1-SPEC.md`)
 **Depends on:** Phase 2
-**Plans:** 2/7 plans executed
+**Plans:** 6/7 plans executed
 
 Plans:
 
@@ -62,10 +62,10 @@ Plans:
 
 **Wave 2 — UI primitives + hooks + auth chain** *(blocked on Wave 1)*
 - [x] 02.1-02: Hooks `useClassifyPlant` + `useUnclassifiedCount` + `usePlantById` + `src/lib/pending-classification.ts` (sessionStorage helper)
-- [ ] 02.1-03: Auth chain — `claimAnonymousSearches` count + `anon_searches_claimed` event + `AuthContext.onAuthStateChange` chains `processPendingClassification` + dispatch `mp:pending-classification-resolved`
-- [ ] 02.1-04: `ClassificationCards` + `ClassificationMorph` + `PersistentClassificationBanner`
-- [ ] 02.1-05: `UnclassifiedSection` + `HistorySummary` + `ContextChip`
-- [ ] 02.1-06: `AnonClassificationWall` (bottom sheet)
+- [x] 02.1-03: Auth chain — `claimAnonymousSearches` count + `anon_searches_claimed` event + `AuthContext.onAuthStateChange` chains `processPendingClassification` + dispatch `mp:pending-classification-resolved`
+- [x] 02.1-04: `ClassificationCards` + `ClassificationMorph` + `PersistentClassificationBanner`
+- [x] 02.1-05: `UnclassifiedSection` + `HistorySummary` + `ContextChip`
+- [x] 02.1-06: `AnonClassificationWall` (bottom sheet)
 
 **Wave 3 — Integration + tracking sweep** *(blocked on Wave 2 completion)*
 - [ ] 02.1-07: `PlantDetail` page + modify `PlantResultView`/`Index`/`History`/`App` + register `/planta/:id` route + window listener for `mp:pending-classification-resolved` + verify all 10 PostHog events
@@ -116,7 +116,7 @@ Plans:
 |-------|---------------|--------|-----------|
 | 1. Android Native | 5/5 | Complete | - |
 | 2. Prompt Optimization | 0/? | Not started | - |
-| 02.1. Foundations | 2/7 | In Progress|  |
+| 02.1. Foundations | 6/7 | In Progress|  |
 | 3. Calendar v0 | 0/? | Not started | - |
 | 03.1. Plant Map v0 | 0/? | Not started | - |
 | 4. Response Time Optimization | 2/2 | Complete | 2004-04-28 |
