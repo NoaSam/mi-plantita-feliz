@@ -11,7 +11,7 @@
 
 - [x] **Phase 1: Android Native** — Empaquetar la app con Capacitor y generar APK funcional para Android
 - [ ] **Phase 2: Prompt Optimization** — Mejorar precision de IA y devolver watering_interval_days estructurado
-- [ ] **Phase 02.1: Foundations: Classification + Result Actions + Reveal** — 3 acciones en result screen, columna context en DB, banner para usuarios existentes
+- [x] **Phase 02.1: Foundations: Classification + Result Actions + Reveal** — 3 acciones en result screen, columna context en DB, banner para usuarios existentes (completed 2026-05-14)
 - [ ] **Phase 3: Calendar v0** — Lista minima de "Mis plantas" con frecuencia de riego sugerida, condicional al modo casa
 - [ ] **Phase 03.1: Plant Map v0** — Mapa con pins de descubrimientos geolocalizados, condicional al modo explorador
 - [x] **Phase 4: Response Time Optimization** — Reducir latencia percibida del analisis de plantas
@@ -53,7 +53,7 @@ Plans:
 **Goal:** Las identificaciones de plantas se pueden etiquetar como `home` (calendar v0) o `wild` (map v0) desde el resultado, el detalle accedido vía historial y desde la sección "Sin clasificar" en home; los usuarios anónimos ven la opción pero la acción está protegida por un wall de login que preserva su intención y la ejecuta automáticamente tras el alta.
 **Requirements**: SPEC-1..SPEC-10 (locked en `phases/02.1-foundations-classification-result-actions-reveal/02.1-SPEC.md`)
 **Depends on:** Phase 2
-**Plans:** 6/7 plans executed
+**Plans:** 7/7 plans complete
 
 Plans:
 
@@ -68,7 +68,7 @@ Plans:
 - [x] 02.1-06: `AnonClassificationWall` (bottom sheet)
 
 **Wave 3 — Integration + tracking sweep** *(blocked on Wave 2 completion)*
-- [ ] 02.1-07: `PlantDetail` page + modify `PlantResultView`/`Index`/`History`/`App` + register `/planta/:id` route + window listener for `mp:pending-classification-resolved` + verify all 10 PostHog events
+- [x] 02.1-07: `PlantDetail` page + modify `PlantResultView`/`Index`/`History`/`App` + register `/planta/:id` route + window listener for `mp:pending-classification-resolved` + verify all 10 PostHog events
 
 ### Phase 3: Calendar v0
 **Goal**: Los usuarios ven una lista simple de "Mis plantas" con la frecuencia de riego sugerida por la IA, condicional a haber clasificado al menos una planta como casa
@@ -116,7 +116,7 @@ Plans:
 |-------|---------------|--------|-----------|
 | 1. Android Native | 5/5 | Complete | - |
 | 2. Prompt Optimization | 0/? | Not started | - |
-| 02.1. Foundations | 6/7 | In Progress|  |
+| 02.1. Foundations | 7/7 | Complete   | 2026-05-14 |
 | 3. Calendar v0 | 0/? | Not started | - |
 | 03.1. Plant Map v0 | 0/? | Not started | - |
 | 4. Response Time Optimization | 2/2 | Complete | 2004-04-28 |
