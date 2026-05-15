@@ -59,7 +59,7 @@ export function usePlantIdentifier() {
         throw new Error("La imagen no puede superar los 10 MB");
       }
 
-      console.log("[identify] step 2: compress image (Web Worker)");
+      if (import.meta.env.DEV) console.log("[identify] step 2: compress image (Web Worker)");
       const compressedBlob = await imageCompression(imageFile, {
         maxSizeMB: 0.3,
         maxWidthOrHeight: 800,
@@ -68,7 +68,7 @@ export function usePlantIdentifier() {
       });
       const compressed = await fileToBase64(compressedBlob);
 
-      console.log("[identify] step 3: getSession");
+      if (import.meta.env.DEV) console.log("[identify] step 3: getSession");
       const { data: { session } } = await supabase.auth.getSession();
       const loggedIn = !!session?.user;
 
@@ -80,7 +80,7 @@ export function usePlantIdentifier() {
         ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
       };
 
-      console.log("[identify] step 4: fetch edge function");
+      if (import.meta.env.DEV) console.log("[identify] step 4: fetch edge function");
       const response = await fetch(EDGE_URL, {
         method: "POST",
         headers: {
@@ -98,7 +98,7 @@ export function usePlantIdentifier() {
         throw new Error(data?.error || `HTTP ${response.status}`);
       }
 
-      console.log("[identify] step 5: setResult");
+      if (import.meta.env.DEV) console.log("[identify] step 5: setResult");
       const plantResult: PlantResult = {
         id: data.plant_search_id ?? "",
         name: data.name,
@@ -136,7 +136,7 @@ export function usePlantIdentifier() {
       setError(msg);
       track("plant_identification_failed", { error: msg });
     } finally {
-      console.log("[identify] finally: setIsLoading(false)");
+      if (import.meta.env.DEV) console.log("[identify] finally: setIsLoading(false)");
       setIsLoading(false);
     }
   }, []);
