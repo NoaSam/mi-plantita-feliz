@@ -54,13 +54,7 @@ export default function ClassificationCards({
   };
 
   return (
-    <section aria-labelledby="classification-eyebrow" className="flex flex-col gap-3">
-      <p
-        id="classification-eyebrow"
-        className="font-body text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1"
-      >
-        ¿Qué hacemos con esta planta?
-      </p>
+    <div className="flex flex-col gap-3">
       {CARDS.map((card) => {
         const isDisabled = pendingAction !== null && pendingAction !== card.action;
         return (
@@ -94,6 +88,6 @@ export default function ClassificationCards({
           </motion.button>
         );
       })}
-    </section>
+    </div>
   );
 }
