@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RotateCcw } from "lucide-react";
 import { toast } from "sonner";
@@ -78,25 +78,32 @@ export default function PlantResultView({ plant, onReset }: PlantResultViewProps
     ? "¿Qué hacemos con esta planta?"
     : "Más sobre esta planta";
 
-  const handleClassify = async (action: "home" | "wild") => {
-    if (!user) {
-      // Anonymous: open wall, do NOT touch DB
-      setIntendedAction(action);
-      setWallOpen(true);
-      return;
-    }
-    // Authenticated: optimistic immediate UPDATE
-    setPendingAction(action);
-    const { ok } = await classify(plant.id, action);
-    if (!ok) {
-      toast.error("No se pudo guardar. Reintenta.");
-      setPendingAction(null);
-      return;
-    }
-    setPhase("morph");
-  };
+  // Stable callbacks via useCallback so ClassificationMorph's useEffect doesn't
+  // restart its 5s undo timer on every parent re-render (the effect's deps
+  // include onCommit/onUndo). Without this, the timer never settles → phase
+  // never advances to "banner" and the eyebrow stays on "¿Qué hacemos…?".
+  const handleClassify = useCallback(
+    async (action: "home" | "wild") => {
+      if (!user) {
+        // Anonymous: open wall, do NOT touch DB
+        setIntendedAction(action);
+        setWallOpen(true);
+        return;
+      }
+      // Authenticated: optimistic immediate UPDATE
+      setPendingAction(action);
+      const { ok } = await classify(plant.id, action);
+      if (!ok) {
+        toast.error("No se pudo guardar. Reintenta.");
+        setPendingAction(null);
+        return;
+      }
+      setPhase("morph");
+    },
+    [user, classify, plant.id],
+  );
 
-  const handleUndo = async () => {
+  const handleUndo = useCallback(async () => {
     if (!pendingAction) return;
     const { ok } = await revert(plant.id);
     if (!ok) {
@@ -111,19 +118,19 @@ export default function PlantResultView({ plant, onReset }: PlantResultViewProps
     }
     setPendingAction(null);
     setPhase("cards");
-  };
+  }, [pendingAction, revert, plant.id]);
 
-  const handleCommit = () => {
+  const handleCommit = useCallback(() => {
     if (!pendingAction) return;
     setCommittedContext(pendingAction);
     setPendingAction(null);
     setPhase("banner");
-  };
+  }, [pendingAction]);
 
-  const handleChange = () => {
+  const handleChange = useCallback(() => {
     // Per D-08, do NOT touch DB here — just re-mount cards. Next tap drives the UPDATE.
     setPhase("cards");
-  };
+  }, []);
 
   const handleSectionClick = (value: string, label: string) => {
     track("result_section_click", { section: value, section_label: label, plant_name: plant.name });
