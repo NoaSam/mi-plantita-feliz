@@ -25,6 +25,11 @@ export async function claimAnonymousSearches(): Promise<{ count: number }> {
   if (!hasAnonymousId()) return { count: 0 };
   const anonymousId = getAnonymousId();
 
+  // CR-04 defense: refuse to RPC with an empty/falsy anonymous_id. Belt + suspenders
+  // against an attacker clearing localStorage between the hasAnonymousId() check and
+  // the read above.
+  if (!anonymousId) return { count: 0 };
+
   // Count BEFORE the RPC — RPC doesn't return count, and after RPC the rows are
   // owned by user_id so a count by anonymous_id would return 0.
   const { count, error: countError } = await supabase
