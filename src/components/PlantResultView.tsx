@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RotateCcw } from "lucide-react";
 import { toast } from "sonner";
@@ -51,6 +51,21 @@ export default function PlantResultView({ plant, onReset }: PlantResultViewProps
   const [wallOpen, setWallOpen] = useState(false);
   const [intendedAction, setIntendedAction] = useState<"home" | "wild" | null>(null);
 
+  // Resync derived state when plant.id changes (CR-02).
+  // React Router reuses a parameterized route's component instance, so the
+  // useState lazy initializers don't re-run when navigating between two
+  // /planta/:id routes. Without this effect, the previous plant's
+  // phase/pendingAction/committedContext would leak into the new render.
+  useEffect(() => {
+    setPhase(derivePhase(plant.context));
+    setPendingAction(null);
+    setCommittedContext(
+      plant.context === "home" || plant.context === "wild" ? plant.context : null,
+    );
+    setWallOpen(false);
+    setIntendedAction(null);
+  }, [plant.id, plant.context]);
+
   const contentMap: Record<string, string> = {
     description: plant.description,
     care: plant.care,
@@ -85,7 +100,13 @@ export default function PlantResultView({ plant, onReset }: PlantResultViewProps
     if (!pendingAction) return;
     const { ok } = await revert(plant.id);
     if (!ok) {
-      toast.error("No se pudo guardar. Reintenta.");
+      // CR-03: the original UPDATE succeeded — DB row is still classified.
+      // Promote to committed banner so the UI matches the DB instead of stranding
+      // the user in the green pill with no recovery path.
+      toast.error("No se pudo deshacer. La planta sigue en tu jardín.");
+      setCommittedContext(pendingAction);
+      setPendingAction(null);
+      setPhase("banner");
       return;
     }
     setPendingAction(null);
