@@ -72,12 +72,6 @@ export default function PlantResultView({ plant, onReset }: PlantResultViewProps
     diagnosis: plant.diagnosis,
   };
 
-  // Eyebrow + sub-render derived from the SAME phase in one expression (FLAG #5 resolved):
-  const showsCardsOrMorph = phase === "cards" || phase === "morph";
-  const eyebrow = showsCardsOrMorph
-    ? "¿Qué hacemos con esta planta?"
-    : "Más sobre esta planta";
-
   // Stable callbacks via useCallback so ClassificationMorph's useEffect doesn't
   // restart its 5s undo timer on every parent re-render (the effect's deps
   // include onCommit/onUndo). Without this, the timer never settles → phase
@@ -157,11 +151,11 @@ export default function PlantResultView({ plant, onReset }: PlantResultViewProps
         {plant.name}
       </h1>
 
-      {/* Classification section — eyebrow + body atomic per phase */}
+      {/* Classification section — always labeled, cards/morph/banner inside */}
       <section aria-labelledby="classification-eyebrow" className="flex flex-col gap-4">
-        <p id="classification-eyebrow" className="font-display text-base text-muted-foreground">
-          {eyebrow}
-        </p>
+        <h2 id="classification-eyebrow" className="font-display text-base text-muted-foreground">
+          ¿Qué hacemos con esta planta?
+        </h2>
         <AnimatePresence mode="wait">
           {phase === "cards" && (
             <ClassificationCards
@@ -205,12 +199,16 @@ export default function PlantResultView({ plant, onReset }: PlantResultViewProps
         />
       )}
 
-      {/* Accordion sections — UNCHANGED, renders always */}
-      <Accordion
-        type="multiple"
-        defaultValue={["diagnosis"]}
-        className="flex flex-col gap-4"
-      >
+      {/* Info section — always rendered below the classification section */}
+      <section aria-labelledby="plant-info-eyebrow" className="flex flex-col gap-4">
+        <h2 id="plant-info-eyebrow" className="font-display text-base text-muted-foreground">
+          Más sobre esta planta
+        </h2>
+        <Accordion
+          type="multiple"
+          defaultValue={["diagnosis"]}
+          className="flex flex-col gap-4"
+        >
         {sections.map(({ value, emoji, label }) => (
           <AccordionItem
             key={value}
@@ -233,7 +231,8 @@ export default function PlantResultView({ plant, onReset }: PlantResultViewProps
             </AccordionContent>
           </AccordionItem>
         ))}
-      </Accordion>
+        </Accordion>
+      </section>
 
       {/* Reset button — only when onReset is provided (post-identification flow) */}
       {onReset && (
