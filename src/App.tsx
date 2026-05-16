@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import History from "./pages/History";
 import PlantDetail from "./pages/PlantDetail";
 import SettingsPage from "./pages/Settings";
+import MapPage from "./pages/MapPage";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 import CookiePolicy from "./pages/legal/CookiePolicy";
@@ -54,6 +55,7 @@ const App = () => (
           <Route path="/mis-plantas" element={<AppLayout><History /></AppLayout>} />
           <Route path="/planta/:id" element={<AppLayout><PlantDetail /></AppLayout>} />
           <Route path="/ajustes" element={<AppLayout><SettingsPage /></AppLayout>} />
+          <Route path="/mapa" element={<AppLayout fullBleed><MapPage /></AppLayout>} />
           <Route path="/login" element={<Navigate to="/mis-plantas" replace />} />
           <Route path="/signup" element={<Navigate to="/mis-plantas" replace />} />
           {/* Legal pages — accessible without login */}
