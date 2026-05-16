@@ -10,6 +10,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { track } from "@/lib/track";
 import type { WildPlantWithCoords } from "@/hooks/use-wild-plants-with-coords";
 
 export interface PlantMapSheetProps {
@@ -65,6 +66,10 @@ export function PlantMapSheet({ plant, onClose }: PlantMapSheetProps) {
 
   const handleViewDetail = () => {
     if (!plant) return;
+    track("map_navigated_to_detail", {
+      plant_search_id: plant.id,
+      from: "pin_sheet",
+    });
     navigate(`/planta/${plant.id}`);
   };
 
