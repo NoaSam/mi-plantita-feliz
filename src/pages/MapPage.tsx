@@ -85,7 +85,7 @@ export default function MapPage() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
         />
-        {plants.map((plant) => (
+        {plants.map((plant, index) => (
           <Marker
             key={plant.id}
             position={[plant.lat, plant.lng]}
@@ -93,6 +93,11 @@ export default function MapPage() {
             title={plant.name}
             eventHandlers={{
               click: () => {
+                track("map_pin_tapped", {
+                  plant_search_id: plant.id,
+                  pin_index_among_total: index,
+                  total_pins: plants.length,
+                });
                 setSelectedPin(plant);
               },
             }}
