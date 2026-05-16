@@ -88,7 +88,7 @@ Plans:
 **Goal:** Los usuarios con ≥1 planta clasificada como `wild` que tenga `lat/lng` no nulos pueden ver esas plantas como pins en un mapa accesible desde una pestaña condicional en `BottomTabBar`, y tocar un pin abre un preview con CTA al detalle completo de la planta.
 **Requirements**: SPEC-R1..SPEC-R8 + SPEC-AC1..SPEC-AC12 (locked en `phases/03.1-plant-map-v0/03.1-SPEC.md`); contrato adicional UI-SPEC.md + 17 decisiones D-01..D-17 en CONTEXT.md
 **Depends on:** Phase 3
-**Plans:** 3/8 plans executed
+**Plans:** 5/8 plans executed
 
 Plans:
 
@@ -98,8 +98,8 @@ Plans:
 - [x] 03.1-03-PLAN.md — Hook `useWildPlantsWithCoords` (filtro WHERE context=wild + lat/lng NOT NULL) + test unit (SPEC-R3, R8, AC5, AC10)
 
 **Wave 2 — Integration (depends on Wave 1)**
-- [ ] 03.1-04-PLAN.md — Refactor `BottomTabBar` tabs computadas (useMemo + useContextCounts); dispatch `mp:pending-classification-resolved` en `useClassifyPlant` (SPEC-R1, AC1, AC2, AC3)
-- [ ] 03.1-05-PLAN.md — Factory `buildPlantPinIcon` + `FitBoundsOnMount` + `MapPage` shell + AppLayout `fullBleed` prop + route `/mapa` (SPEC-R2, R4, R5, AC4, AC5, AC6, AC11, AC12)
+- [x] 03.1-04-PLAN.md — Refactor `BottomTabBar` tabs computadas (useMemo + useContextCounts); dispatch `mp:pending-classification-resolved` en `useClassifyPlant` (SPEC-R1, AC1, AC2, AC3)
+- [x] 03.1-05-PLAN.md — Factory `buildPlantPinIcon` + `FitBoundsOnMount` + `MapPage` shell + AppLayout `fullBleed` prop + route `/mapa` (SPEC-R2, R4, R5, AC4, AC5, AC6, AC11, AC12)
 
 **Wave 3 — Sheet interaction (depends on Wave 2)**
 - [ ] 03.1-06-PLAN.md — `PlantMapSheet` (bottom sheet preview) + mount en MapPage (SPEC-R6, R7, AC7, AC8)
@@ -135,7 +135,7 @@ Plans:
 | 2. Prompt Optimization | 0/? | Not started | - |
 | 02.1. Foundations | 7/7 | Complete    | 2026-05-15 |
 | 3. Calendar v0 | 0/? | Not started | - |
-| 03.1. Plant Map v0 | 3/8 | In Progress|  |
+| 03.1. Plant Map v0 | 5/8 | In Progress|  |
 | 4. Response Time Optimization | 2/2 | Complete | 2004-04-28 |
 
 ---
