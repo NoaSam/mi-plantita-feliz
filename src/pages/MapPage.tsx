@@ -6,6 +6,7 @@ import {
   type WildPlantWithCoords,
 } from "@/hooks/use-wild-plants-with-coords";
 import { FitBoundsOnMount } from "@/components/FitBoundsOnMount";
+import { PlantMapSheet } from "@/components/PlantMapSheet";
 import { buildPlantPinIcon } from "@/lib/build-plant-pin-icon";
 import { track } from "@/lib/track";
 
@@ -32,8 +33,6 @@ import { track } from "@/lib/track";
  */
 export default function MapPage() {
   const { plants, isLoading } = useWildPlantsWithCoords();
-  // selectedPin: Plan 06 will consume to mount PlantMapSheet.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedPin, setSelectedPin] = useState<WildPlantWithCoords | null>(null);
   const [trackedOpen, setTrackedOpen] = useState(false);
 
@@ -101,6 +100,7 @@ export default function MapPage() {
         ))}
         <FitBoundsOnMount pins={plants.map((p) => ({ lat: p.lat, lng: p.lng }))} />
       </MapContainer>
+      <PlantMapSheet plant={selectedPin} onClose={() => setSelectedPin(null)} />
     </div>
   );
 }
