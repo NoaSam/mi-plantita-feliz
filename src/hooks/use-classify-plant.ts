@@ -26,7 +26,7 @@ export function useClassifyPlant(): UseClassifyPlantReturn {
     }
     if (typeof window !== "undefined") {
       window.dispatchEvent(
-        new CustomEvent("mp:pending-classification-resolved", {
+        new CustomEvent("mp:plant-context-updated", {
           detail: { plant_search_id: plantSearchId, action },
         }),
       );
@@ -46,7 +46,7 @@ export function useClassifyPlant(): UseClassifyPlantReturn {
     }
     if (typeof window !== "undefined") {
       window.dispatchEvent(
-        new CustomEvent("mp:pending-classification-resolved", {
+        new CustomEvent("mp:plant-context-updated", {
           detail: { plant_search_id: plantSearchId, action: 'unclassified' },
         }),
       );

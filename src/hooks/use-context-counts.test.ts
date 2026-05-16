@@ -156,4 +156,16 @@ describe("useContextCounts", () => {
     await waitFor(() => expect(result.current.wild_with_coords).toBe(1));
     expect(queryCounter).toBe(8); // 4 initial + 4 refetch
   });
+
+  it("refetches counts when window dispatches mp:plant-context-updated (Plan 04 UI classify)", async () => {
+    const { result } = renderHook(() => useContextCounts());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(queryCounter).toBe(4);
+    wildWithResult = { data: null, error: null, count: 2 };
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("mp:plant-context-updated"));
+    });
+    await waitFor(() => expect(result.current.wild_with_coords).toBe(2));
+    expect(queryCounter).toBe(8);
+  });
 });

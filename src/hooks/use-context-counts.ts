@@ -112,13 +112,22 @@ export function useContextCounts(): UseContextCountsReturn {
   // Pattern S4: cross-component invalidation via CustomEvent (PATTERNS.md S4).
   // Cubre SPEC-AC2: tras clasificar una wild con coords, la tab Mapa
   // aparece sin reload del browser.
+  //
+  // Listens to TWO events:
+  // - `mp:pending-classification-resolved`: fired by AuthContext after anon→auth
+  //   claim flow processes a queued classification.
+  // - `mp:plant-context-updated`: fired by useClassifyPlant after a UI-driven
+  //   classify/revert. Separate event from the auth-claim one to avoid
+  //   triggering the navigate-to-detail listener in App.tsx.
   useEffect(() => {
     const handler = () => {
       load();
     };
     window.addEventListener("mp:pending-classification-resolved", handler);
+    window.addEventListener("mp:plant-context-updated", handler);
     return () => {
       window.removeEventListener("mp:pending-classification-resolved", handler);
+      window.removeEventListener("mp:plant-context-updated", handler);
     };
   }, [load]);
 

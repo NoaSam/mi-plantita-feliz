@@ -48,11 +48,16 @@ export default function HistoryPage() {
     refetch();
   }, [location.pathname, refetch]);
 
-  // Refetch when an anon→auth flow auto-classifies a plant elsewhere.
+  // Refetch when an anon→auth flow auto-classifies a plant elsewhere,
+  // or when the user classifies/reverts via the UI (Phase 03.1).
   useEffect(() => {
     const handler = () => refetch();
     window.addEventListener("mp:pending-classification-resolved", handler);
-    return () => window.removeEventListener("mp:pending-classification-resolved", handler);
+    window.addEventListener("mp:plant-context-updated", handler);
+    return () => {
+      window.removeEventListener("mp:pending-classification-resolved", handler);
+      window.removeEventListener("mp:plant-context-updated", handler);
+    };
   }, [refetch]);
 
   const filtered = useMemo(() => {
