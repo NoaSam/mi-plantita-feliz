@@ -24,6 +24,13 @@ export function useClassifyPlant(): UseClassifyPlantReturn {
       console.error("[classify] update failed:", error.message);
       return { ok: false as const };
     }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("mp:pending-classification-resolved", {
+          detail: { plant_search_id: plantSearchId, action },
+        }),
+      );
+    }
     return { ok: true as const };
   }, []);
 
@@ -36,6 +43,13 @@ export function useClassifyPlant(): UseClassifyPlantReturn {
     if (error) {
       console.error("[classify] revert failed:", error.message);
       return { ok: false as const };
+    }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("mp:pending-classification-resolved", {
+          detail: { plant_search_id: plantSearchId, action: 'unclassified' },
+        }),
+      );
     }
     return { ok: true as const };
   }, []);
