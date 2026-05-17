@@ -24,8 +24,16 @@ import L from "leaflet";
  * className "plant-map-pin": hooks into index.css overrides that remove
  * Leaflet's default white background + grey border (RESEARCH.md Pitfall 3).
  */
+// Singleton instance — all pins on the map share the same DivIcon. Creating
+// one instance per Marker per render churns react-leaflet's referential
+// comparison and forces marker unmount/remount on every parent re-render
+// (e.g. opening/closing the sheet). The HTML and config are static (no
+// user-controlled data interpolated), so sharing is safe.
+let pinIconInstance: L.DivIcon | null = null;
+
 export function buildPlantPinIcon(): L.DivIcon {
-  return L.divIcon({
+  if (pinIconInstance) return pinIconInstance;
+  pinIconInstance = L.divIcon({
     className: "plant-map-pin",
     html: `
       <div style="
@@ -47,4 +55,5 @@ export function buildPlantPinIcon(): L.DivIcon {
     iconAnchor: [18, 36],
     popupAnchor: [0, -36],
   });
+  return pinIconInstance;
 }
