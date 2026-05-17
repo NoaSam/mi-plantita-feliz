@@ -59,8 +59,11 @@ export default function MapPage() {
       <div
         className="relative w-full bg-secondary/30"
         style={{
-          height:
-            "calc(100dvh - 4rem - env(safe-area-inset-bottom) - env(safe-area-inset-top))",
+          // Subtract tab bar (4rem) + iOS home indicator safe-area only.
+          // Do NOT subtract safe-area-inset-top — there is no header on /mapa,
+          // and viewport-fit=cover lets the map extend under the status bar.
+          // Subtracting the top inset would leave a white gap above the tab bar.
+          height: "calc(100dvh - 4rem - env(safe-area-inset-bottom))",
         }}
         aria-busy="true"
         aria-label="Cargando mapa de descubrimientos"
@@ -76,8 +79,7 @@ export default function MapPage() {
     <div
       className="relative w-full"
       style={{
-        height:
-          "calc(100dvh - 4rem - env(safe-area-inset-bottom) - env(safe-area-inset-top))",
+        height: "calc(100dvh - 4rem - env(safe-area-inset-bottom))",
       }}
       role="application"
       aria-label="Mapa de descubrimientos de plantas"
