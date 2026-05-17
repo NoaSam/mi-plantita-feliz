@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import { useAuth } from "@/hooks/use-auth";
 import {
   useWildPlantsWithCoords,
   type WildPlantWithCoords,
@@ -32,7 +33,14 @@ import { track } from "@/lib/track";
  * <FitBoundsOnMount /> set the true viewport via useMap().
  */
 export default function MapPage() {
-  const { plants, isLoading } = useWildPlantsWithCoords();
+  const { user, isLoading: authLoading } = useAuth();
+  const { plants, isLoading: plantsLoading } = useWildPlantsWithCoords();
+  // Wait until: (a) auth has resolved, (b) we have a user, and (c) the
+  // wild-plants query for that user has run at least once. Without (c) there is
+  // a brief render-window after user changes from null → loaded where
+  // plantsLoading=false (stale from the no-user gate) and plants=[] (also stale)
+  // which would otherwise trigger a premature redirect to "/".
+  const isLoading = authLoading || (!!user && plantsLoading);
   const [selectedPin, setSelectedPin] = useState<WildPlantWithCoords | null>(null);
   const [trackedOpen, setTrackedOpen] = useState(false);
 

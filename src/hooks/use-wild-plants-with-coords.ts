@@ -65,6 +65,10 @@ export function useWildPlantsWithCoords(): UseWildPlantsWithCoordsReturn {
       setIsLoading(false);
       return;
     }
+    // Set loading synchronously when we have a user — avoids a render window
+    // where isLoading=false (stale from the no-user gate) + plants=[] would
+    // mislead consumers (e.g. MapPage's redirect-on-empty branch).
+    setIsLoading(true);
     const { data, error } = await supabase
       .from("plant_searches")
       .select("id, name, image_url, lat, lng, created_at, description")
