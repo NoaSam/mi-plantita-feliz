@@ -82,7 +82,7 @@ export function PlantMapSheet({ plant, onClose }: PlantMapSheetProps) {
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent
         side="bottom"
-        className="bg-background border-t-2 border-foreground rounded-t-2xl p-6 max-h-[75dvh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+        className="bg-background border-t-2 border-foreground rounded-t-2xl p-6 max-h-[75dvh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:max-w-md sm:left-1/2 sm:right-auto sm:-translate-x-1/2"
       >
         <div
           className="w-9 h-1 bg-foreground/25 rounded-full mx-auto mb-5"
