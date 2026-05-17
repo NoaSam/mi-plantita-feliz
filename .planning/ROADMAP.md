@@ -1,7 +1,7 @@
 # Roadmap: Mi Plantita Feliz
 
 **Milestone:** Android + Calendario de Riego
-**Creado:** 2004-04-22
+**Creado:** 2026-04-22
 **Granularidad:** Coarse
 **Cobertura:** 21/21 requirements v1 mapeados
 
@@ -73,7 +73,7 @@ Plans:
 
 ### Phase 3: Calendar v0
 **Goal**: Los usuarios ven una lista simple de "Mis plantas" con la frecuencia de riego sugerida por la IA, condicional a haber clasificado al menos una planta como casa
-**Depends on**: Phase 02.1
+**Depends on**: Phase 02.1 (clasificación + context column), Phase 2 (campo `watering_interval_days` estructurado que la lista consume)
 **Requirements**: RIEG-01, RIEG-02 (parcial — editable se difiere a v1+)
 **Success Criteria**:
   1. La seccion "Mis plantas" aparece en home solo cuando hay >=1 planta clasificada como casa
@@ -112,7 +112,7 @@ Plans:
 - [x] 03.1-08-PLAN.md — E2E Playwright `e2e/map.spec.ts` (NOT tests/e2e/) happy path AC9 + AC1 tab visibility + AC12 tile failure (SPEC-AC1, AC4, AC5, AC7, AC8, AC9, AC11, AC12)
 
 ### Phase 4: Response Time Optimization
-**Goal**: El usuario percibe el resultado de identificacion en ~3-5 segundos en lugar de ~04-25 segundos, gracias a streaming SSE y seleccion first-winner del modelo de IA
+**Goal**: El usuario percibe el resultado de identificacion en ~3-5 segundos en lugar de ~14-25 segundos, gracias a streaming SSE y seleccion first-winner del modelo de IA
 **Depends on**: Phase 1
 **Requirements**: PERF-01, PERF-02, PERF-03
 **Success Criteria**:
@@ -147,9 +147,9 @@ Plans:
 | 02.1. Foundations | 7/7 | Complete    | 2026-05-15 |
 | 3. Calendar v0 | 0/? | Not started | - |
 | 03.1. Plant Map v0 | 8/8 | Complete    | 2026-05-17 |
-| 4. Response Time Optimization | 2/2 | Complete | 2004-04-28 |
+| 4. Response Time Optimization | 2/2 | Complete | 2026-04-28 |
 | 04.1. My Plants Load Time Optimization | 0/? | Not started | - |
 
 ---
 
-*Roadmap creado: 2004-04-22*
+*Roadmap creado: 2026-04-22*
