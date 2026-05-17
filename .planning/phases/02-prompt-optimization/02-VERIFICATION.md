@@ -1,26 +1,26 @@
 ---
 phase: 02-prompt-optimization
 verifier: inline-orchestrator
-status: human_needed
+status: passed_with_tradeoff
 phase_goal: "La identificación por IA devuelve datos estructurados y fiables que el calendario puede consumir"
 requirements_verified:
   - id: PROM-01
     status: passed
     evidence: "watering_interval_days returned as int|null by edge function, persisted in plant_searches, propagated through hook"
   - id: PROM-02
-    status: human_needed
-    evidence: "SYSTEM_PROMPT rewritten with 10-plant few-shot + uncertainty handling; benchmark tool committed but golden-set hand-labeling pending owner work (~1-2h)"
+    status: passed_with_tradeoff
+    evidence: "Benchmark on 31-photo Pl@ntNet-bootstrapped golden set: PRIMARY 83.9% (vs pre-Phase-2 prompt: 87.1%). Strict criterion 'notably more precise' is NOT met (−3.2pp regression, within ±3pp noise for n=31). Product owner accepted as trade for adding coherent watering field (SANITY 84.9%, SECONDARY 2.15-day stddev across 3 models). Iteration attempt did not recover the gap. See 02-HUMAN-UAT.md Test #2."
 success_criteria:
   - criterion: "Cada identificación incluye un campo numérico watering_interval_days (no embebido en prosa)"
     status: passed
   - criterion: "Las identificaciones de plantas comunes del hogar son notablemente más precisas"
-    status: human_needed
-    note: "Tooling and prompt are in place; quantitative confirmation requires running npm run benchmark:prompt against a populated golden set"
+    status: failed_quantitatively_accepted_as_tradeoff
+    note: "Measured −3.2pp regression vs baseline on n=31 (within sampling noise). Owner closed Phase 2 on 2026-05-17 accepting the tradeoff: small ID regression in exchange for new structured watering field that unblocks Phase 3 Calendar. Future iterations should expand golden set to 60-100 before re-evaluating prompt changes."
 plans_complete: 3
 plans_total: 3
 human_verification_items: 2
 verified_at: 2026-05-17
-note: "Produced inline by the orchestrator instead of spawning gsd-verifier subagent — two prior Wave 1 subagents stalled at 600s and this fallback avoids cost. Goal-backward analysis against ROADMAP success criteria + per-plan must-haves."
+note: "Produced inline by the orchestrator instead of spawning gsd-verifier subagent — two prior Wave 1 subagents stalled at 600s and this fallback avoids cost. Goal-backward analysis against ROADMAP success criteria + per-plan must-haves. Updated 2026-05-17 evening: golden set bootstrapped + benchmark run + owner closed phase with tradeoff acceptance."
 ---
 
 # Phase 02: prompt-optimization — Verification Report
@@ -44,15 +44,27 @@ End-to-end evidence the field is structured and reachable by Phase 3 Calendar v0
 | Lockstep | `scripts/benchmark-prompt.ts SYSTEM_PROMPT` byte-identical to edge function; both files carry matching `// IMPORTANT` sync comments |
 
 ### ⚠ Criterion 2 — Identifications of common home plants are notably more precise
-**Status: HUMAN_NEEDED**
+**Status: FAILED QUANTITATIVELY — ACCEPTED AS TRADEOFF BY PRODUCT OWNER**
 
 What shipped:
 - SYSTEM_PROMPT rewritten with a 10-plant Spanish↔scientific few-shot block (Potus, Monstera, Sansevieria, Ficus lyrata, Chamaedorea, Calathea, Dracaena, Spathiphyllum, Echeveria, Cactaceae)
 - Explicit uncertainty instruction added (model must say in `description` when confidence is low)
 - Reusable measurement tool: `npm run benchmark:prompt` (Node CLI computing PRIMARY accuracy, SECONDARY watering coherence, SANITY non-null %) committed at `scripts/benchmark-prompt.ts`
+- Golden set bootstrap pipeline: `scripts/bootstrap-golden-set.ts` (uses Pl@ntNet as expert ground-truth source) → `scripts/.benchmark-golden-set.json` (31 photos, kept threshold 0.5 from 50-photo seed)
 
-What is **not** verifiable from the codebase:
-- A quantitative before/after comparison. The plan deliberately deferred the golden-set hand-labeling to the product owner (~1-2h work, per Plan 02-02 D-12). The benchmark exits 0 with "Golden set is empty" until `scripts/.benchmark-golden-set.json` `items` is populated with 20-25 representative `model_evaluations` rows.
+What the benchmark actually measured (2026-05-17):
+
+| Metric | New prompt | Pre-Phase-2 prompt | Diff |
+|---|---|---|---|
+| PRIMARY (consensus ≥2/3 matches ground truth) | 83.9% | 87.1% | **−3.2pp** |
+| SECONDARY (stddev watering_interval_days across 3 models) | 2.15 days | n/a (field did not exist) | new |
+| SANITY (% calls returning non-null watering) | 84.9% | 0% (field did not exist) | new |
+
+Honest reading: the strict criterion "notably more precise" is NOT met — the new prompt is *marginally less precise* on identification. The single photo that flipped pass→fail was Citrus × aurantium (2/3 → 1/3).
+
+An iteration attempt (reduce few-shot list 10→4, reorder to put identification priority first) was tested in `scripts/benchmark-prompt.ts` and did not recover the gap (PRIMARY tied at 83.9%, watering coherence improved to 1.57 days stddev). The change was reverted to keep production prompt unchanged.
+
+**Owner decision (2026-05-17):** close Phase 2 accepting the tradeoff. The −3.2pp ID regression is within sampling noise for n=31 (one photo flip = 3.2pp). The new structured `watering_interval_days` field (84.9% sanity, 2.15-day coherence) unblocks Phase 3 Calendar, which was the *actual* phase goal. Future prompt iterations should expand the golden set to 60-100 photos before drawing conclusions.
 
 ## Per-plan must_haves audit
 
@@ -74,8 +86,8 @@ What is **not** verifiable from the codebase:
 ### Plan 02-02 — Benchmark CLI + golden set
 | Must-have | Status |
 |-----------|--------|
-| D-09: Reproducible before/after metric possible | ✓ (tool committed) |
-| D-10: Golden set sourced from `model_evaluations` (sampling SQL documented in `notes`) | ✓ (skeleton + recipe; population pending owner) |
+| D-09: Reproducible before/after metric possible | ✓ (tool committed + run 2026-05-17) |
+| D-10: Golden set sourced from `model_evaluations` (sampling SQL documented in `notes`) | ✓ (31 photos bootstrapped via Pl@ntNet) |
 | D-11: 3 metrics (PRIMARY accuracy ≥2/3 consensus, SECONDARY stddev, SANITY non-null %) | ✓ |
 | D-12: Tool committed as recurring resource | ✓ |
 | Env-var gating with clear error | ✓ |
@@ -100,7 +112,7 @@ What is **not** verifiable from the codebase:
 | ID | Phase frontmatter | Verified |
 |----|-------------------|----------|
 | PROM-01 | 02-01, 02-03 | ✓ — full pipeline carries the field |
-| PROM-02 | 02-01, 02-02 | ⚠ — qualitative ship (new prompt + measurement tool) done; quantitative confirmation depends on owner-populated golden set |
+| PROM-02 | 02-01, 02-02 | ⚠ → ✓ — measured on 31-photo golden set; quantitative criterion missed by −3.2pp (within noise); owner accepted as PROM-01-enabling tradeoff |
 
 ## Cross-phase smoke
 - `consensus.ts` zero diff vs phase base (D-03) ✓
@@ -109,25 +121,21 @@ What is **not** verifiable from the codebase:
 - 3 model callers (`callClaude` / `callGemini` / `callOpenAI`) still present ✓ (`grep -c "^async function call"` returns 4 — includes `callModelTimed`)
 
 ## Human verification items
-The phase ships **everything the codebase can guarantee on its own**. Two items need owner action to fully close the success criteria:
+Both items resolved.
 
-### 1. Deploy the edge function update to Supabase
-**Expected:** `curl` against the live `identify-plant` function returns a JSON response that includes `watering_interval_days: <int|null>` for any test image.
+### 1. Deploy the edge function update to Supabase — ✅ DONE
+Deployed via `supabase functions deploy identify-plant` on 2026-05-17 21:23 UTC; function ACTIVE at version 16 on project sdxfxkqzgnonxfshbjfc.
 
-**Required because:** This phase modified the edge function source but the workflow does not auto-deploy. The DB migration is already live; the function code is not. Run `supabase functions deploy identify-plant` from the project root (or trigger via CI/CD if configured).
+### 2. Populate the benchmark golden set and run baseline vs new prompt — ✅ DONE (with tradeoff)
+Golden set bootstrapped via Pl@ntNet (31 photos from 50 candidates, threshold 0.5). Benchmark run on 2026-05-17 evening:
+- PRIMARY 83.9% vs pre-Phase-2 87.1% → −3.2pp (within ±3pp noise for n=31)
+- SECONDARY 2.15 days stddev (bounded ✓)
+- SANITY 84.9% non-null (≥80% ✓)
 
-### 2. Populate the benchmark golden set and run baseline vs new prompt
-**Expected:** With 20-25 labeled images in `scripts/.benchmark-golden-set.json`, `npm run benchmark:prompt` reports:
-- PRIMARY identification accuracy is **notably higher** than the same metric measured against the pre-Phase-2 prompt
-- SECONDARY watering stddev is bounded (e.g., < 5 days on most photos)
-- SANITY non-null rate is ≥ 80% for clearly identifiable plants
-
-**Required because:** This is the only way to falsify "more precise identifications of common home plants" (PROM-02 / Success Criterion 2). The plan deliberately scoped golden-set labeling out of executor work.
+Strict criterion "notably higher" not met. Owner accepted as tradeoff for new watering field that unblocks Phase 3. See 02-HUMAN-UAT.md Test #2 for full detail.
 
 ## Verdict
-**HUMAN_NEEDED** — All code-deliverable success criteria pass cleanly. Two items require external action (function deploy + golden-set labeling + benchmark run) to fully close the phase goal.
-
-If the owner confirms both items pass after manual testing, the phase can be marked PASSED. Otherwise, gaps surface real defects that warrant a `--gaps` re-plan.
+**PASSED_WITH_TRADEOFF** — PROM-01 fully passed. PROM-02 quantitative criterion missed by 3.2pp (within sampling noise on n=31), owner-closed accepting the tradeoff. Future iterations of the prompt should re-run the benchmark with an expanded golden set (60-100 photos) before drawing conclusions about prompt-level improvements.
 
 ---
-*Verified: 2026-05-17 inline by orchestrator (gsd-verifier subagent stall fallback)*
+*Verified: 2026-05-17 inline by orchestrator (gsd-verifier subagent stall fallback). Updated 2026-05-17 evening after owner ran benchmark + closed phase.*
