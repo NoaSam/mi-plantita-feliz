@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "createdAt": "2026-05-17",
+  "notes": "Skeleton emitido por el executor. La dueña del producto debe poblar `items` con 20-25 filas de model_evaluations etiquetadas a mano. Ver .planning/phases/02-prompt-optimization/02-CONTEXT.md § D-10 y § D-11 para método. Sampling sugerido: SELECT plant_search_id, image_url, scientific_name FROM model_evaluations WHERE success = true ORDER BY random() LIMIT 50; — etiquetar los 20-25 más representativos.",
+  "items": []
+}
