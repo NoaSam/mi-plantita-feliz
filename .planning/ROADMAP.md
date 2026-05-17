@@ -15,6 +15,7 @@
 - [ ] **Phase 3: Calendar v0** — Lista minima de "Mis plantas" con frecuencia de riego sugerida, condicional al modo casa
 - [x] **Phase 03.1: Plant Map v0** — Mapa con pins de descubrimientos geolocalizados, condicional al modo explorador (completed 2026-05-17)
 - [x] **Phase 4: Response Time Optimization** — Reducir latencia percibida del analisis de plantas
+- [ ] **Phase 04.1: My Plants Load Time Optimization** — Acelerar la pantalla `/mis-plantas` (history)
 
 ---
 
@@ -125,6 +126,16 @@ Plans:
 - [x] 04-01-PLAN.md — Edge function: Promise.race first-winner + SSE streaming response
 - [x] 04-02-PLAN.md — Client hook: SSE reader + browser-image-compression + test update
 
+### Phase 04.1: My Plants Load Time Optimization (INSERTED)
+**Goal**: La pantalla `/mis-plantas` (history) carga visiblemente más rápido en mobile — métrica concreta (p50/p90 antes/después) a definir en discuss-phase
+**Depends on**: Phase 02.1 (la pantalla ya existe con context chips), Phase 4 (patrones de perf ya validados en la app)
+**Requirements**: TBD (a derivar durante discuss-phase — hipótesis: imágenes pesadas sin lazy/thumbnails, query sin paginación, falta de skeleton, queries N+1)
+**Success Criteria**: TBD (mínimo: time-to-first-content < 1.5s en 4G mobile, scroll suave a 60fps con 50+ items)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 04.1 to break down)
+
 ---
 
 ## Progress
@@ -137,6 +148,7 @@ Plans:
 | 3. Calendar v0 | 0/? | Not started | - |
 | 03.1. Plant Map v0 | 8/8 | Complete    | 2026-05-17 |
 | 4. Response Time Optimization | 2/2 | Complete | 2004-04-28 |
+| 04.1. My Plants Load Time Optimization | 0/? | Not started | - |
 
 ---
 

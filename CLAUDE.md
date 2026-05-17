@@ -53,6 +53,7 @@ src/
 - [ ] Optimizar prompts de análisis de plantas
 - [ ] Diseñar onboarding para primer uso
 - [x] Testear instalación PWA en Android e iOS
+- [ ] Optimizar tiempo de carga de /mis-plantas (history page)
 
 ## Consideraciones de producto
 - **Público objetivo:** personas no técnicas, jardineros aficionados, gente con plantas en casa
