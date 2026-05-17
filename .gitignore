@@ -32,6 +32,9 @@ dist-ssr
 # Error tracking baseline (local)
 scripts/.error-baseline.json
 
+# Benchmark golden-set bootstrap input (transient — contains real plant_search IDs from production)
+scripts/.benchmark-candidates.json
+
 # Playwright
 test-results/
 playwright-report/
