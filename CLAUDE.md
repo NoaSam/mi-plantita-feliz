@@ -41,6 +41,7 @@ src/
 - Nombres de variables, componentes y commits en inglés. Contenido de UI en español.
 - Tests para lógica de negocio (hooks y services). No tests de UI por ahora.
 - Accesibilidad básica: contraste, labels, navegación por teclado.
+- **Migraciones Supabase que crean tablas en `public`** deben incluir `GRANT` explícitos (`authenticated` + `service_role`, opcional `anon`) además del `enable row level security` + políticas. Boilerplate y razón en `supabase/MIGRATION_CONVENTIONS.md` — obligatorio desde el 30 oct 2026 (Supabase deja de auto-grantear). Las tablas existentes (`plant_searches`, `profiles`, `model_evaluations`) están protegidas por la cláusula "existing tables keep their grants" y no necesitan migración.
 
 ## Roadmap activo
 - [x] Migrar repo desde Lovable a GitHub propio
