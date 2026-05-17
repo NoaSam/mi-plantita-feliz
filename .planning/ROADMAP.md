@@ -16,6 +16,7 @@
 - [ ] **Phase 03.1: Plant Map v0** — Mapa con pins de descubrimientos geolocalizados, condicional al modo explorador
 - [x] **Phase 4: Response Time Optimization** — Reducir latencia percibida del analisis de plantas
 - [ ] **Phase 5: Identification Engine v2 — Pl@ntNet + 1 LLM** *(candidate)* — Separar identificación (Pl@ntNet, especializado) de generación de cuidados/diagnóstico (1 LLM en vez de 3)
+- [ ] **Phase 6: Backfill imágenes históricas base64 → Storage** *(candidate)* — Migrar las ~124 filas legacy de `plant_searches.image_url` (data:image/jpeg;base64,...) a URLs HTTPS en Supabase Storage; reducir tamaño DB y eliminar riesgo OOM en Capacitor
 
 ---
 
@@ -140,6 +141,46 @@ Plans:
 
 **Nota:** La idea surgió mientras la dueña preguntaba si Pl@ntNet podía usarse como ground-truth para el benchmark de Phase 2 (sí — y se usó para eso). El uso como ground-truth no implica el uso en producción; esta phase es la decisión separada de meter Pl@ntNet al runtime.
 
+### Phase 6: Backfill imágenes históricas base64 → Storage (CANDIDATE)
+
+**Status:** Candidate — NOT scheduled. Independiente de Phase 5; las dos pueden hacerse en cualquier orden.
+
+**Goal:** Migrar las filas legacy de `plant_searches.image_url` que están como base64 data URIs a URLs HTTPS de Supabase Storage. Dejar 0 filas con `image_url LIKE 'data:%'` y todas con `image_url LIKE 'https://%supabase.co/storage/%'`.
+
+**Depends on:** Nada urgente (Phase 1 Plan 01-03 ya migró el path de upload nuevo). Esta phase solo backfilléa el histórico.
+
+**Requirements:** TBD — candidato: nueva `STOR-01` (backfill completo + ALTER pendiente).
+
+**Success Criteria** *(borrador, sujeto a discuss-phase):*
+  1. `SELECT COUNT(*) FROM plant_searches WHERE image_url LIKE 'data:%'` devuelve 0 al final del proceso.
+  2. Las filas migradas mantienen la misma imagen perceptualmente (verificable con hash o por muestra visual de 10-15 filas).
+  3. La columna `image_url` puede llevar un CHECK constraint `image_url IS NULL OR image_url LIKE 'https://%'` post-backfill para prevenir regresiones (defensa-en-profundidad — el edge function ya solo escribe URLs).
+  4. Tamaño total de la columna `image_url` en `plant_searches` baja al menos 90% (verificable con `pg_total_relation_size` antes/después).
+  5. El historial de la app (página de detalle, lista de plantas) sigue mostrando todas las fotos correctamente, sin URLs rotas.
+
+**Plans:** TBD
+
+**Hallazgo que motiva esta phase** *(detectado 2026-05-17 durante el bootstrap del golden set del Phase 2):*
+- Al intentar samplear fotos de `model_evaluations + plant_searches` para alimentar el benchmark, la query `image_url LIKE 'https://%'` devolvió **0 filas**. Diagnóstico: las 124 filas existentes en producción tienen `image_url` como `data:image/jpeg;base64,...` inline.
+- Phase 1 Plan 01-03 cambió el edge function para que **nuevas** identificaciones suban la imagen al bucket `plant-images` y guarden la URL HTTPS — pero **no backfilleó las filas existentes**, por diseño (riesgo en migración + estaban dentro de scope de "Capacitor blocker" no de "DB cleanup").
+- Sin el backfill, conviven los 2 formatos indefinidamente; cualquier query/script/feature futuro tiene que manejar ambos.
+
+**Tradeoffs y consideraciones:**
+- **Riesgo OOM en Capacitor (Android):** abrir la página de detalle de una planta vieja carga ~1.5MB de base64 en memoria React + DOM. Multiplicado por scroll de historial, puede tirar la app en dispositivos modestos.
+- **Coste de almacenamiento:** ~1.5MB por foto en base64 vs ~100 bytes de URL en Postgres. 124 filas ≈ 180MB de datos legacy en `plant_searches`. Supabase Free tier es 500MB DB / 1GB Storage; mover de DB a Storage es ~1500x más barato por byte.
+- **Coste de export/backup:** los dumps SQL incluyen el base64; mueven gigas. Storage es metadata + blobs separados.
+- **Costo de migración:** script Node que (1) selecciona filas con `data:`, (2) decodifica base64 a Buffer, (3) sube al bucket vía `supabase.storage.from('plant-images').upload(...)`, (4) actualiza `image_url` con la URL pública nueva. ~1-2h de implementación; ~10-30s de runtime real (124 uploads secuenciales).
+- **Reversibilidad:** un backup completo de la tabla `plant_searches` antes del migrate, por si algún upload falla y queda inconsistente. El script debe ser idempotente (skip rows que ya son HTTPS).
+
+**Por qué NO es urgente:**
+- Solo hay 124 filas. La app funciona con ambos formatos hoy.
+- Si Phase 3 (Calendar) o Phase 5 (Identification v2) llegan antes y exponen el problema (e.g., crash en Android al cargar historial), se promueve a "urgent".
+
+**Por qué SÍ vale la pena hacerlo eventualmente:**
+- Cada día que pasa, el ratio data:/https: empeora a favor de HTTPS porque las nuevas uploads van bien — pero las 124 viejas se quedan ahí. Es deuda técnica acotada que se cierra de una vez con un script ad-hoc.
+
+**Nota:** Detectado mientras se construía el bootstrap del benchmark de Phase 2. El bootstrap se adaptó para soportar ambos formatos como workaround inmediato (commit `153e0a6`). Esta phase elimina la causa raíz.
+
 ---
 
 ## Progress
@@ -153,6 +194,7 @@ Plans:
 | 03.1. Plant Map v0 | 0/? | Not started | - |
 | 4. Response Time Optimization | 2/2 | Complete | 2004-04-28 |
 | 5. Identification Engine v2 (Pl@ntNet + 1 LLM) | 0/? | Candidate | - |
+| 6. Backfill base64 → Storage | 0/? | Candidate | - |
 
 ---
 
