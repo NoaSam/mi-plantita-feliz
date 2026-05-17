@@ -15,6 +15,7 @@
 - [ ] **Phase 3: Calendar v0** — Lista minima de "Mis plantas" con frecuencia de riego sugerida, condicional al modo casa
 - [ ] **Phase 03.1: Plant Map v0** — Mapa con pins de descubrimientos geolocalizados, condicional al modo explorador
 - [x] **Phase 4: Response Time Optimization** — Reducir latencia percibida del analisis de plantas
+- [ ] **Phase 5: Identification Engine v2 — Pl@ntNet + 1 LLM** *(candidate)* — Separar identificación (Pl@ntNet, especializado) de generación de cuidados/diagnóstico (1 LLM en vez de 3)
 
 ---
 
@@ -108,6 +109,37 @@ Plans:
 - [x] 04-01-PLAN.md — Edge function: Promise.race first-winner + SSE streaming response
 - [x] 04-02-PLAN.md — Client hook: SSE reader + browser-image-compression + test update
 
+### Phase 5: Identification Engine v2 — Pl@ntNet + 1 LLM (CANDIDATE)
+
+**Status:** Candidate — NOT scheduled; pending Phase 3 + Phase 4 outcomes and benchmark data from Phase 2.
+
+**Goal:** Separar las 2 tareas que hoy hacen los 3 LLMs a la vez. Usar Pl@ntNet (API especializada en identificación, state-of-the-art libre, free tier 500 req/día) para resolver "qué planta es", y un único LLM generalista para resolver "cómo se cuida + diagnóstico visual + watering_interval_days". Reducir de 3 llamadas LLM por identificación a 1 Pl@ntNet + 1 LLM.
+
+**Depends on:** Phase 2 (benchmark con golden set debe estar corrido — necesitamos saber la línea base de accuracy del prompt-only 3-LLM antes de comparar)
+
+**Requirements:** TBD — candidatos: nueva acc-01 (accuracy de identificación), nueva cost-01 (reducción de coste por identificación), reuso de PROM-01 (watering_interval_days sigue siendo número estructurado)
+
+**Success Criteria** *(borrador, sujeto a discuss-phase):*
+  1. La accuracy de identificación (PRIMARY metric del benchmark Phase 2) sube ≥10 puntos vs el baseline 3-LLM
+  2. El coste medio por identificación baja ≥40% (1 Pl@ntNet + 1 LLM vs 3 LLMs)
+  3. La latencia P95 percibida no empeora (Pl@ntNet ~1-2s + LLM ~2-3s en secuencia vs 3 LLMs ~3-5s en paralelo)
+  4. El campo `watering_interval_days` sigue saliendo como `number | null` sin cambios de contrato hacia el cliente
+  5. El diagnóstico de salud ("hojas amarillas...") sigue funcionando — el LLM sigue viendo la foto
+  6. Hay un kill-switch (env var o config) para volver a 3-LLM si Pl@ntNet falla
+
+**Plans:** TBD
+
+**Key tradeoffs documentados** *(de la discusión 2026-05-17 con la dueña):*
+- **Pro:** Pl@ntNet es especialista — entrenado con millones de fotos verificadas por expertos botánicos; supera a LLMs generalistas en accuracy de identificación de plantas, especialmente común-de-hogar.
+- **Pro:** Coste — free tier 500 req/día cubre el inicio; paid es ~$30/mes por 5K req/día (muy por debajo del coste de 3 LLMs por identificación).
+- **Pro:** El consensus actual deja de ser necesario (Pl@ntNet es de facto el experto), simplifica `consensus.ts` o lo retira del path de identificación.
+- **Contra:** +1 proveedor externo (Pl@ntNet) → +1 API key, +1 billing, +1 SLA del cual depender.
+- **Contra:** Cultivares ornamentales raros / plantas no-cultivadas pueden quedar peor cubiertos que con LLMs generalistas → mitigación: fallback a 1 LLM cuando Pl@ntNet `score < threshold`.
+- **Contra:** Invalida el benchmark de Phase 2 (mide la arquitectura 3-LLM); habrá que re-benchmarkearlo o rediseñarlo para esta phase.
+- **Contra:** Pl@ntNet no devuelve diagnóstico de salud ni nombre común en español → el LLM sigue siendo necesario para esas 2 piezas (de ahí "Pl@ntNet + 1 LLM", no "Pl@ntNet solo").
+
+**Nota:** La idea surgió mientras la dueña preguntaba si Pl@ntNet podía usarse como ground-truth para el benchmark de Phase 2 (sí — y se usó para eso). El uso como ground-truth no implica el uso en producción; esta phase es la decisión separada de meter Pl@ntNet al runtime.
+
 ---
 
 ## Progress
@@ -120,6 +152,7 @@ Plans:
 | 3. Calendar v0 | 0/? | Not started | - |
 | 03.1. Plant Map v0 | 0/? | Not started | - |
 | 4. Response Time Optimization | 2/2 | Complete | 2004-04-28 |
+| 5. Identification Engine v2 (Pl@ntNet + 1 LLM) | 0/? | Candidate | - |
 
 ---
 
