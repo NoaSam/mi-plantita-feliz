@@ -69,12 +69,26 @@ interface GoldenSetItem {
   };
 }
 
-async function downloadImage(url: string): Promise<{ buffer: Buffer; mediaType: string; filename: string }> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`fetch image ${res.status} for ${url}`);
+async function loadImage(
+  urlOrDataUri: string,
+  candidateId: string,
+): Promise<{ buffer: Buffer; mediaType: string; filename: string }> {
+  // Historical rows in plant_searches.image_url store images as base64 data URIs
+  // (the Storage migration in Phase 1 did not backfill old rows). New rows are
+  // stored as https://*supabase.co/storage/... URLs. Handle both formats here.
+  const dataUriMatch = urlOrDataUri.match(/^data:(image\/\w+);base64,(.+)$/);
+  if (dataUriMatch) {
+    const mediaType = dataUriMatch[1];
+    const buffer = Buffer.from(dataUriMatch[2], "base64");
+    const ext = mediaType.split("/")[1] ?? "jpg";
+    return { buffer, mediaType, filename: `${candidateId}.${ext}` };
+  }
+
+  const res = await fetch(urlOrDataUri);
+  if (!res.ok) throw new Error(`fetch image ${res.status} for ${urlOrDataUri}`);
   const mediaType = res.headers.get("content-type") ?? "image/jpeg";
   const buffer = Buffer.from(await res.arrayBuffer());
-  const filename = url.split("/").pop()?.split("?")[0] ?? "image.jpg";
+  const filename = urlOrDataUri.split("/").pop()?.split("?")[0] ?? "image.jpg";
   return { buffer, mediaType, filename };
 }
 
@@ -125,7 +139,10 @@ async function main() {
   for (const [i, candidate] of candidates.entries()) {
     process.stdout.write(`[${i + 1}/${candidates.length}] ${candidate.plant_search_id.substring(0, 8)} ... `);
     try {
-      const { buffer, mediaType, filename } = await downloadImage(candidate.image_url);
+      const { buffer, mediaType, filename } = await loadImage(
+        candidate.image_url,
+        candidate.plant_search_id.substring(0, 8),
+      );
       const resp = await queryPlantNet(buffer, mediaType, filename);
       const top = resp.results[0];
       if (!top) {
