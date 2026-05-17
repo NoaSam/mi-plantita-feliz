@@ -33,6 +33,7 @@ const MOCK_JSON_RESPONSE = {
   description: "Una planta tropical",
   care: "Riego moderado",
   diagnosis: "Se ve sana",
+  watering_interval_days: 7,
   model: "claude",
   plant_search_id: "test-uuid-123",
   created_at: "2026-04-23T10:00:00Z",
@@ -147,7 +148,41 @@ describe("usePlantIdentifier", () => {
       expect(result.current.result!.name).toBe("Potus (Epipremnum aureum)");
       expect(result.current.result!.model).toBe("claude");
       expect(result.current.result!.id).toBe("test-uuid-123");
+      expect(result.current.result!.watering_interval_days).toBe(7);
       expect(result.current.isLoading).toBe(false);
+    });
+
+    it("passes watering_interval_days=null when model is unsure", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue({ ...MOCK_JSON_RESPONSE, watering_interval_days: null }),
+      });
+
+      const { result } = renderHook(() => usePlantIdentifier());
+      await act(async () => {
+        await result.current.identify(createMockFile("image/jpeg", 1024, "plant.jpg"));
+      });
+
+      expect(result.current.result).not.toBeNull();
+      expect(result.current.result!.watering_interval_days).toBeNull();
+    });
+
+    it("defaults watering_interval_days to null when field is missing from response", async () => {
+      // Covers the transient deploy window where the client is updated before the
+      // edge function ships the new field (or an older edge build is still live).
+      const { watering_interval_days: _omit, ...withoutField } = MOCK_JSON_RESPONSE;
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue(withoutField),
+      });
+
+      const { result } = renderHook(() => usePlantIdentifier());
+      await act(async () => {
+        await result.current.identify(createMockFile("image/jpeg", 1024, "plant.jpg"));
+      });
+
+      expect(result.current.result).not.toBeNull();
+      expect(result.current.result!.watering_interval_days).toBeNull();
     });
 
     it("handles HTTP error from edge function", async () => {

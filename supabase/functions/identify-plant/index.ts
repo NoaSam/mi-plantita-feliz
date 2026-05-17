@@ -13,6 +13,8 @@ const corsHeaders = {
 
 // ─── Prompt ────────────────────────────────────────────────────────────────────
 
+// IMPORTANT: keep this prompt in sync with scripts/benchmark-prompt.ts SYSTEM_PROMPT.
+//            If you edit one, you MUST edit the other — there is no shared module.
 const SYSTEM_PROMPT = `Eres un botánico experto que ayuda a personas con plantas en casa. Responde SIEMPRE en español, con tono cercano y claro. Evita jerga botánica innecesaria — si usas un término técnico, explícalo brevemente.
 
 El usuario te envía una foto de una planta. Analízala y responde SOLO con un JSON válido (sin texto antes ni después) con esta estructura:
@@ -21,18 +23,30 @@ El usuario te envía una foto de una planta. Analízala y responde SOLO con un J
   "name": "Nombre común (Nombre científico)",
   "description": "Markdown con descripción de la planta",
   "care": "Markdown con guía de cuidados",
-  "diagnosis": "Markdown con diagnóstico visual"
+  "diagnosis": "Markdown con diagnóstico visual",
+  "watering_interval_days": 7
 }
 
 Instrucciones para cada campo:
 
-**name**: Nombre común seguido del nombre científico entre paréntesis. Ej: "Potus (Epipremnum aureum)"
+**name**: Nombre común seguido del nombre científico entre paréntesis. Ej: "Potus (Epipremnum aureum)". Usa nombres canónicos en español — evita variantes ortográficas. Plantas comunes y su nomenclatura de referencia:
+- Potus → Epipremnum aureum
+- Monstera → Monstera deliciosa
+- Sansevieria / Lengua de suegra → Sansevieria trifasciata
+- Ficus / Ficus lira → Ficus lyrata
+- Palmera de salón → Chamaedorea elegans
+- Calatea → Calathea
+- Dracena → Dracaena marginata
+- Espatifilo / Lirio de la paz → Spathiphyllum
+- Suculenta → Echeveria
+- Cactus → Cactaceae
 
 **description**: Usa Markdown. Incluye:
 - Qué planta es y a qué familia pertenece
 - De dónde es originaria
 - Características visuales principales (hojas, flores, tamaño típico)
 - Algún dato curioso o útil si lo hay
+- Si NO estás del todo seguro de la identificación, dilo claramente al principio: indica qué planta crees que es y por qué tu confianza es baja (e.g. "podría ser X, pero la foto no muestra bien Y").
 
 **care**: Usa Markdown con una lista clara. Incluye estas categorías con indicaciones concretas y prácticas:
 - **Riego** — frecuencia y cantidad (ej: "cada 3-4 días en verano, cada semana en invierno")
@@ -45,7 +59,9 @@ Instrucciones para cada campo:
 **diagnosis**: Usa Markdown. Analiza lo que ves en la foto:
 - Si se ve **sana**: dilo claramente y menciona qué señales positivas observas
 - Si tiene **problemas**: describe los síntomas que ves, la causa más probable, y qué hacer paso a paso para solucionarlo
-- Si la foto no permite un diagnóstico claro, dilo honestamente`;
+- Si la foto no permite un diagnóstico claro, dilo honestamente
+
+**watering_interval_days**: Número entero entre 1 y 60 que representa la **frecuencia promedio anual de riego en días** para una planta de interior en condiciones típicas (luz indirecta, 20-22°C). Ej: 7 significa "regar cada 7 días en promedio a lo largo del año". Si no puedes determinar la frecuencia con confianza (planta desconocida, identificación incierta, o sin datos suficientes), devuelve \`null\` — es preferible no inventar un número.`;
 
 const USER_MESSAGE = "Identifica esta planta, dime cómo cuidarla y analiza si le pasa algo.";
 
@@ -56,6 +72,7 @@ interface PlantInfo {
   description: string;
   care: string;
   diagnosis: string;
+  watering_interval_days: number | null;
 }
 
 interface ModelResult {
@@ -232,11 +249,20 @@ function parseAIResponse(text: string): PlantInfo | null {
   const toStr = (v: unknown, fb: string) =>
     typeof v === "string" && v.trim() ? v : fb;
 
+  const toIntOrNull = (v: unknown): number | null => {
+    const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+    if (!Number.isFinite(n)) return null;
+    const int = Math.round(n);
+    if (int < 1 || int > 60) return null;
+    return int;
+  };
+
   return {
     name: toStr(parsed.name, FALLBACK_NAME),
     description: toStr(parsed.description, FALLBACK_DESCRIPTION),
     care: toStr(parsed.care, FALLBACK_CARE),
     diagnosis: toStr(parsed.diagnosis, FALLBACK_DIAGNOSIS),
+    watering_interval_days: toIntOrNull(parsed.watering_interval_days),
   };
 }
 
@@ -385,12 +411,13 @@ Deno.serve(async (req) => {
     const { data: searchRow, error: searchError } = await supabaseAdmin
       .from("plant_searches")
       .insert({
-        name:        winner.plantInfo!.name,
-        description: winner.plantInfo!.description,
-        care:        winner.plantInfo!.care,
-        diagnosis:   winner.plantInfo!.diagnosis,
-        image_url:   imageUrl,
-        model:       winner.model,
+        name:                   winner.plantInfo!.name,
+        description:            winner.plantInfo!.description,
+        care:                   winner.plantInfo!.care,
+        diagnosis:              winner.plantInfo!.diagnosis,
+        watering_interval_days: winner.plantInfo!.watering_interval_days,
+        image_url:              imageUrl,
+        model:                  winner.model,
         ...(user_id ? { user_id } : { user_id: null, anonymous_id: anonymous_id ?? null }),
         ...(typeof lat === "number" && isFinite(lat) && lat >= -90 && lat <= 90 &&
            typeof lng === "number" && isFinite(lng) && lng >= -180 && lng <= 180
@@ -451,15 +478,16 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        name:              winner.plantInfo!.name,
-        description:       winner.plantInfo!.description,
-        care:              winner.plantInfo!.care,
-        diagnosis:         winner.plantInfo!.diagnosis,
-        model:             winner.model,
-        plant_search_id:   searchRow?.id ?? null,
-        created_at:        searchRow?.created_at ?? null,
-        models:            modelsSummary,
-        consensus_reached: consensusReached,
+        name:                   winner.plantInfo!.name,
+        description:            winner.plantInfo!.description,
+        care:                   winner.plantInfo!.care,
+        diagnosis:              winner.plantInfo!.diagnosis,
+        watering_interval_days: winner.plantInfo!.watering_interval_days,
+        model:                  winner.model,
+        plant_search_id:        searchRow?.id ?? null,
+        created_at:             searchRow?.created_at ?? null,
+        models:                 modelsSummary,
+        consensus_reached:      consensusReached,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

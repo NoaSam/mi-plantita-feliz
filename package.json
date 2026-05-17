@@ -16,6 +16,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "benchmark:bootstrap": "tsx scripts/bootstrap-golden-set.ts",
+    "benchmark:prompt": "tsx scripts/benchmark-prompt.ts",
     "check:errors": "tsx scripts/check-errors.ts"
   },
   "dependencies": {

@@ -11,6 +11,7 @@ export interface PlantResult {
   description: string;
   care: string;
   diagnosis: string;
+  watering_interval_days: number | null;
   imageUrl: string;
   date: string;
   model?: string;
@@ -105,6 +106,7 @@ export function usePlantIdentifier() {
         description: data.description,
         care: data.care,
         diagnosis: data.diagnosis,
+        watering_interval_days: data.watering_interval_days ?? null,
         imageUrl: compressed,
         date: data.created_at ?? new Date().toISOString(),
         model: data.model,
