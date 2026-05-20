@@ -4,6 +4,8 @@ trigger_condition: Cuando se vaya a hacer Phase 3 (Calendar v0) o antes si el fe
 planted_date: 2026-05-17
 type: ux-gap-seed
 related_phase: 02.1 (introdujo la columna `context` pero no la propagó al PlantResultView)
+status: decided-2026-05-20
+decision: "Hipótesis A → próximo phase (Phase 02.2). Hipótesis B → Phase candidate en roadmap (futuro). Decisión tomada tras revisar mockups vía /mockup."
 ---
 
 # Detalle de planta consciente del contexto
@@ -23,6 +25,15 @@ Para un usuario que pulsa un pin del mapa y entra al detalle, los acordeones de 
 - Usuario que abre `/planta/:id` desde un pin del mapa (`wild`) → ve cuidados irrelevantes
 - (No aplica a `home`) → ahí los 3 acordeones son útiles
 - (No aplica a `unclassified`) → ahí el usuario todavía no decidió, mostrarle los 3 le ayuda a decidir
+
+## Decisión (2026-05-20)
+
+Tras mockup de A vs B vía `/mockup`:
+- **Hipótesis A ✅ ELEGIDA** → próxima fase a planificar (Phase 02.2). Cambio mínimo, sin riesgo de regresión, resuelve el ruido inmediato.
+- **Hipótesis B 📋 ROADMAP** → movida a Phase candidate (futuro). Interesante pero scope grande y dependiente de Phase 2 (prompt optimization) estabilizado.
+- Hipótesis C y D no se evaluaron en esta ronda.
+
+Próximo paso: `/gsd-plan-phase` para crear Phase 02.2.
 
 ## Hipótesis de solución (sin lock — pensar mejor)
 

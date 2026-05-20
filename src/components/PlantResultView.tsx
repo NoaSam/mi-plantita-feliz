@@ -66,6 +66,12 @@ export default function PlantResultView({ plant, onReset }: PlantResultViewProps
     setIntendedAction(null);
   }, [plant.id, plant.context]);
 
+  // Source of truth for the *currently displayed* context: optimistic
+  // pendingAction (during morph) > committedContext (after commit) > plant.context (initial fetch).
+  // This drives the accordion visibility — without it, the wild→home/home→wild reclassification
+  // would only update the banner and require a page refresh to see the accordions change.
+  const currentContext = pendingAction ?? committedContext ?? plant.context;
+
   const contentMap: Record<string, string> = {
     description: plant.description,
     care: plant.care,
@@ -199,17 +205,21 @@ export default function PlantResultView({ plant, onReset }: PlantResultViewProps
         />
       )}
 
-      {/* Info section — always rendered below the classification section */}
+      {/* Info section — always rendered below the classification section.
+          For wild plants (descubrimientos del mapa) only show "Qué es" — the
+          user is not going to water or treat a one-off discovery. */}
       <section aria-labelledby="plant-info-eyebrow" className="flex flex-col gap-4">
         <h2 id="plant-info-eyebrow" className="font-display text-base text-muted-foreground">
           Más sobre esta planta
         </h2>
         <Accordion
           type="multiple"
-          defaultValue={["diagnosis"]}
+          defaultValue={currentContext === "wild" ? ["description"] : ["diagnosis"]}
           className="flex flex-col gap-4"
         >
-        {sections.map(({ value, emoji, label }) => (
+        {sections
+          .filter(({ value }) => currentContext !== "wild" || value === "description")
+          .map(({ value, emoji, label }) => (
           <AccordionItem
             key={value}
             value={value}

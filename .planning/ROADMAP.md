@@ -136,6 +136,13 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd-plan-phase 04.1 to break down)
 
+### Phase candidate: Wild Field Journal (Hipótesis B del seed `context-aware-plant-detail`)
+**Goal**: Para plantas clasificadas como silvestres (`context = 'wild'`), reemplazar los acordeones de cuidados/diagnóstico por una **ficha de descubrimiento** con campos botánicos útiles: familia, hábitat natural, época de floración, origen (nativa/exótica/invasora en España), comestible, tóxica. Estilo "cuaderno de naturalista".
+**Depends on**: Phase 02.2 (Hipótesis A — pre-requisito mínimo), Phase 2 estabilizada (toca prompt + DB schema)
+**Trigger condition**: Reactivar cuando Phase 02.2 esté en producción y haya feedback de usuarios pidiendo más info sobre descubrimientos. Coordinar con Phase 2 si se va a tocar el prompt (eficiencia de un solo sprint).
+**Riesgos a evaluar**: la IA puede inventar datos críticos como toxicidad — requiere validación humana de un sample antes de mostrar a usuarios.
+**Origen**: mockup de A vs B vía `/mockup` el 2026-05-20. Hipótesis A elegida como Phase 02.2 inmediata; B se difiere a este candidate.
+
 ---
 
 ## Progress
