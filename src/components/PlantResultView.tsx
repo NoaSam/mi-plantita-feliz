@@ -66,6 +66,12 @@ export default function PlantResultView({ plant, onReset }: PlantResultViewProps
     setIntendedAction(null);
   }, [plant.id, plant.context]);
 
+  // Source of truth for the *currently displayed* context: optimistic
+  // pendingAction (during morph) > committedContext (after commit) > plant.context (initial fetch).
+  // This drives the accordion visibility — without it, the wild→home/home→wild reclassification
+  // would only update the banner and require a page refresh to see the accordions change.
+  const currentContext = pendingAction ?? committedContext ?? plant.context;
+
   const contentMap: Record<string, string> = {
     description: plant.description,
     care: plant.care,
@@ -208,11 +214,11 @@ export default function PlantResultView({ plant, onReset }: PlantResultViewProps
         </h2>
         <Accordion
           type="multiple"
-          defaultValue={plant.context === "wild" ? ["description"] : ["diagnosis"]}
+          defaultValue={currentContext === "wild" ? ["description"] : ["diagnosis"]}
           className="flex flex-col gap-4"
         >
         {sections
-          .filter(({ value }) => plant.context !== "wild" || value === "description")
+          .filter(({ value }) => currentContext !== "wild" || value === "description")
           .map(({ value, emoji, label }) => (
           <AccordionItem
             key={value}
