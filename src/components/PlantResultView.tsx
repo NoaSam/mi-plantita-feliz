@@ -199,17 +199,21 @@ export default function PlantResultView({ plant, onReset }: PlantResultViewProps
         />
       )}
 
-      {/* Info section — always rendered below the classification section */}
+      {/* Info section — always rendered below the classification section.
+          For wild plants (descubrimientos del mapa) only show "Qué es" — the
+          user is not going to water or treat a one-off discovery. */}
       <section aria-labelledby="plant-info-eyebrow" className="flex flex-col gap-4">
         <h2 id="plant-info-eyebrow" className="font-display text-base text-muted-foreground">
           Más sobre esta planta
         </h2>
         <Accordion
           type="multiple"
-          defaultValue={["diagnosis"]}
+          defaultValue={plant.context === "wild" ? ["description"] : ["diagnosis"]}
           className="flex flex-col gap-4"
         >
-        {sections.map(({ value, emoji, label }) => (
+        {sections
+          .filter(({ value }) => plant.context !== "wild" || value === "description")
+          .map(({ value, emoji, label }) => (
           <AccordionItem
             key={value}
             value={value}
