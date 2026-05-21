@@ -55,6 +55,10 @@ export default {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        // Phase 3 (D-15): soft warm yellow para urgencia de riego.
+        // Usado por PlantWateringCard badge "X d" cuando X <= 0.
+        softWarn: "hsl(var(--soft-warn))",
+        softWarnBg: "hsl(var(--soft-warn-bg))",
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
