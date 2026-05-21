@@ -72,11 +72,17 @@ npm run build        # Build de producción
 ## Plugins de Claude Code activos (nivel usuario)
 - **frontend-design** — Se activa automáticamente en tareas de frontend. Obliga a definir dirección estética antes de generar código. Genera interfaces con identidad visual real (tipografía, animaciones, composición espacial), no el típico aspecto genérico de IA.
 - **feature-dev** — Skill que se activa automáticamente cuando se describe una feature a implementar. Sigue un flujo estructurado: análisis → plan → implementación → tests. No es un slash command, se activa por contexto.
+- **`/mockup`** — Skill manual para revisión CPO. Tres casos de uso:
+  - **Pre-execute (default):** `/mockup` entre `plan-phase` y `execute-phase`. Lee el `PLAN.md` activo y genera mockups HTML estáticos en `/tmp/` con device frames, datos placeholder en español y anotaciones de producto al lado (de dónde llega, a dónde va, qué se guarda en DB, qué eventos PostHog se añaden). Cierra con bloque de decisión: ✅ procedo / ❌ cambios.
+  - **Comparativo en discuss-phase:** `/mockup hipótesis A vs B vs C` (descripción libre) cuando hay 2-3 candidatos visuales en tensión y la conversación está atascada. Resuelve el tradeoff visual en 2 minutos. NO usar en discuss-phase si solo hay una idea sobre la mesa (sesgo de anclaje) o si la decisión es backend/datos sin componente visual claro — el flujo correcto es divergir (discuss) → converger (plan) → validar (mockup canónico).
+  - **Post-execute QA:** `/mockup --live` arranca `npm run dev` y genera HTML con iframe del dev server + panel CPO con diff vs `main` (DB, edge functions, RLS, PostHog events, deps). Útil antes de mergear. Limitación: rutas con auth-guard (ej. `/mapa`) requieren login previo en una pestaña aparte de `localhost:8080`.
+  - Skill global en `~/.claude/skills/mockup/SKILL.md`. NO modifica código, NO commitea, NO mergea — solo lee y genera.
 
 ### Workflow con plugins
 1. Para cada feature nueva: describir la feature directamente a Claude Code
-2. Ambos plugins se activan solos cuando Claude detecte trabajo relevante
-3. Si se pide diseño de pantalla nueva, definir primero dirección estética (frontend-design lo pedirá)
+2. `frontend-design` y `feature-dev` se activan solos cuando Claude detecte trabajo relevante
+3. Si se pide diseño de pantalla nueva, definir primero dirección estética (`frontend-design` lo pedirá)
+4. Antes de ejecutar un PLAN.md → `/mockup` para validar visual y producto. Antes de mergear a `main` → `/mockup --live` para QA
 
 ## Contexto para Claude Code
 - La dueña del producto es CPO con 15+ años de experiencia. No escribe código, dirige desarrollo.
