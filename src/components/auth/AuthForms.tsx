@@ -4,7 +4,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { CheckCircle, Leaf, Mail } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -51,7 +51,6 @@ type RegisterValues = z.infer<typeof registerSchema>;
 // --- Login Form ---
 
 function LoginForm() {
-  const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
   const {
     register,
@@ -64,9 +63,14 @@ function LoginForm() {
     const { error } = await authService.signIn(email, password);
     if (error) {
       setServerError(error);
-    } else {
-      navigate("/mis-plantas");
     }
+    // No navigate on success: user is already on /mis-plantas (the only path that
+    // mounts AuthForms via RequireAuth). When AuthContext's onAuthStateChange
+    // flips `user`, RequireAuth re-renders to show History. If a pending
+    // classification exists, the post-auth chain in AuthContext dispatches
+    // mp:pending-classification-resolved, and App's listener navigates to
+    // /planta/:id with replace=true. A premature navigate here would race
+    // against that listener and override its replace.
   };
 
   return (

@@ -149,3 +149,55 @@ plant_identified (logged_in: false)
   → anon_searches_claimed
   → classification_completed
 ```
+
+---
+
+## Phase 03.1 — Plant Map v0
+
+**Status:** Implementado en Phase 03.1. Los archivos `.tsx` son `src/pages/MapPage.tsx` y `src/components/PlantMapSheet.tsx`.
+
+### Eventos del mapa de descubrimientos
+
+| Evento | Propiedades | Archivo | Cuándo se dispara |
+|---|---|---|---|
+| `map_opened` | `pin_count` | `src/pages/MapPage.tsx` | Usuario navega a `/mapa` y el hook `useWildPlantsWithCoords` resuelve (disparar **una vez por montaje**, gated con flag local `trackedOpen` para evitar inflar la métrica con re-renders) |
+| `map_pin_tapped` | `plant_search_id`, `pin_index_among_total`, `total_pins` | `src/pages/MapPage.tsx` | Usuario toca un pin del mapa. Disparar **antes** de `setSelectedPin` |
+| `map_navigated_to_detail` | `plant_search_id`, `from` | `src/components/PlantMapSheet.tsx` | Usuario toca "Ver detalle" en el bottom sheet del pin. Disparar **antes** del `navigate(\`/planta/${id}\`)` |
+
+### Detalle de propiedades
+
+**`map_opened`**
+- `pin_count`: número de pins visibles en el mapa (= `wild_with_coords_count` del usuario)
+- Disparar **una sola vez por montaje** de `MapPage` (flag in-component `trackedOpen`) para evitar inflar la métrica con re-renders por state changes (selectedPin, etc.)
+
+**`map_pin_tapped`**
+- `plant_search_id`: UUID de la fila en `plant_searches` correspondiente al pin tocado
+- `pin_index_among_total`: índice **0-based** del pin entre los `plants.length` totales. El hook ordena por `created_at desc`, por lo que `index === 0` siempre es el descubrimiento más reciente. Permite analizar si los usuarios prefieren los pins recientes (índice bajo) o los antiguos.
+- `total_pins`: cardinalidad total de pins en el mapa cuando se hizo el tap. Permite normalizar `pin_index_among_total` y separar comportamiento de usuarios con pocos vs muchos descubrimientos.
+
+**`map_navigated_to_detail`**
+- `plant_search_id`: UUID de la fila
+- `from`: literal `'pin_sheet'` en v0. Campo reservado por si en v1+ se añade otro punto de entrada al detalle desde el mapa (ej. swipe-to-detail, long-press, mini-card en el header).
+
+### Funnel previsto (para análisis posterior)
+
+Funnel de descubrimiento → exploración:
+```
+plant_identified (con has_location: true)
+  → classification_action_clicked (action: 'wild')
+  → classification_completed
+  → (visita futura) map_opened
+  → map_pin_tapped
+  → map_navigated_to_detail        [conversión clave: el mapa lleva al detalle]
+```
+
+Funnel cross-fase (Phase 02.1 + 03.1):
+```
+plant_identified
+  → classification_action_clicked (action: 'wild')
+  → classification_completed
+  → (tab "Mapa" aparece reactivamente — sin event explícito, pero útil para diagnostico)
+  → map_opened (con pin_count >= 1)
+  → map_pin_tapped (con pin_index_among_total: 0 — el descubrimiento que acaban de hacer)
+  → map_navigated_to_detail (from: 'pin_sheet')
+```

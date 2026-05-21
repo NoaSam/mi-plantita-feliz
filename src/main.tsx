@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { initPostHog } from "./lib/track";
 import App from "./App.tsx";
+import "leaflet/dist/leaflet.css";
 import "./index.css";
 
 // Initialize PostHog only if the user has previously consented to analytics.

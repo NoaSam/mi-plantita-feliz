@@ -68,16 +68,27 @@ export async function processPendingClassification(): Promise<{ plant_search_id:
   const pending = readPendingClassification();
   if (!pending) return null;
 
-  const { error } = await supabase
-    .from("plant_searches")
-    .update({ context: pending.action })
-    .eq("id", pending.plant_search_id);
-
-  // Always clear the key so we never retry on next navigation.
+  // Always clear the key first so we never retry on next navigation, even on failure.
   clearPendingClassification();
 
-  if (error) {
-    console.warn("processPendingClassification UPDATE failed:", error.message);
+  // Get the current authenticated user (the only legitimate writer for this UPDATE).
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // CR-04 fix: belt + RLS suspenders. Gate the UPDATE on user_id = current user
+  // so sessionStorage tampering cannot mutate another row of the just-signed-in user.
+  // .select().maybeSingle() so we can detect the 0-rows-affected case (RLS deny or
+  // wrong owner) without conflating it with network errors.
+  const { data, error } = await supabase
+    .from("plant_searches")
+    .update({ context: pending.action })
+    .eq("id", pending.plant_search_id)
+    .eq("user_id", user.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error) console.warn("processPendingClassification UPDATE failed:", error.message);
     return null;
   }
 
