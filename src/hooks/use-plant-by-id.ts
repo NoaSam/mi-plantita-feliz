@@ -13,7 +13,7 @@ export interface UsePlantByIdReturn {
  * RLS denies / 0 rows → notFound = true (per D-06).
  * Caller in PlantDetail page surfaces toast + navigate('/').
  */
-export function usePlantById(id: string): UsePlantByIdReturn {
+export function usePlantById(id: string | undefined): UsePlantByIdReturn {
   const [plant, setPlant] = useState<PlantResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);

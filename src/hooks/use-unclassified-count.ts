@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -21,9 +21,20 @@ export function useUnclassifiedCount(): UseUnclassifiedCountReturn {
   const [count, setCount] = useState(0);
   const [recent, setRecent] = useState<UnclassifiedThumb[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // WR-02 fix: ref-tracked mounted boolean so the async load() can guard every
+  // setState against an unmounted component without smuggling the flag through
+  // every helper.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const load = useCallback(async () => {
     if (!user) {
+      if (!mountedRef.current) return;
       setCount(0);
       setRecent([]);
       setIsLoading(false);
@@ -37,6 +48,8 @@ export function useUnclassifiedCount(): UseUnclassifiedCountReturn {
       .eq("context", "unclassified")
       .order("created_at", { ascending: false })
       .limit(4);
+
+    if (!mountedRef.current) return;
 
     if (error) {
       console.error("Error fetching unclassified count:", error.message);
@@ -59,12 +72,7 @@ export function useUnclassifiedCount(): UseUnclassifiedCountReturn {
   }, [user]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      await load();
-      if (cancelled) return;
-    })();
-    return () => { cancelled = true; };
+    load();
   }, [load]);
 
   return { count, recent, isLoading, refetch: load };

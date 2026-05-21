@@ -70,6 +70,52 @@ export const MOCK_HISTORY_ITEMS = [
 ];
 
 // ---------------------------------------------------------------------------
+// Phase 03.1 — Wild plants with coords (for /mapa tests)
+// ---------------------------------------------------------------------------
+
+export const MOCK_WILD_WITH_COORDS = [
+  {
+    id: "wild-001",
+    name: "Salvia rosmarinus (Rosmarinus officinalis)",
+    description: "Romero silvestre encontrado en zona forestal.",
+    care: "Riego escaso, luz directa, suelo seco.",
+    diagnosis: "Buen estado.",
+    image_url: "data:image/jpeg;base64,/9j/wild001",
+    context: "wild" as const,
+    lat: 40.4168,
+    lng: -3.7038,
+    created_at: "2026-05-10T10:00:00Z",
+    user_id: MOCK_USER.id,
+  },
+  {
+    id: "wild-002",
+    name: "Lavandula angustifolia (Lavandula angustifolia)",
+    description: "Lavanda descubierta en Lisboa.",
+    care: "Sol pleno, riego moderado.",
+    diagnosis: "Buen estado.",
+    image_url: "data:image/jpeg;base64,/9j/wild002",
+    context: "wild" as const,
+    lat: 38.7223,
+    lng: -9.1393,
+    created_at: "2026-04-20T14:30:00Z",
+    user_id: MOCK_USER.id,
+  },
+  {
+    id: "wild-003",
+    name: "Olea europaea (Olea europaea)",
+    description: "Olivo joven en parque urbano.",
+    care: "Sol directo, poco riego.",
+    diagnosis: "Buen estado.",
+    image_url: "data:image/jpeg;base64,/9j/wild003",
+    context: "wild" as const,
+    lat: 41.3851,
+    lng: 2.1734,
+    created_at: "2026-03-15T09:00:00Z",
+    user_id: MOCK_USER.id,
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Supabase URL detection
 // ---------------------------------------------------------------------------
 

@@ -1,7 +1,7 @@
 # Roadmap: Mi Plantita Feliz
 
 **Milestone:** Android + Calendario de Riego
-**Creado:** 2004-04-22
+**Creado:** 2026-04-22
 **Granularidad:** Coarse
 **Cobertura:** 21/21 requirements v1 mapeados
 
@@ -11,10 +11,11 @@
 
 - [x] **Phase 1: Android Native** — Empaquetar la app con Capacitor y generar APK funcional para Android
 - [ ] **Phase 2: Prompt Optimization** — Mejorar precision de IA y devolver watering_interval_days estructurado
-- [ ] **Phase 02.1: Foundations: Classification + Result Actions + Reveal** — 3 acciones en result screen, columna context en DB, banner para usuarios existentes
+- [x] **Phase 02.1: Foundations: Classification + Result Actions + Reveal** — 3 acciones en result screen, columna context en DB, banner para usuarios existentes (completed 2026-05-14)
 - [ ] **Phase 3: Calendar v0** — Lista minima de "Mis plantas" con frecuencia de riego sugerida, condicional al modo casa
-- [ ] **Phase 03.1: Plant Map v0** — Mapa con pins de descubrimientos geolocalizados, condicional al modo explorador
+- [x] **Phase 03.1: Plant Map v0** — Mapa con pins de descubrimientos geolocalizados, condicional al modo explorador (completed 2026-05-17)
 - [x] **Phase 4: Response Time Optimization** — Reducir latencia percibida del analisis de plantas
+- [ ] **Phase 04.1: My Plants Load Time Optimization** — Acelerar la pantalla `/mis-plantas` (history)
 - [ ] **Phase 5: Identification Engine v2 — Pl@ntNet + 1 LLM** *(candidate)* — Separar identificación (Pl@ntNet, especializado) de generación de cuidados/diagnóstico (1 LLM en vez de 3)
 - [ ] **Phase 6: Backfill imágenes históricas base64 → Storage** *(candidate)* — Migrar las ~124 filas legacy de `plant_searches.image_url` (data:image/jpeg;base64,...) a URLs HTTPS en Supabase Storage; reducir tamaño DB y eliminar riesgo OOM en Capacitor
 
@@ -55,7 +56,7 @@ Plans:
 **Goal:** Las identificaciones de plantas se pueden etiquetar como `home` (calendar v0) o `wild` (map v0) desde el resultado, el detalle accedido vía historial y desde la sección "Sin clasificar" en home; los usuarios anónimos ven la opción pero la acción está protegida por un wall de login que preserva su intención y la ejecuta automáticamente tras el alta.
 **Requirements**: SPEC-1..SPEC-10 (locked en `phases/02.1-foundations-classification-result-actions-reveal/02.1-SPEC.md`)
 **Depends on:** Phase 2
-**Plans:** 3/3 plans complete
+**Plans:** 7/7 plans complete
 
 Plans:
 
@@ -64,17 +65,17 @@ Plans:
 
 **Wave 2 — UI primitives + hooks + auth chain** *(blocked on Wave 1)*
 - [x] 02.1-02: Hooks `useClassifyPlant` + `useUnclassifiedCount` + `usePlantById` + `src/lib/pending-classification.ts` (sessionStorage helper)
-- [ ] 02.1-03: Auth chain — `claimAnonymousSearches` count + `anon_searches_claimed` event + `AuthContext.onAuthStateChange` chains `processPendingClassification` + dispatch `mp:pending-classification-resolved`
-- [ ] 02.1-04: `ClassificationCards` + `ClassificationMorph` + `PersistentClassificationBanner`
-- [ ] 02.1-05: `UnclassifiedSection` + `HistorySummary` + `ContextChip`
-- [ ] 02.1-06: `AnonClassificationWall` (bottom sheet)
+- [x] 02.1-03: Auth chain — `claimAnonymousSearches` count + `anon_searches_claimed` event + `AuthContext.onAuthStateChange` chains `processPendingClassification` + dispatch `mp:pending-classification-resolved`
+- [x] 02.1-04: `ClassificationCards` + `ClassificationMorph` + `PersistentClassificationBanner`
+- [x] 02.1-05: `UnclassifiedSection` + `HistorySummary` + `ContextChip`
+- [x] 02.1-06: `AnonClassificationWall` (bottom sheet)
 
 **Wave 3 — Integration + tracking sweep** *(blocked on Wave 2 completion)*
-- [ ] 02.1-07: `PlantDetail` page + modify `PlantResultView`/`Index`/`History`/`App` + register `/planta/:id` route + window listener for `mp:pending-classification-resolved` + verify all 10 PostHog events
+- [x] 02.1-07: `PlantDetail` page + modify `PlantResultView`/`Index`/`History`/`App` + register `/planta/:id` route + window listener for `mp:pending-classification-resolved` + verify all 10 PostHog events
 
 ### Phase 3: Calendar v0
 **Goal**: Los usuarios ven una lista simple de "Mis plantas" con la frecuencia de riego sugerida por la IA, condicional a haber clasificado al menos una planta como casa
-**Depends on**: Phase 02.1
+**Depends on**: Phase 02.1 (clasificación + context column), Phase 2 (campo `watering_interval_days` estructurado que la lista consume)
 **Requirements**: RIEG-01, RIEG-02 (parcial — editable se difiere a v1+)
 **Success Criteria**:
   1. La seccion "Mis plantas" aparece en home solo cuando hay >=1 planta clasificada como casa
@@ -87,16 +88,33 @@ Plans:
 
 ### Phase 03.1: Plant Map v0 (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
-**Requirements**: TBD
+**Goal:** Los usuarios con ≥1 planta clasificada como `wild` que tenga `lat/lng` no nulos pueden ver esas plantas como pins en un mapa accesible desde una pestaña condicional en `BottomTabBar`, y tocar un pin abre un preview con CTA al detalle completo de la planta.
+**Requirements**: SPEC-R1..SPEC-R8 + SPEC-AC1..SPEC-AC12 (locked en `phases/03.1-plant-map-v0/03.1-SPEC.md`); contrato adicional UI-SPEC.md + 17 decisiones D-01..D-17 en CONTEXT.md
 **Depends on:** Phase 3
-**Plans:** 0 plans
+**Plans:** 8/8 plans complete
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 03.1 to break down)
+
+**Wave 1 — Foundations (parallel)**
+- [x] 03.1-01-PLAN.md — Install leaflet + react-leaflet + @types/leaflet; import CSS in main.tsx; add .plant-map-pin + .leaflet-control-* overrides in index.css (SPEC-R3, R4)
+- [x] 03.1-02-PLAN.md — Hook `useContextCounts` (4 buckets) + test unit + listener `mp:pending-classification-resolved` (SPEC-R1, AC1, AC2, AC3)
+- [x] 03.1-03-PLAN.md — Hook `useWildPlantsWithCoords` (filtro WHERE context=wild + lat/lng NOT NULL) + test unit (SPEC-R3, R8, AC5, AC10)
+
+**Wave 2 — Integration (depends on Wave 1)**
+- [x] 03.1-04-PLAN.md — Refactor `BottomTabBar` tabs computadas (useMemo + useContextCounts); dispatch `mp:pending-classification-resolved` en `useClassifyPlant` (SPEC-R1, AC1, AC2, AC3)
+- [x] 03.1-05-PLAN.md — Factory `buildPlantPinIcon` + `FitBoundsOnMount` + `MapPage` shell + AppLayout `fullBleed` prop + route `/mapa` (SPEC-R2, R4, R5, AC4, AC5, AC6, AC11, AC12)
+
+**Wave 3 — Sheet interaction (depends on Wave 2)**
+- [x] 03.1-06-PLAN.md — `PlantMapSheet` (bottom sheet preview) + mount en MapPage (SPEC-R6, R7, AC7, AC8)
+
+**Wave 4 — Tracking sweep (depends on Wave 3)**
+- [x] 03.1-07-PLAN.md — Tracking PostHog completo: `map_pin_tapped` en MapPage + `map_navigated_to_detail` en sheet + `docs/posthog-events.md` § Phase 03.1
+
+**Wave 5 — E2E gate (depends on Waves 2 + 3 + 4)**
+- [x] 03.1-08-PLAN.md — E2E Playwright `e2e/map.spec.ts` (NOT tests/e2e/) happy path AC9 + AC1 tab visibility + AC12 tile failure (SPEC-AC1, AC4, AC5, AC7, AC8, AC9, AC11, AC12)
 
 ### Phase 4: Response Time Optimization
-**Goal**: El usuario percibe el resultado de identificacion en ~3-5 segundos en lugar de ~04-25 segundos, gracias a streaming SSE y seleccion first-winner del modelo de IA
+**Goal**: El usuario percibe el resultado de identificacion en ~3-5 segundos en lugar de ~14-25 segundos, gracias a streaming SSE y seleccion first-winner del modelo de IA
 **Depends on**: Phase 1
 **Requirements**: PERF-01, PERF-02, PERF-03
 **Success Criteria**:
@@ -109,6 +127,16 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Edge function: Promise.race first-winner + SSE streaming response
 - [x] 04-02-PLAN.md — Client hook: SSE reader + browser-image-compression + test update
+
+### Phase 04.1: My Plants Load Time Optimization (INSERTED)
+**Goal**: La pantalla `/mis-plantas` (history) carga visiblemente más rápido en mobile — métrica concreta (p50/p90 antes/después) a definir en discuss-phase
+**Depends on**: Phase 02.1 (la pantalla ya existe con context chips), Phase 4 (patrones de perf ya validados en la app)
+**Requirements**: TBD (a derivar durante discuss-phase — hipótesis: imágenes pesadas sin lazy/thumbnails, query sin paginación, falta de skeleton, queries N+1)
+**Success Criteria**: TBD (mínimo: time-to-first-content < 1.5s en 4G mobile, scroll suave a 60fps con 50+ items)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 04.1 to break down)
 
 ### Phase 5: Identification Engine v2 — Pl@ntNet + 1 LLM (CANDIDATE)
 
@@ -181,6 +209,13 @@ Plans:
 
 **Nota:** Detectado mientras se construía el bootstrap del benchmark de Phase 2. El bootstrap se adaptó para soportar ambos formatos como workaround inmediato (commit `153e0a6`). Esta phase elimina la causa raíz.
 
+### Phase candidate: Wild Field Journal (Hipótesis B del seed `context-aware-plant-detail`)
+**Goal**: Para plantas clasificadas como silvestres (`context = 'wild'`), reemplazar los acordeones de cuidados/diagnóstico por una **ficha de descubrimiento** con campos botánicos útiles: familia, hábitat natural, época de floración, origen (nativa/exótica/invasora en España), comestible, tóxica. Estilo "cuaderno de naturalista".
+**Depends on**: Phase 02.2 (Hipótesis A — pre-requisito mínimo), Phase 2 estabilizada (toca prompt + DB schema)
+**Trigger condition**: Reactivar cuando Phase 02.2 esté en producción y haya feedback de usuarios pidiendo más info sobre descubrimientos. Coordinar con Phase 2 si se va a tocar el prompt (eficiencia de un solo sprint).
+**Riesgos a evaluar**: la IA puede inventar datos críticos como toxicidad — requiere validación humana de un sample antes de mostrar a usuarios.
+**Origen**: mockup de A vs B vía `/mockup` el 2026-05-20. Hipótesis A elegida como Phase 02.2 inmediata; B se difiere a este candidate.
+
 ---
 
 ## Progress
@@ -189,13 +224,14 @@ Plans:
 |-------|---------------|--------|-----------|
 | 1. Android Native | 5/5 | Complete | - |
 | 2. Prompt Optimization | 0/? | Not started | - |
-| 02.1. Foundations | 2/7 | In Progress|  |
+| 02.1. Foundations | 7/7 | Complete    | 2026-05-15 |
 | 3. Calendar v0 | 0/? | Not started | - |
-| 03.1. Plant Map v0 | 0/? | Not started | - |
-| 4. Response Time Optimization | 2/2 | Complete | 2004-04-28 |
+| 03.1. Plant Map v0 | 8/8 | Complete    | 2026-05-17 |
+| 4. Response Time Optimization | 2/2 | Complete | 2026-04-28 |
+| 04.1. My Plants Load Time Optimization | 0/? | Not started | - |
 | 5. Identification Engine v2 (Pl@ntNet + 1 LLM) | 0/? | Candidate | - |
 | 6. Backfill base64 → Storage | 0/? | Candidate | - |
 
 ---
 
-*Roadmap creado: 2004-04-22*
+*Roadmap creado: 2026-04-22*

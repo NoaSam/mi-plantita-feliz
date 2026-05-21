@@ -69,3 +69,44 @@
     letter-spacing: -0.01em;
   }
 }
+
+/* ============================================================
+   Phase 03.1 — Plant Map v0 — Leaflet integration overrides
+   ============================================================ */
+
+/* Pitfall 3 de RESEARCH.md: el divIcon default de Leaflet aplica
+   .leaflet-div-icon { background: white; border: 1px solid #666 } al wrapper,
+   envolviendo nuestro sticker en una caja blanca. Override obligatorio. */
+.plant-map-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Plant map pin — D-10 active feedback (CONTEXT.md) */
+.plant-map-pin > div {
+  cursor: pointer;
+}
+.plant-map-pin:active > div,
+.plant-map-pin:focus-within > div {
+  transform: scale(1.1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .plant-map-pin > div {
+    transition: none;
+  }
+  .plant-map-pin:active > div,
+  .plant-map-pin:focus-within > div {
+    transform: none;
+  }
+}
+
+/* UI-SPEC line 822-824: Leaflet zoom controls hidden — touch pinch is
+   sufficient on mobile; keyboard +/- still works for a11y. */
+.leaflet-control-zoom {
+  display: none !important;
+}
+
+/* UI-SPEC line 826-829: iOS PWA safe-area-inset-right para attribution */
+.leaflet-control-attribution {
+  margin-right: max(2px, env(safe-area-inset-right)) !important;
+}
