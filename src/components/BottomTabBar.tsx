@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Leaf, BookOpen, Settings, MapPin } from "lucide-react";
+import { Leaf, BookOpen, Settings, MapPin, Droplet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useContextCounts } from "@/hooks/use-context-counts";
@@ -15,19 +15,24 @@ export default function BottomTabBar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { wild_with_coords } = useContextCounts();
+  const { home, wild_with_coords } = useContextCounts();
 
   const tabs: Tab[] = useMemo(() => {
     const result: Tab[] = [{ path: "/", label: "Inicio", icon: Leaf }];
+    // Phase 3 (D-01): tab Regar condicional a usuario logado con >= 1 planta casa.
+    if (user && home >= 1) {
+      result.push({ path: "/regar", label: "Regar", icon: Droplet });
+    }
+    // Phase 03.1: tab Mapa condicional a wild_with_coords >= 1.
     if (user && wild_with_coords >= 1) {
       result.push({ path: "/mapa", label: "Mapa", icon: MapPin });
     }
-    result.push({ path: "/mis-plantas", label: "Mis plantas", icon: BookOpen });
+    // D-03: "Mis plantas" deja de ser tab principal — vive en /ajustes/mis-plantas.
     if (user) {
       result.push({ path: "/ajustes", label: "Ajustes", icon: Settings });
     }
     return result;
-  }, [user, wild_with_coords]);
+  }, [user, home, wild_with_coords]);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t-2 border-foreground/10 pb-safe">
