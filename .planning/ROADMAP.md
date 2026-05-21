@@ -91,7 +91,7 @@ Plans:
 **Goal:** Los usuarios con ≥1 planta clasificada como `wild` que tenga `lat/lng` no nulos pueden ver esas plantas como pins en un mapa accesible desde una pestaña condicional en `BottomTabBar`, y tocar un pin abre un preview con CTA al detalle completo de la planta.
 **Requirements**: SPEC-R1..SPEC-R8 + SPEC-AC1..SPEC-AC12 (locked en `phases/03.1-plant-map-v0/03.1-SPEC.md`); contrato adicional UI-SPEC.md + 17 decisiones D-01..D-17 en CONTEXT.md
 **Depends on:** Phase 02.1 (clasificación + columna `context` + filtro `wild`). NOTA: el ROADMAP original declaraba "Depends on Phase 3" como ordering preference, pero técnicamente esta phase solo necesita Phase 02.1; shipeada a producción 2026-05-21 antes de Phase 3 sin issues (la tab del mapa es condicional en `BottomTabBar`, la ruta redirige a `/` sin plantas wild → no hay regresión visible).
-**Plans:** 8/8 plans complete
+**Plans:** 1/5 plans executed
 
 Plans:
 
@@ -225,7 +225,7 @@ Plans:
 | 1. Android Native | 5/5 | Complete | - |
 | 2. Prompt Optimization | 0/? | Not started | - |
 | 02.1. Foundations | 7/7 | Complete    | 2026-05-15 |
-| 3. Calendar v0 | 0/? | Not started | - |
+| 3. Calendar v0 | 1/5 | In Progress | - |
 | 03.1. Plant Map v0 | 8/8 | Complete    | 2026-05-17 |
 | 4. Response Time Optimization | 2/2 | Complete | 2026-04-28 |
 | 04.1. My Plants Load Time Optimization | 0/? | Not started | - |

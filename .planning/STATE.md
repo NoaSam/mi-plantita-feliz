@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-last_updated: "2026-05-21T00:00:00.000Z"
+status: executing
+last_updated: "2026-05-21T19:18:26.287Z"
 progress:
-  total_phases: 7
-  completed_phases: 6
-  total_plans: 23
-  completed_plans: 23
-  percent: 86
+  total_phases: 10
+  completed_phases: 5
+  total_plans: 35
+  completed_plans: 27
+  percent: 77
 ---
 
 # State: Mi Plantita Feliz
 
-**Last updated:** 2026-04-22
+**Last updated:** 2026-05-21
 
 ---
 
@@ -22,16 +22,16 @@ progress:
 
 **Core value:** Cualquier persona puede sacar una foto a una planta y saber al instante qué es, cómo cuidarla y si tiene algún problema — sin saber nada de botánica.
 
-**Current focus:** Phase 3 — Calendar v0 (próxima a planificar)
+**Current focus:** Phase 3 — Calendar v0 (Wave 1 completada; Wave 2 a continuación)
 
 ---
 
 ## Current Position
 
 **Phase:** 3 (Calendar v0)
-**Plan:** Not started
-**Status:** Ready to plan
-**Completed:** Phase 1, 2, 02.1, 02.2, 03.1, 4 (merged to main 2026-05-21)
+**Plan:** 03-01 (Nav restructure) — ✅ completado
+**Status:** Wave 1 done; ready for Wave 2 (03-02 regar list)
+**Completed:** Phase 1, 2, 02.1, 02.2, 03.1, 4 (merged to main 2026-05-21) + Phase 3 Plan 01 (en feat/phase-3-calendar-v0)
 
 ```
 [Phase 1] [>>] [Phase 2] [ ] [Phase 3] [ ] [Phase 4]
@@ -59,6 +59,8 @@ progress:
 - Lista de riego (no push notifications) para validar hábito antes de invertir en FCM
 - appId: com.miplantitafeliz.app (no com.mijardin.app) — decisión de producto confirmada
 - android/ excluido de git — se genera por máquina desde capacitor.config.ts + dist/
+- Phase 3 D-03: /mis-plantas vive ahora en /ajustes/mis-plantas (Opción A) con redirect chain desde la URL antigua para bookmarks y login/signup redirects
+- Phase 3 D-04: aviso de migración via toast Sonner 8s + flag localStorage `mp_seen_history_relocation_notice` (lifecycle-only component)
 
 ### Roadmap Evolution
 
@@ -80,8 +82,8 @@ progress:
 ## Session Continuity
 
 Para resumir: leer `.planning/ROADMAP.md` y `.planning/REQUIREMENTS.md`.
-Última sesión: 2026-04-23 — Completados Plans 01-01 a 01-04 (Waves 1-2).
-Siguiente acción: Instalar Android Studio con SDK API 36, luego ejecutar 01-05-PLAN.md (Wave 3: Android build + verification).
+Última sesión: 2026-05-21 — Ejecutado Plan 03-01 (Nav restructure) en feat/phase-3-calendar-v0; 6 commits atómicos; 110/110 tests passing.
+Siguiente acción: Ejecutar Plan 03-02 (regar list — lista de plantas casa con cards y estados visuales).
 
 ---
 

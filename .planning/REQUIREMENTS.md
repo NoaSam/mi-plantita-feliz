@@ -18,7 +18,7 @@
 
 ### Calendario de Riego
 
-- [ ] **RIEG-01**: El usuario puede añadir una planta identificada a su colección ("Mis Plantas")
+- [x] **RIEG-01**: El usuario puede añadir una planta identificada a su colección ("Mis Plantas")
 - [ ] **RIEG-02**: Cada planta tiene frecuencia de riego sugerida por la IA, editable por el usuario
 - [ ] **RIEG-03**: Sección "Hoy toca regar" muestra plantas pendientes del día
 - [ ] **RIEG-04**: El usuario puede marcar "Regué hoy" con un toque para resetear el contador
@@ -74,7 +74,7 @@
 | ANDR-08 | Fase 1 | Completo |
 | PROM-01 | Fase 2 | Pendiente |
 | PROM-02 | Fase 2 | Pendiente |
-| RIEG-01 | Fase 3 | Pendiente |
+| RIEG-01 | Fase 3 (Plan 03-01) | Completo |
 | RIEG-02 | Fase 3 | Pendiente |
 | RIEG-03 | Fase 3 | Pendiente |
 | RIEG-04 | Fase 3 | Pendiente |
