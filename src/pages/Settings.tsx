@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  BookOpen,
   Download,
   FileText,
   Leaf,
@@ -164,6 +165,24 @@ export default function SettingsPage() {
           </>
         )}
       </Section>
+
+      {/* D-03: Mis plantas vive ahora bajo Ajustes (movido desde tab principal en Phase 3). */}
+      {user && (
+        <Section title="Mi colección" icon={BookOpen}>
+          <p className="text-base text-muted-foreground">
+            Tus plantas guardadas, incluyendo las de casa y los descubrimientos.
+          </p>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => navigate("/ajustes/mis-plantas")}
+            className="w-full justify-start gap-2"
+          >
+            <BookOpen className="size-5" />
+            Mis plantas (casa + descubrimientos)
+          </Button>
+        </Section>
+      )}
 
       {/* User data rights — only shown when logged in */}
       {user && (
