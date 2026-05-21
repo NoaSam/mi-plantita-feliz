@@ -179,7 +179,7 @@ export default function SettingsPage() {
             className="w-full justify-start gap-2"
           >
             <BookOpen className="size-5" />
-            Mis plantas (casa + descubrimientos)
+            Mis plantas
           </Button>
         </Section>
       )}
