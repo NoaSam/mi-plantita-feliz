@@ -26,7 +26,10 @@ test.describe("Calendar (/regar)", () => {
     page,
     asAuthenticated: _asAuth,
   }) => {
-    await page.clock.install({ time: FIXED_CLOCK });
+    // setFixedTime keeps Date.now() deterministic without pausing timers
+    // (install() pauses setTimeout/requestAnimationFrame, which stalls
+    // React's flush of the optimistic update + flash + toast).
+    await page.clock.setFixedTime(FIXED_CLOCK);
     await page.unroute(SUPABASE_PLANT_SEARCHES);
     await page.route("**/rest/v1/plant_searches*", (route) => {
       const method = route.request().method();
@@ -92,7 +95,10 @@ test.describe("Calendar (/regar)", () => {
     page,
     asAuthenticated: _asAuth,
   }) => {
-    await page.clock.install({ time: FIXED_CLOCK });
+    // setFixedTime keeps Date.now() deterministic without pausing timers
+    // (install() pauses setTimeout/requestAnimationFrame, which stalls
+    // React's flush of the optimistic update + flash + toast).
+    await page.clock.setFixedTime(FIXED_CLOCK);
     await page.unroute(SUPABASE_PLANT_SEARCHES);
     await page.route("**/rest/v1/plant_searches*", (route) =>
       route.fulfill({

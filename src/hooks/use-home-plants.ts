@@ -59,53 +59,72 @@ export function useHomePlants(): UseHomePlantsReturn {
     };
   }, []);
 
-  const load = useCallback(async () => {
-    if (!user) {
-      if (!mountedRef.current) return;
-      setPlants([]);
-      setIsLoading(false);
-      return;
-    }
-    // Set loading synchronously when we have a user — avoids a render
-    // window where isLoading=false (stale from no-user gate) + plants=[]
-    // would mislead consumers (RegarPage's redirect-on-empty branch).
+  // React "derive state from props" pattern: when the user identity changes,
+  // reset isLoading=true SYNCHRONOUSLY during render so RegarPage sees the
+  // loading state in the same render where user becomes set — avoiding a
+  // race where the redirect-on-empty branch fires before the effect that
+  // kicks off the fetch (#2 — WebKit auth bootstrap is slow enough to expose
+  // this without a sync reset).
+  const [trackedUserId, setTrackedUserId] = useState<string | undefined>(user?.id);
+  if (trackedUserId !== user?.id) {
+    setTrackedUserId(user?.id);
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from("plant_searches")
-      .select("id, name, image_url, watering_interval_days, last_watered_at, created_at")
-      .eq("user_id", user.id)
-      .eq("context", "home")
-      .order("created_at", { ascending: false });
+    setPlants([]);
+  }
 
-    if (!mountedRef.current) return;
-    if (error) {
-      console.error("Error fetching home plants:", error.message);
-      setPlants([]);
-      setIsLoading(false);
-      return;
-    }
-    setPlants(
-      (data ?? []).map((row) => ({
-        id: row.id,
-        name: row.name,
-        imageUrl: row.image_url,
-        createdAt: row.created_at,
-        wateringIntervalDays: row.watering_interval_days,
-        lastWateredAt: row.last_watered_at,
-      })),
-    );
-    setIsLoading(false);
-  }, [user]);
+  // `showLoading`: toggle `isLoading` so RegarPage's spinner gates renders.
+  // Initial mount + user changes pass `true`. Event-driven refetches
+  // (`mp:plant-watered`, etc.) pass `false` so the list stays mounted and
+  // consumer-side optimistic state (PlantWateringCard.optimisticLastWatered)
+  // is not clobbered by a spinner remount.
+  const fetchPlants = useCallback(
+    async (showLoading: boolean) => {
+      if (!user) {
+        if (!mountedRef.current) return;
+        setPlants([]);
+        setIsLoading(false);
+        return;
+      }
+      if (showLoading) setIsLoading(true);
+      const { data, error } = await supabase
+        .from("plant_searches")
+        .select("id, name, image_url, watering_interval_days, last_watered_at, created_at")
+        .eq("user_id", user.id)
+        .eq("context", "home")
+        .order("created_at", { ascending: false });
 
+      if (!mountedRef.current) return;
+      if (error) {
+        console.error("Error fetching home plants:", error.message);
+        setPlants([]);
+        if (showLoading) setIsLoading(false);
+        return;
+      }
+      setPlants(
+        (data ?? []).map((row) => ({
+          id: row.id,
+          name: row.name,
+          imageUrl: row.image_url,
+          createdAt: row.created_at,
+          wateringIntervalDays: row.watering_interval_days,
+          lastWateredAt: row.last_watered_at,
+        })),
+      );
+      if (showLoading) setIsLoading(false);
+    },
+    [user],
+  );
+
+  // Initial load + reloads on user identity change show the spinner.
   useEffect(() => {
-    load();
-  }, [load]);
+    fetchPlants(true);
+  }, [fetchPlants]);
 
   // D-05 reactivity: refetch on classify/revert (Phase 02.1 + 03.1
   // patterns) OR after anon→auth claim (AuthContext existing pattern).
   useEffect(() => {
     const handler = () => {
-      load();
+      fetchPlants(false);
     };
     window.addEventListener("mp:plant-context-updated", handler);
     window.addEventListener("mp:pending-classification-resolved", handler);
@@ -119,7 +138,8 @@ export function useHomePlants(): UseHomePlantsReturn {
       window.removeEventListener("mp:plant-watered", handler);
       window.removeEventListener("mp:plant-frequency-updated", handler);
     };
-  }, [load]);
+  }, [fetchPlants]);
 
-  return { plants, isLoading, refetch: load };
+  const refetch = useCallback(() => fetchPlants(true), [fetchPlants]);
+  return { plants, isLoading, refetch };
 }
