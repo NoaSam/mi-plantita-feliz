@@ -1,6 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useLogWatering } from "./use-log-watering";
+import type { HomePlant } from "@/hooks/use-home-plants";
 
 const makeChain = (result: { error: unknown }) => {
   const chain = {
@@ -10,11 +11,30 @@ const makeChain = (result: { error: unknown }) => {
   return chain;
 };
 
+const mockPlant: HomePlant = {
+  id: "plant-001",
+  name: "Test Plant (Test scientific)",
+  imageUrl: "data:image/jpeg;base64,test",
+  createdAt: "2026-05-10T10:00:00Z",
+  wateringIntervalDays: 7,
+  lastWateredAt: "2026-05-10T10:00:00Z",
+};
+
+const mockPlantPendingFirst: HomePlant = {
+  ...mockPlant,
+  wateringIntervalDays: null,
+  lastWateredAt: null,
+};
+
 let mockSupabaseFrom: ReturnType<typeof vi.fn>;
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (...args: unknown[]) => mockSupabaseFrom(...args),
   },
+}));
+
+vi.mock("@/lib/track", () => ({
+  track: vi.fn(),
 }));
 
 describe("useLogWatering", () => {
@@ -31,7 +51,7 @@ describe("useLogWatering", () => {
 
     let res: { ok: boolean } | undefined;
     await act(async () => {
-      res = await result.current.logWatering("plant-001");
+      res = await result.current.logWatering(mockPlant);
     });
 
     expect(res?.ok).toBe(true);
@@ -58,7 +78,7 @@ describe("useLogWatering", () => {
 
     let res: { ok: boolean } | undefined;
     await act(async () => {
-      res = await result.current.logWatering("plant-001");
+      res = await result.current.logWatering(mockPlant);
     });
 
     expect(res?.ok).toBe(false);
@@ -70,6 +90,28 @@ describe("useLogWatering", () => {
     consoleSpy.mockRestore();
   });
 
+  it("logWatering: pending-first plant tracks was_first_time=true", async () => {
+    const chain = makeChain({ error: null });
+    mockSupabaseFrom.mockReturnValue(chain);
+    const { track } = await import("@/lib/track");
+    vi.mocked(track).mockClear();
+
+    const { result } = renderHook(() => useLogWatering());
+
+    await act(async () => {
+      await result.current.logWatering(mockPlantPendingFirst);
+    });
+
+    expect(track).toHaveBeenCalledWith(
+      "watering_logged",
+      expect.objectContaining({
+        plant_search_id: "plant-001",
+        was_first_time: true,
+        interval_days: null,
+      }),
+    );
+  });
+
   it("revertWatering: success sends UPDATE with previous timestamp", async () => {
     const chain = makeChain({ error: null });
     mockSupabaseFrom.mockReturnValue(chain);
@@ -79,7 +121,7 @@ describe("useLogWatering", () => {
 
     let res: { ok: boolean } | undefined;
     await act(async () => {
-      res = await result.current.revertWatering("plant-001", previous);
+      res = await result.current.revertWatering(mockPlant, previous);
     });
 
     expect(res?.ok).toBe(true);
@@ -95,7 +137,7 @@ describe("useLogWatering", () => {
 
     let res: { ok: boolean } | undefined;
     await act(async () => {
-      res = await result.current.revertWatering("plant-001", null);
+      res = await result.current.revertWatering(mockPlant, null);
     });
 
     expect(res?.ok).toBe(true);
@@ -111,7 +153,7 @@ describe("useLogWatering", () => {
 
     let res: { ok: boolean } | undefined;
     await act(async () => {
-      res = await result.current.revertWatering("plant-001", "2026-05-10T10:00:00Z");
+      res = await result.current.revertWatering(mockPlant, "2026-05-10T10:00:00Z");
     });
 
     expect(res?.ok).toBe(false);
