@@ -96,11 +96,28 @@ export default {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.6" },
         },
+        // Phase 3 sub-phase 3-03 (D-12): flash green 1s tras log de riego.
+        // No usar bg-primary directamente (cambio brusco) — un fade suave 20%→0%
+        // con el color primario via box-shadow inset evita repaint completo del card.
+        "flash-success": {
+          "0%": {
+            boxShadow:
+              "inset 0 0 0 9999px hsl(var(--primary) / 0.2), 4px 4px 0 0 hsl(var(--foreground))",
+          },
+          "100%": {
+            boxShadow:
+              "inset 0 0 0 9999px hsl(var(--primary) / 0), 4px 4px 0 0 hsl(var(--foreground))",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-slow": "pulse-slow 2s ease-in-out infinite",
+        // 1s ease-out, runs once (no infinite). PlantWateringCard applies
+        // `animate-flash-success` via React state for 1s after logging,
+        // then removes the class.
+        "flash-success": "flash-success 1s ease-out forwards",
       },
     },
   },
