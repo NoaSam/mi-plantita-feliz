@@ -78,7 +78,7 @@ describe("useHomePlants", () => {
     expect(notCalls.length).toBe(0);
   });
 
-  it("maps snake_case columns to camelCase including watering_interval_days", async () => {
+  it("maps snake_case columns to camelCase including watering_interval_days and last_watered_at", async () => {
     nextResult = {
       data: [
         {
@@ -86,6 +86,7 @@ describe("useHomePlants", () => {
           name: "Monstera deliciosa (Monstera deliciosa)",
           image_url: "https://img/1.jpg",
           watering_interval_days: 7,
+          last_watered_at: "2026-05-15T10:00:00Z",
           created_at: "2026-05-10T10:00:00Z",
         },
         {
@@ -93,6 +94,7 @@ describe("useHomePlants", () => {
           name: "Pothos",
           image_url: "https://img/2.jpg",
           watering_interval_days: null,
+          last_watered_at: null,
           created_at: "2026-04-01T10:00:00Z",
         },
       ],
@@ -107,6 +109,7 @@ describe("useHomePlants", () => {
         imageUrl: "https://img/1.jpg",
         createdAt: "2026-05-10T10:00:00Z",
         wateringIntervalDays: 7,
+        lastWateredAt: "2026-05-15T10:00:00Z",
       },
       {
         id: "plant-2",
@@ -114,6 +117,7 @@ describe("useHomePlants", () => {
         imageUrl: "https://img/2.jpg",
         createdAt: "2026-04-01T10:00:00Z",
         wateringIntervalDays: null,
+        lastWateredAt: null,
       },
     ]);
   });
@@ -150,6 +154,18 @@ describe("useHomePlants", () => {
 
     act(() => {
       window.dispatchEvent(new CustomEvent("mp:pending-classification-resolved"));
+    });
+
+    await waitFor(() => expect(fromCallCount).toBeGreaterThan(callsBefore));
+  });
+
+  it("refetches when mp:plant-watered event fires (sub-phase 3-03 reactivity)", async () => {
+    const { result } = renderHook(() => useHomePlants());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const callsBefore = fromCallCount;
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent("mp:plant-watered"));
     });
 
     await waitFor(() => expect(fromCallCount).toBeGreaterThan(callsBefore));

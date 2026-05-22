@@ -20,6 +20,7 @@ export interface HomePlant {
   imageUrl: string;
   createdAt: string;
   wateringIntervalDays: number | null;
+  lastWateredAt: string | null;
 }
 
 export interface UseHomePlantsReturn {
@@ -71,7 +72,7 @@ export function useHomePlants(): UseHomePlantsReturn {
     setIsLoading(true);
     const { data, error } = await supabase
       .from("plant_searches")
-      .select("id, name, image_url, watering_interval_days, created_at")
+      .select("id, name, image_url, watering_interval_days, last_watered_at, created_at")
       .eq("user_id", user.id)
       .eq("context", "home")
       .order("created_at", { ascending: false });
@@ -90,6 +91,7 @@ export function useHomePlants(): UseHomePlantsReturn {
         imageUrl: row.image_url,
         createdAt: row.created_at,
         wateringIntervalDays: row.watering_interval_days,
+        lastWateredAt: row.last_watered_at,
       })),
     );
     setIsLoading(false);
@@ -107,9 +109,12 @@ export function useHomePlants(): UseHomePlantsReturn {
     };
     window.addEventListener("mp:plant-context-updated", handler);
     window.addEventListener("mp:pending-classification-resolved", handler);
+    // Phase 3 sub-phase 3-03: dispatched by useLogWatering after log/revert.
+    window.addEventListener("mp:plant-watered", handler);
     return () => {
       window.removeEventListener("mp:plant-context-updated", handler);
       window.removeEventListener("mp:pending-classification-resolved", handler);
+      window.removeEventListener("mp:plant-watered", handler);
     };
   }, [load]);
 
