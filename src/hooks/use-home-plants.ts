@@ -111,10 +111,13 @@ export function useHomePlants(): UseHomePlantsReturn {
     window.addEventListener("mp:pending-classification-resolved", handler);
     // Phase 3 sub-phase 3-03: dispatched by useLogWatering after log/revert.
     window.addEventListener("mp:plant-watered", handler);
+    // Phase 3 sub-phase 3-04: dispatched by useEditWateringInterval after edit.
+    window.addEventListener("mp:plant-frequency-updated", handler);
     return () => {
       window.removeEventListener("mp:plant-context-updated", handler);
       window.removeEventListener("mp:pending-classification-resolved", handler);
       window.removeEventListener("mp:plant-watered", handler);
+      window.removeEventListener("mp:plant-frequency-updated", handler);
     };
   }, [load]);
 
