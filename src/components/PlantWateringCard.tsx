@@ -34,10 +34,18 @@ export interface PlantWateringCardProps {
     previousLastWateredAt: string | null,
   ) => Promise<{ ok: boolean }>;
   /**
-   * Sub-phase 3-04: tap on "Cada N días" will open a picker.
-   * In 3-03 it is not interactive yet.
+   * Tap on "Cada N días" / "Sin frecuencia" text. Caller (RegarPage) opens
+   * the picker singleton pre-filled with the plant's current intervalDays.
    */
-  onEditFrequency?: (plantId: string) => void;
+  onEditFrequency?: (plant: HomePlant) => void;
+  /**
+   * D-14 case 2: invoked when the user taps "Regar" but the plant has no
+   * watering interval configured. Caller (RegarPage) opens the picker first;
+   * on save, the picker's onSave invokes editInterval and then automatically
+   * chains logWatering. Card does NOT proceed with the normal optimistic
+   * flow in this case.
+   */
+  onWaterRequiringFrequency?: (plant: HomePlant) => void;
 }
 
 /**
@@ -61,6 +69,7 @@ export function PlantWateringCard({
   onWater,
   onUndo,
   onEditFrequency,
+  onWaterRequiringFrequency,
 }: PlantWateringCardProps) {
   const { commonName } = splitNameField(plant.name);
   const [optimisticLastWatered, setOptimisticLastWatered] = useState<
@@ -117,14 +126,27 @@ export function PlantWateringCard({
   }
 
   const handleWater = async () => {
+    // VERIFICATION ajuste #2: prevent double-tap during the 1s flash window.
+    // Without this guard, a quick second tap fires 2 UPDATE + 2 track + 2 toast.
+    if (flashing) return;
+
+    // D-14 case 2: la planta no tiene intervalo configurado. Delegamos al
+    // padre para abrir el picker primero y encadenar editInterval → logWatering.
+    if (plant.wateringIntervalDays === null) {
+      if (onWaterRequiringFrequency) {
+        onWaterRequiringFrequency(plant);
+        return;
+      }
+      console.warn(
+        "[PlantWateringCard] plant has no intervalDays but no onWaterRequiringFrequency wired:",
+        plant.id,
+      );
+    }
+
     if (!onWater) {
       console.log("[PlantWateringCard] water tap (no onWater wired):", plant.id);
       return;
     }
-
-    // VERIFICATION ajuste #2: prevent double-tap during the 1s flash window.
-    // Without this guard, a quick second tap fires 2 UPDATE + 2 track + 2 toast.
-    if (flashing) return;
 
     // Capture previous BEFORE optimistic mutation (for undo target).
     const previousLastWateredAt = plant.lastWateredAt;
@@ -185,9 +207,8 @@ export function PlantWateringCard({
 
   const handleEditFrequency = () => {
     if (onEditFrequency) {
-      onEditFrequency(plant.id);
+      onEditFrequency(plant);
     }
-    // Sub-phase 3-04 wires this. In 3-03 without a handler it's a no-op.
   };
 
   return (
