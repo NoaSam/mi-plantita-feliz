@@ -1,9 +1,11 @@
+import { useState } from "react";
+import { toast } from "sonner";
 import type { HomePlant } from "@/hooks/use-home-plants";
+import { computeStatus } from "@/lib/watering-countdown";
 
 /**
  * Splittea "Common (Scientific)" en sus dos partes.
- * Patrón copiado verbatim de PlantMapSheet (no importado para evitar
- * coupling cross-feature).
+ * Patrón copiado verbatim de PlantMapSheet (no importado para evitar coupling).
  */
 function splitNameField(name: string): {
   commonName: string;
@@ -11,10 +13,7 @@ function splitNameField(name: string): {
 } {
   const match = name.match(/^(.+?)\s*\(([^)]+)\)$/);
   if (match) {
-    return {
-      commonName: match[1].trim(),
-      scientificName: match[2].trim(),
-    };
+    return { commonName: match[1].trim(), scientificName: match[2].trim() };
   }
   return { commonName: name, scientificName: null };
 }
@@ -22,13 +21,21 @@ function splitNameField(name: string): {
 export interface PlantWateringCardProps {
   plant: HomePlant;
   /**
-   * Sub-phase 3-02: no-op opcional. Sub-phase 3-03 lo wirea al hook
-   * useLogWatering. Si no se pasa, el botón hace console.log informativo.
+   * Caller (RegarPage) wires this to `useLogWatering.logWatering`.
+   * Optional to allow storybook/preview without DB.
    */
-  onWater?: (plantId: string) => void;
+  onWater?: (plant: HomePlant) => Promise<{ ok: boolean }>;
   /**
-   * Sub-phase 3-04: tap on frecuencia abrirá un picker bottom-sheet.
-   * En 3-02 el botón está pero su onClick es no-op.
+   * Caller (RegarPage) wires this to `useLogWatering.revertWatering`.
+   * If absent, the toast does not show a Deshacer action.
+   */
+  onUndo?: (
+    plant: HomePlant,
+    previousLastWateredAt: string | null,
+  ) => Promise<{ ok: boolean }>;
+  /**
+   * Sub-phase 3-04: tap on "Cada N días" will open a picker.
+   * In 3-03 it is not interactive yet.
    */
   onEditFrequency?: (plantId: string) => void;
 }
@@ -36,84 +43,159 @@ export interface PlantWateringCardProps {
 /**
  * Card del listado /regar — representa una planta casa con su estado de riego.
  *
- * Phase 3 sub-phase 3-02: estructura visual completa, pero TODAS las
- * plantas se renderizan en estado "Pendiente primera vez" porque el
- * dato de último riego no existe todavía en la DB. Sub-phase 3-03 introduce
- * `computeDaysRemaining()` y los 4 estados D-08.
+ * Phase 3 sub-phase 3-03: countdown real vía computeStatus(); botón wired
+ * a onWater (optimistic UPDATE + Sonner toast con Deshacer); flash green
+ * animation 1s tras log.
  *
- * Sticker card visual (CLAUDE.md design system):
- * - border-2 border-foreground rounded-2xl bg-card
- * - boxShadow var(--shadow-press)
- * - foto 64×64 rounded-xl border-2
- * - nombre common (font-display semibold)
- * - frecuencia "Cada N días" o "Sin frecuencia" (D-16, sin atribución)
- * - badge "X d" right-aligned (en 3-02: "—" gris)
- * - status text empático (D-15)
- * - botón full-width abajo con copy state-dependent (D-10):
- *   "Regada" si X>0, "Regar" si X<=0 o pending-first
+ * Estados D-08:
+ * - normal (X>0):    botón "Regada", badge gris, status "Próximo riego en X días"
+ * - urgent (X=0):    botón "Regar", badge soft-warn, status "Toca regar hoy"
+ * - overdue (X<0):   botón "Regar", badge soft-warn, status "Lleva N días esperándote"
+ * - pending-first:   botón "Regar", badge "—", status "Pendiente primera vez · Toca regar para empezar"
  *
- * D-15 tono suave: amarillo cálido (soft-warn) NO rojo.
+ * Sub-phase 3-04 cableará el flujo "pending-first sin intervalo" (D-14):
+ * primer tap → picker frecuencia → setea intervalo → log.
  */
 export function PlantWateringCard({
   plant,
   onWater,
+  onUndo,
   onEditFrequency,
 }: PlantWateringCardProps) {
   const { commonName } = splitNameField(plant.name);
+  const [optimisticLastWatered, setOptimisticLastWatered] = useState<
+    string | null | undefined
+  >(undefined);
+  const [flashing, setFlashing] = useState(false);
+
+  // If there's an optimistic update, use that value; otherwise the DB value.
+  const effectiveLastWateredAt =
+    optimisticLastWatered === undefined ? plant.lastWateredAt : optimisticLastWatered;
+
+  const { status, daysRemaining } = computeStatus({
+    lastWateredAt: effectiveLastWateredAt,
+    intervalDays: plant.wateringIntervalDays,
+  });
+
   const intervalLabel =
     plant.wateringIntervalDays !== null
       ? `Cada ${plant.wateringIntervalDays} días`
       : "Sin frecuencia";
 
-  // Sub-phase 3-02: sin dato de último riego, todas las plantas son pending-first-time.
-  // Sub-phase 3-03 reemplaza esta lógica con computeDaysRemaining().
-  const status: "normal" | "urgent" | "overdue" | "pending-first" = "pending-first";
-
-  // Per D-15 status copy + D-10 button copy:
+  // D-15 status copy + D-10 button label + badge styling per status.
   let statusText: string;
   let badgeText: string;
   let badgeIsWarn: boolean;
   let buttonLabel: string;
 
   switch (status) {
+    case "normal":
+      statusText = `Próximo riego en ${daysRemaining} días`;
+      badgeText = `${daysRemaining} d`;
+      badgeIsWarn = false;
+      buttonLabel = "Regada";
+      break;
+    case "urgent":
+      statusText = "Toca regar hoy";
+      badgeText = "0 d";
+      badgeIsWarn = true;
+      buttonLabel = "Regar";
+      break;
+    case "overdue":
+      statusText = `Lleva ${Math.abs(daysRemaining ?? 0)} días esperándote`;
+      badgeText = `${daysRemaining} d`;
+      badgeIsWarn = true;
+      buttonLabel = "Regar";
+      break;
     case "pending-first":
+    default:
       statusText = "Pendiente primera vez · Toca regar para empezar";
       badgeText = "—";
       badgeIsWarn = false;
       buttonLabel = "Regar";
       break;
-    // Sub-phase 3-03 cablea estos otros branches:
-    // case "normal": statusText = `Próximo riego en ${X} días`; buttonLabel = "Regada"; ...
-    // case "urgent": statusText = "Toca regar hoy"; badgeIsWarn = true; ...
-    // case "overdue": statusText = `Lleva ${Math.abs(X)} días esperándote`; badgeIsWarn = true; ...
-    default:
-      statusText = "";
-      badgeText = "—";
-      badgeIsWarn = false;
-      buttonLabel = "Regar";
   }
 
-  const handleWater = () => {
-    if (onWater) {
-      onWater(plant.id);
-    } else {
-      // Sub-phase 3-02: botón estático. Sub-phase 3-03 wirea useLogWatering.
-      console.log("[PlantWateringCard] water tap (no-op in 3-02):", plant.id);
+  const handleWater = async () => {
+    if (!onWater) {
+      console.log("[PlantWateringCard] water tap (no onWater wired):", plant.id);
+      return;
     }
+
+    // VERIFICATION ajuste #2: prevent double-tap during the 1s flash window.
+    // Without this guard, a quick second tap fires 2 UPDATE + 2 track + 2 toast.
+    if (flashing) return;
+
+    // Capture previous BEFORE optimistic mutation (for undo target).
+    const previousLastWateredAt = plant.lastWateredAt;
+
+    // 1. Optimistic update visible
+    const newTimestamp = new Date().toISOString();
+    setOptimisticLastWatered(newTimestamp);
+    // 2. Flash animation 1s
+    setFlashing(true);
+    window.setTimeout(() => setFlashing(false), 1000);
+
+    // 3. Persist immediately
+    const result = await onWater(plant);
+
+    if (!result.ok) {
+      // Rollback optimistic + toast error
+      setOptimisticLastWatered(undefined);
+      setFlashing(false);
+      toast.error("No se pudo guardar el riego. Inténtalo de nuevo.");
+      return;
+    }
+
+    // 4. Build the toast copy. If the plant has no intervalDays yet,
+    // the correct flow lives in sub-phase 3-04 — here we show a fallback.
+    const newStatus = computeStatus({
+      lastWateredAt: newTimestamp,
+      intervalDays: plant.wateringIntervalDays,
+    });
+    const toastMessage =
+      newStatus.daysRemaining !== null
+        ? `✓ Regada · Siguiente riego en ${newStatus.daysRemaining} días`
+        : "✓ Regada · Configura la frecuencia para ver el próximo riego";
+
+    // 5. Sonner toast with Deshacer action (when onUndo wired).
+    toast(toastMessage, {
+      duration: 4000,
+      ...(onUndo
+        ? {
+            action: {
+              label: "Deshacer",
+              onClick: async () => {
+                setOptimisticLastWatered(previousLastWateredAt);
+                setFlashing(false);
+                const undoResult = await onUndo(plant, previousLastWateredAt);
+                if (!undoResult.ok) {
+                  toast.error(
+                    "No se pudo deshacer el riego. Refresca para sincronizar.",
+                  );
+                } else {
+                  setOptimisticLastWatered(undefined);
+                }
+              },
+            },
+          }
+        : {}),
+    });
   };
 
   const handleEditFrequency = () => {
     if (onEditFrequency) {
       onEditFrequency(plant.id);
     }
-    // Sub-phase 3-04 wirea el picker. En 3-02 el tap no hace nada.
+    // Sub-phase 3-04 wires this. In 3-03 without a handler it's a no-op.
   };
 
   return (
     <article
-      className="flex flex-col gap-3 p-4 bg-card border-2 border-foreground rounded-2xl"
+      className={`flex flex-col gap-3 p-4 bg-card border-2 border-foreground rounded-2xl ${flashing ? "animate-flash-success" : ""}`}
       style={{ boxShadow: "var(--shadow-press)" }}
       aria-label={`Planta: ${commonName}`}
+      data-watering-status={status}
     >
       <div className="flex items-start gap-3">
         <img
