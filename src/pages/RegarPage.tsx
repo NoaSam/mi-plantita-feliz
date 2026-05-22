@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Leaf } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
@@ -9,6 +9,7 @@ import { useEditWateringInterval } from "@/hooks/use-edit-watering-interval";
 import { PlantWateringCard } from "@/components/PlantWateringCard";
 import { WateringFrequencyPicker } from "@/components/WateringFrequencyPicker";
 import { computeStatus } from "@/lib/watering-countdown";
+import { track } from "@/lib/track";
 
 /**
  * /regar — ¿Toca regar? — Calendario de riego.
@@ -58,14 +59,38 @@ export default function RegarPage() {
   const { plants, isLoading: plantsLoading } = useHomePlants();
   const { logWatering, revertWatering } = useLogWatering();
   const { editInterval } = useEditWateringInterval();
+  const navigate = useNavigate();
 
   const [pickerState, setPickerState] = useState<PickerState>(null);
+  const [trackedOpen, setTrackedOpen] = useState(false);
 
   const isLoading = authLoading || (!!user && plantsLoading);
 
   useEffect(() => {
     document.title = "¿Toca regar? · Mi Plantita Feliz";
   }, []);
+
+  // D-17 evento 1: calendar_opened. Dispara una sola vez por montaje tras
+  // resolverse isLoading (patrón verbatim MapPage:51-55).
+  useEffect(() => {
+    if (isLoading || trackedOpen) return;
+    let overdueCount = 0;
+    let pendingFirstTimeCount = 0;
+    for (const p of plants) {
+      const { status } = computeStatus({
+        lastWateredAt: p.lastWateredAt,
+        intervalDays: p.wateringIntervalDays,
+      });
+      if (status === "overdue") overdueCount += 1;
+      if (status === "pending-first") pendingFirstTimeCount += 1;
+    }
+    track("calendar_opened", {
+      home_count: plants.length,
+      overdue_count: overdueCount,
+      pending_first_time_count: pendingFirstTimeCount,
+    });
+    setTrackedOpen(true);
+  }, [isLoading, trackedOpen, plants]);
 
   // D-09 sort por urgencia.
   const sortedPlants = useMemo(() => {
@@ -95,14 +120,14 @@ export default function RegarPage() {
   }
 
   const handleWater = async (plant: HomePlant) => {
-    return logWatering(plant.id);
+    return logWatering(plant);
   };
 
   const handleUndo = async (
     plant: HomePlant,
     previousLastWateredAt: string | null,
   ) => {
-    return revertWatering(plant.id, previousLastWateredAt);
+    return revertWatering(plant, previousLastWateredAt);
   };
 
   // D-13: tap on "Cada N días" / "Sin frecuencia" text.
@@ -121,7 +146,17 @@ export default function RegarPage() {
     // Close optimistically — toast on outcome.
     setPickerState(null);
 
-    const editResult = await editInterval(plant.id, newDays);
+    // D-17 source classification:
+    //  - 'null_filled_in_by_user': prev was null (IA didn't set it; user filled).
+    //  - 'user_override': user changed an existing value.
+    //  - 'ia_initial': no-op edit (rare; user saved without changing).
+    const prevDays = plant.wateringIntervalDays;
+    let source: "ia_initial" | "user_override" | "null_filled_in_by_user";
+    if (prevDays === null) source = "null_filled_in_by_user";
+    else if (prevDays === newDays) source = "ia_initial";
+    else source = "user_override";
+
+    const editResult = await editInterval(plant.id, newDays, prevDays, source);
     if (!editResult.ok) {
       toast.error("No se pudo guardar la frecuencia. Inténtalo de nuevo.");
       return;
@@ -129,9 +164,14 @@ export default function RegarPage() {
 
     toast(`Frecuencia actualizada · Cada ${newDays} días`, { duration: 3000 });
 
-    // D-14 case 2: tras editar, encadenar log de riego.
+    // D-14 case 2: tras editar, encadenar log de riego. Como la planta acaba
+    // de recibir un intervalo, construimos un HomePlant actualizado para que
+    // logWatering compute days_remaining_before con el valor nuevo.
     if (mode === "frequency-then-water") {
-      const logResult = await logWatering(plant.id);
+      const logResult = await logWatering({
+        ...plant,
+        wateringIntervalDays: newDays,
+      });
       if (!logResult.ok) {
         toast.error(
           "La frecuencia se guardó, pero no se pudo registrar el riego. Inténtalo de nuevo.",
@@ -148,6 +188,15 @@ export default function RegarPage() {
     setPickerState(null);
   };
 
+  // D-17 evento 5: track + navigate al detalle.
+  const handleNavigateToDetail = (plant: HomePlant, position: number) => {
+    track("calendar_card_navigated_to_detail", {
+      plant_search_id: plant.id,
+      position,
+    });
+    navigate(`/planta/${plant.id}`);
+  };
+
   return (
     <div className="px-6 py-8 pb-24">
       <header className="mb-6 flex flex-col gap-1">
@@ -159,14 +208,16 @@ export default function RegarPage() {
         </p>
       </header>
       <ul className="flex flex-col gap-3" aria-label="Lista de plantas de casa">
-        {sortedPlants.map((plant) => (
+        {sortedPlants.map((plant, index) => (
           <li key={plant.id}>
             <PlantWateringCard
               plant={plant}
+              position={index}
               onWater={handleWater}
               onUndo={handleUndo}
               onEditFrequency={handleEditFrequency}
               onWaterRequiringFrequency={handleWaterRequiringFrequency}
+              onNavigateToDetail={handleNavigateToDetail}
             />
           </li>
         ))}
