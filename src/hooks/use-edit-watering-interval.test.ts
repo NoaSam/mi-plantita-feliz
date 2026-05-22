@@ -17,6 +17,10 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
+vi.mock("@/lib/track", () => ({
+  track: vi.fn(),
+}));
+
 describe("useEditWateringInterval", () => {
   beforeEach(() => {
     mockSupabaseFrom = vi.fn();
@@ -32,7 +36,7 @@ describe("useEditWateringInterval", () => {
 
     let res: { ok: boolean } | undefined;
     await act(async () => {
-      res = await result.current.editInterval("plant-001", 5);
+      res = await result.current.editInterval("plant-001", 5, 7, "user_override");
     });
 
     expect(res?.ok).toBe(true);
@@ -59,7 +63,7 @@ describe("useEditWateringInterval", () => {
 
     let res: { ok: boolean } | undefined;
     await act(async () => {
-      res = await result.current.editInterval("plant-001", 99);
+      res = await result.current.editInterval("plant-001", 99, 7, "user_override");
     });
 
     expect(res?.ok).toBe(false);
@@ -79,9 +83,34 @@ describe("useEditWateringInterval", () => {
 
     for (const value of [1, 7, 60]) {
       await act(async () => {
-        await result.current.editInterval("plant-001", value);
+        await result.current.editInterval(
+          "plant-001",
+          value,
+          null,
+          "null_filled_in_by_user",
+        );
       });
       expect(chain.update).toHaveBeenCalledWith({ watering_interval_days: value });
     }
+  });
+
+  it("editInterval: fires watering_frequency_edited track with prev/new/source", async () => {
+    const chain = makeChain({ error: null });
+    mockSupabaseFrom.mockReturnValue(chain);
+    const { track } = await import("@/lib/track");
+    vi.mocked(track).mockClear();
+
+    const { result } = renderHook(() => useEditWateringInterval());
+
+    await act(async () => {
+      await result.current.editInterval("plant-001", 5, 7, "user_override");
+    });
+
+    expect(track).toHaveBeenCalledWith("watering_frequency_edited", {
+      plant_search_id: "plant-001",
+      prev_interval: 7,
+      new_interval: 5,
+      source: "user_override",
+    });
   });
 });
