@@ -22,16 +22,16 @@ progress:
 
 **Core value:** Cualquier persona puede sacar una foto a una planta y saber al instante qué es, cómo cuidarla y si tiene algún problema — sin saber nada de botánica.
 
-**Current focus:** Phase 3 — Calendar v0 (Waves 1-4 completadas; Wave 5 a continuación)
+**Current focus:** Phase 3 — Calendar v0 (todas las waves completadas; pendiente verificación/merge)
 
 ---
 
 ## Current Position
 
 **Phase:** 3 (Calendar v0)
-**Plan:** 03-04 (Picker + D-14 flow) — ✅ completado
-**Status:** Waves 1-4 done; ready for Wave 5 (03-05 tracking + E2E + microcopy)
-**Completed:** Phase 1, 2, 02.1, 02.2, 03.1, 4 (merged to main 2026-05-21) + Phase 3 Plans 01-04 (en feat/phase-3-calendar-v0)
+**Plan:** 03-05 (Tracking + E2E + microcopy) — ✅ completado
+**Status:** Phase 3 implementación completa (5/5 plans); pendiente verifier + merge a main
+**Completed:** Phase 1, 2, 02.1, 02.2, 03.1, 4 (merged to main 2026-05-21) + Phase 3 Plans 01-05 (en feat/phase-3-calendar-v0)
 
 ```
 [Phase 1] [>>] [Phase 2] [ ] [Phase 3] [ ] [Phase 4]
