@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-05-21T19:18:26.287Z"
+status: completed
+last_updated: "2026-05-22T07:22:22.269Z"
 progress:
   total_phases: 10
   completed_phases: 5
-  total_plans: 35
-  completed_plans: 27
-  percent: 77
+  total_plans: 30
+  completed_plans: 29
+  percent: 97
 ---
 
 # State: Mi Plantita Feliz
@@ -22,16 +22,16 @@ progress:
 
 **Core value:** Cualquier persona puede sacar una foto a una planta y saber al instante qué es, cómo cuidarla y si tiene algún problema — sin saber nada de botánica.
 
-**Current focus:** Phase 3 — Calendar v0 (Wave 1 completada; Wave 2 a continuación)
+**Current focus:** Phase 3 — Calendar v0 (Waves 1-4 completadas; Wave 5 a continuación)
 
 ---
 
 ## Current Position
 
 **Phase:** 3 (Calendar v0)
-**Plan:** 03-01 (Nav restructure) — ✅ completado
-**Status:** Wave 1 done; ready for Wave 2 (03-02 regar list)
-**Completed:** Phase 1, 2, 02.1, 02.2, 03.1, 4 (merged to main 2026-05-21) + Phase 3 Plan 01 (en feat/phase-3-calendar-v0)
+**Plan:** 03-04 (Picker + D-14 flow) — ✅ completado
+**Status:** Waves 1-4 done; ready for Wave 5 (03-05 tracking + E2E + microcopy)
+**Completed:** Phase 1, 2, 02.1, 02.2, 03.1, 4 (merged to main 2026-05-21) + Phase 3 Plans 01-04 (en feat/phase-3-calendar-v0)
 
 ```
 [Phase 1] [>>] [Phase 2] [ ] [Phase 3] [ ] [Phase 4]
