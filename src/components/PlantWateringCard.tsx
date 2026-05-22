@@ -20,6 +20,8 @@ function splitNameField(name: string): {
 
 export interface PlantWateringCardProps {
   plant: HomePlant;
+  /** Position 0-based en la lista ordenada — propagado al tracking del tap-to-detail. */
+  position: number;
   /**
    * Caller (RegarPage) wires this to `useLogWatering.logWatering`.
    * Optional to allow storybook/preview without DB.
@@ -46,6 +48,12 @@ export interface PlantWateringCardProps {
    * flow in this case.
    */
   onWaterRequiringFrequency?: (plant: HomePlant) => void;
+  /**
+   * D-17 evento 5 + Success Criterion #6: tap en el área principal de la card
+   * (foto + nombre + frecuencia + badge — NO el botón Regar) navega al detalle.
+   * Caller (RegarPage) hace el track ANTES del navigate.
+   */
+  onNavigateToDetail?: (plant: HomePlant, position: number) => void;
 }
 
 /**
@@ -66,10 +74,12 @@ export interface PlantWateringCardProps {
  */
 export function PlantWateringCard({
   plant,
+  position,
   onWater,
   onUndo,
   onEditFrequency,
   onWaterRequiringFrequency,
+  onNavigateToDetail,
 }: PlantWateringCardProps) {
   const { commonName } = splitNameField(plant.name);
   const [optimisticLastWatered, setOptimisticLastWatered] = useState<
@@ -211,6 +221,15 @@ export function PlantWateringCard({
     }
   };
 
+  // D-17 evento 5: tap en el área principal de la card → detalle.
+  // Usamos div role="button" para evitar HTML inválido (nested <button>): el
+  // botón frecuencia interno necesita su propio click area sin anidamiento.
+  const handleCardClick = () => {
+    if (onNavigateToDetail) {
+      onNavigateToDetail(plant, position);
+    }
+  };
+
   return (
     <article
       className={`flex flex-col gap-3 p-4 bg-card border-2 border-foreground rounded-2xl ${flashing ? "animate-flash-success" : ""}`}
@@ -218,10 +237,22 @@ export function PlantWateringCard({
       aria-label={`Planta: ${commonName}`}
       data-watering-status={status}
     >
-      <div className="flex items-start gap-3">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleCardClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleCardClick();
+          }
+        }}
+        className="w-full flex items-start gap-3 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring rounded-xl"
+        aria-label={`Ver detalle de ${commonName}`}
+      >
         <img
           src={plant.imageUrl}
-          alt={commonName}
+          alt=""
           loading="lazy"
           className="size-16 shrink-0 object-cover rounded-xl border-2 border-foreground"
         />
@@ -231,7 +262,10 @@ export function PlantWateringCard({
           </h2>
           <button
             type="button"
-            onClick={handleEditFrequency}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditFrequency();
+            }}
             className="font-body text-sm text-muted-foreground text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
             aria-label={`Frecuencia de riego: ${intervalLabel}. Pulsa para editar.`}
           >
