@@ -19,18 +19,19 @@ export default function BottomTabBar() {
 
   const tabs: Tab[] = useMemo(() => {
     const result: Tab[] = [{ path: "/", label: "Inicio", icon: Leaf }];
-    // Phase 3 (D-01): tab Regar condicional a usuario logado con >= 1 planta casa.
-    if (user && home >= 1) {
+    // Anon: signal there's more behind login by exposing "Mis plantas"
+    // (RequireAuth in the page renders the login/signup form).
+    if (!user) {
+      result.push({ path: "/ajustes/mis-plantas", label: "Mis plantas", icon: BookOpen });
+      return result;
+    }
+    if (home >= 1) {
       result.push({ path: "/regar", label: "Regar", icon: Droplet });
     }
-    // Phase 03.1: tab Mapa condicional a wild_with_coords >= 1.
-    if (user && wild_with_coords >= 1) {
+    if (wild_with_coords >= 1) {
       result.push({ path: "/mapa", label: "Mapa", icon: MapPin });
     }
-    // D-03: "Mis plantas" deja de ser tab principal — vive en /ajustes/mis-plantas.
-    if (user) {
-      result.push({ path: "/ajustes", label: "Ajustes", icon: Settings });
-    }
+    result.push({ path: "/ajustes", label: "Ajustes", icon: Settings });
     return result;
   }, [user, home, wild_with_coords]);
 
