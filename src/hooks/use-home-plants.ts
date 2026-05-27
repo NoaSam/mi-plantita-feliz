@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { getDemoHomePlants } from "@/lib/demo-home-plants";
+
+function isDemoMode(): boolean {
+  return (
+    import.meta.env.DEV &&
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("demo")
+  );
+}
 
 /**
  * Home plant: a `plant_searches` row with `context = 'home'`.
@@ -79,6 +88,12 @@ export function useHomePlants(): UseHomePlantsReturn {
   // is not clobbered by a spinner remount.
   const fetchPlants = useCallback(
     async (showLoading: boolean) => {
+      if (isDemoMode()) {
+        if (!mountedRef.current) return;
+        setPlants(getDemoHomePlants());
+        setIsLoading(false);
+        return;
+      }
       if (!user) {
         if (!mountedRef.current) return;
         setPlants([]);
