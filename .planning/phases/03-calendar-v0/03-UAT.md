@@ -8,7 +8,7 @@ source:
   - 03-04-SUMMARY.md
   - 03-05-SUMMARY.md
 started: "2026-05-22T08:03:44Z"
-updated: "2026-05-22T10:55:00Z"
+updated: "2026-05-27T00:00:00Z"
 ---
 
 ## Current Test
@@ -69,17 +69,36 @@ notes: "e2e 'tap on card body navigates to /planta/:id' verifica click en foto �
 
 ### 11. Aviso de migración /mis-plantas (one-shot toast)
 expected: La primera vez que visitas `/mis-plantas` (URL antigua), aparece un toast "📍 Hemos movido Mis plantas a Ajustes" durante ~8s y la URL redirige a `/ajustes/mis-plantas`. La segunda vez que visitas la URL antigua, el redirect ocurre pero el toast NO vuelve a aparecer (flag localStorage).
-result: skipped
-reason: "Requiere navegación manual con localStorage limpio + segunda visita en sesión persistente. La lógica está cubierta por HistoryRelocationNotice (lifecycle-only, localStorage flag `mp_seen_history_relocation_notice`) — pattern verbatim de PendingClassificationListener ya validado en Phase 02.1. Marcar para QA manual antes del merge a main."
+result: pass
+notes: "Verificado manualmente por CPO 2026-05-27 en ventana incógnita. Bug aparte detectado: el toast también aparece en /regar (HistoryRelocationNotice montado a nivel app); CPO decidió diferirlo a sub-fase aparte (no bloquea ship)."
 
 ## Summary
 
 total: 11
-passed: 10
+passed: 11
 issues: 0
 pending: 0
-skipped: 1
+skipped: 0
 
 ## Gaps
 
 [none — 1 bug found and fixed during UAT (PlantWateringCard optimistic UI clobbered by useHomePlants refetch loader); fix in commit bb99fa4]
+
+## Post-UAT CPO review (2026-05-25 → 2026-05-27)
+
+CPO reviewed via /mockup --live and identified 5 bugs + 1 sort re-bucketing + visual polish.
+Applied in this branch (uncommitted at UAT close, see commits below for atomic breakdown):
+
+- Anon BottomTabBar shows "Mis plantas" (login wall)
+- Picker pre-fills with IA recommendation; opens for any pending-first plant
+- Sort re-bucketed: overdue → sin-frecuencia → urgent → resto (IA-pending-first at end)
+- Toast action: Deshacer → Modificar frecuencia (opens picker)
+- Pencil icon next to "Cada N días"
+- Cookie banner z-index lowered to clear BottomTabBar
+- Loading copy "Cargando tus plantas…" visible
+- /regar header summary line: "Hoy toca regar N plantas 💧" / "Todo al día ✨"
+- Dev-only demo mode (?demo) for 5-state preview without DB
+
+Deferred (not blocking ship):
+- HistoryRelocationNotice fires on routes other than /mis-plantas (sub-phase TBD)
+- e2e history.spec + map.spec pre-existing failures (unrelated to Phase 3)
