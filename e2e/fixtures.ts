@@ -175,9 +175,22 @@ export const MOCK_HOME_PLANTS = [
     diagnosis: "Buen estado.",
     image_url: "data:image/jpeg;base64,/9j/home004",
     context: "home" as const,
-    watering_interval_days: null, // IA didn't determine → pending-first
+    watering_interval_days: null, // IA didn't determine → pending-first, picker opens empty
     last_watered_at: null,
     created_at: "2026-05-15T10:00:00Z",
+    user_id: MOCK_USER.id,
+  },
+  {
+    id: "home-005",
+    name: "Aloe vera",
+    description: "Suculenta resistente.",
+    care: "Riego escaso, sol directo.",
+    diagnosis: "Buen estado.",
+    image_url: "data:image/jpeg;base64,/9j/home005",
+    context: "home" as const,
+    watering_interval_days: 14, // IA recommended → pending-first, picker prefilled with 14
+    last_watered_at: null,
+    created_at: "2026-05-16T10:00:00Z",
     user_id: MOCK_USER.id,
   },
 ];

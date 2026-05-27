@@ -172,14 +172,14 @@ test.describe("Authentication", () => {
     await expect(page.getByText("new@plantita.dev")).toBeVisible();
   });
 
-  test("authenticated user sees 3 tabs", async ({
+  test("authenticated user sees Inicio + Ajustes tabs (Regar/Mapa appear only with classified plants)", async ({
     page,
     asAuthenticated,
   }) => {
     await page.goto("/");
 
-    const tabs = page.locator("nav button");
-    await expect(tabs).toHaveCount(3);
+    await expect(page.getByRole("button", { name: "Inicio" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Ajustes" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Mis plantas" })).toHaveCount(0);
   });
 });
