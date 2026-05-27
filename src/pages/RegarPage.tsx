@@ -5,7 +5,10 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { useHomePlants, type HomePlant } from "@/hooks/use-home-plants";
 import { useLogWatering } from "@/hooks/use-log-watering";
-import { useEditWateringInterval } from "@/hooks/use-edit-watering-interval";
+import {
+  useEditWateringInterval,
+  type FrequencyEditSource,
+} from "@/hooks/use-edit-watering-interval";
 import { PlantWateringCard } from "@/components/PlantWateringCard";
 import { WateringFrequencyPicker } from "@/components/WateringFrequencyPicker";
 import { computeStatus } from "@/lib/watering-countdown";
@@ -14,16 +17,12 @@ import { track } from "@/lib/track";
 /**
  * /regar — ¿Toca regar? — Calendario de riego.
  *
- * Phase 3 sub-phase 3-03: lista completa con countdown real + botón funcional.
- *
- * D-09 sort order:
+ * Sort order (CPO 2026-05-25):
  *   1. overdue (X<0), more negative first
- *   2. urgent (X=0)
- *   3. normal (X>0) ascending X
- *   4. pending-first at the end
+ *   2. sin frecuencia — intervalDays === null (necesitan input del usuario)
+ *   3. urgent (X=0)
+ *   4. el resto — normal (X>0 ascending) + pending-first con IA al final
  *   Ties: alphabetical by common name.
- *
- * D-15 tono suave: header "Tus plantas casa" empático.
  */
 
 function splitCommonName(name: string): string {
@@ -31,22 +30,17 @@ function splitCommonName(name: string): string {
   return match ? match[1].trim() : name;
 }
 
-/**
- * D-09 sort key: lower = renders earlier.
- *   - overdue (X<0): negative integers (more negative = more overdue = renders first)
- *   - urgent (X=0): 0
- *   - normal (X>0): positive integers (smaller X = renders earlier)
- *   - pending-first: Number.POSITIVE_INFINITY (always last)
- * Tie-break by commonName alpha (handled in sort cb).
- */
-function urgencyKey(plant: HomePlant): number {
+function urgencyKey(plant: HomePlant): [number, number] {
   const { status, daysRemaining } = computeStatus({
     lastWateredAt: plant.lastWateredAt,
     intervalDays: plant.wateringIntervalDays,
   });
-  if (status === "pending-first") return Number.POSITIVE_INFINITY;
-  // daysRemaining is non-null when status !== 'pending-first'
-  return daysRemaining ?? 0;
+  if (status === "overdue") return [0, daysRemaining ?? 0];
+  if (plant.wateringIntervalDays === null) return [1, 0];
+  if (status === "urgent") return [2, 0];
+  // Bucket 3 ("el resto"): normal (X>0) and pending-first-with-IA (no countdown).
+  // Pending-first-with-IA goes to the end of the bucket via Infinity.
+  return [3, daysRemaining ?? Number.POSITIVE_INFINITY];
 }
 
 type PickerState =
@@ -57,7 +51,7 @@ type PickerState =
 export default function RegarPage() {
   const { user, isLoading: authLoading } = useAuth();
   const { plants, isLoading: plantsLoading } = useHomePlants();
-  const { logWatering, revertWatering } = useLogWatering();
+  const { logWatering } = useLogWatering();
   const { editInterval } = useEditWateringInterval();
   const navigate = useNavigate();
 
@@ -92,25 +86,48 @@ export default function RegarPage() {
     setTrackedOpen(true);
   }, [isLoading, trackedOpen, plants]);
 
-  // D-09 sort por urgencia.
   const sortedPlants = useMemo(() => {
     return [...plants].sort((a, b) => {
-      const ka = urgencyKey(a);
-      const kb = urgencyKey(b);
-      if (ka !== kb) return ka - kb;
-      // Tie-break: alphabetical by common name.
+      const [ba, sa] = urgencyKey(a);
+      const [bb, sb] = urgencyKey(b);
+      if (ba !== bb) return ba - bb;
+      if (sa !== sb) return sa - sb;
       return splitCommonName(a.name).localeCompare(splitCommonName(b.name), "es");
     });
   }, [plants]);
 
+  const dueCount = useMemo(() => {
+    return plants.reduce((count, p) => {
+      const { status } = computeStatus({
+        lastWateredAt: p.lastWateredAt,
+        intervalDays: p.wateringIntervalDays,
+      });
+      return status === "urgent" ||
+        status === "overdue" ||
+        status === "pending-first"
+        ? count + 1
+        : count;
+    }, 0);
+  }, [plants]);
+
+  const focusLine =
+    dueCount === 0
+      ? "Todo al día ✨"
+      : dueCount === 1
+        ? "Hoy toca regar 1 planta 💧"
+        : `Hoy toca regar ${dueCount} plantas 💧`;
+
   if (isLoading) {
     return (
       <div
-        className="flex items-center justify-center py-20"
+        className="flex flex-col items-center justify-center gap-4 py-20"
         aria-busy="true"
         aria-label="Cargando tus plantas"
       >
         <Leaf className="size-12 text-primary animate-pulse-slow" strokeWidth={1.2} />
+        <p className="font-body text-sm text-muted-foreground">
+          Cargando tus plantas…
+        </p>
       </div>
     );
   }
@@ -123,50 +140,49 @@ export default function RegarPage() {
     return logWatering(plant);
   };
 
-  const handleUndo = async (
-    plant: HomePlant,
-    previousLastWateredAt: string | null,
-  ) => {
-    return revertWatering(plant, previousLastWateredAt);
-  };
-
-  // D-13: tap on "Cada N días" / "Sin frecuencia" text.
   const handleEditFrequency = (plant: HomePlant) => {
     setPickerState({ plant, mode: "edit" });
   };
 
-  // D-14 case 2: tap on "Regar" when intervalDays is null.
   const handleWaterRequiringFrequency = (plant: HomePlant) => {
     setPickerState({ plant, mode: "frequency-then-water" });
+  };
+
+  const showWateredToast = (plant: HomePlant, intervalDays: number) => {
+    toast(`✓ Regada · Siguiente riego en ${intervalDays} días`, {
+      duration: 4000,
+      action: {
+        label: "Modificar frecuencia",
+        onClick: () =>
+          setPickerState({
+            plant: { ...plant, wateringIntervalDays: intervalDays },
+            mode: "edit",
+          }),
+      },
+    });
   };
 
   const handlePickerSave = async (newDays: number) => {
     if (!pickerState) return;
     const { plant, mode } = pickerState;
-    // Close optimistically — toast on outcome.
     setPickerState(null);
 
-    // D-17 source classification:
-    //  - 'null_filled_in_by_user': prev was null (IA didn't set it; user filled).
-    //  - 'user_override': user changed an existing value.
-    //  - 'ia_initial': no-op edit (rare; user saved without changing).
     const prevDays = plant.wateringIntervalDays;
-    let source: "ia_initial" | "user_override" | "null_filled_in_by_user";
-    if (prevDays === null) source = "null_filled_in_by_user";
-    else if (prevDays === newDays) source = "ia_initial";
-    else source = "user_override";
+    const intervalChanged = prevDays !== newDays;
 
-    const editResult = await editInterval(plant.id, newDays, prevDays, source);
-    if (!editResult.ok) {
-      toast.error("No se pudo guardar la frecuencia. Inténtalo de nuevo.");
-      return;
+    if (intervalChanged) {
+      const source: FrequencyEditSource =
+        prevDays === null ? "null_filled_in_by_user" : "user_override";
+      const editResult = await editInterval(plant.id, newDays, prevDays, source);
+      if (!editResult.ok) {
+        toast.error("No se pudo guardar la frecuencia. Inténtalo de nuevo.");
+        return;
+      }
+      if (mode === "edit") {
+        toast(`Frecuencia actualizada · Cada ${newDays} días`, { duration: 3000 });
+      }
     }
 
-    toast(`Frecuencia actualizada · Cada ${newDays} días`, { duration: 3000 });
-
-    // D-14 case 2: tras editar, encadenar log de riego. Como la planta acaba
-    // de recibir un intervalo, construimos un HomePlant actualizado para que
-    // logWatering compute days_remaining_before con el valor nuevo.
     if (mode === "frequency-then-water") {
       const logResult = await logWatering({
         ...plant,
@@ -174,13 +190,13 @@ export default function RegarPage() {
       });
       if (!logResult.ok) {
         toast.error(
-          "La frecuencia se guardó, pero no se pudo registrar el riego. Inténtalo de nuevo.",
+          intervalChanged
+            ? "La frecuencia se guardó, pero no se pudo registrar el riego. Inténtalo de nuevo."
+            : "No se pudo registrar el riego. Inténtalo de nuevo.",
         );
-      } else {
-        toast(`✓ Regada · Siguiente riego en ${newDays} días`, {
-          duration: 4000,
-        });
+        return;
       }
+      showWateredToast(plant, newDays);
     }
   };
 
@@ -203,8 +219,12 @@ export default function RegarPage() {
         <h1 className="font-display text-2xl font-bold text-foreground">
           ¿Toca regar?
         </h1>
-        <p className="font-body text-base text-muted-foreground">
-          Tus plantas casa
+        <p
+          className="font-body text-base text-foreground"
+          aria-live="polite"
+          data-watering-focus
+        >
+          {focusLine}
         </p>
       </header>
       <ul className="flex flex-col gap-3" aria-label="Lista de plantas de casa">
@@ -214,7 +234,6 @@ export default function RegarPage() {
               plant={plant}
               position={index}
               onWater={handleWater}
-              onUndo={handleUndo}
               onEditFrequency={handleEditFrequency}
               onWaterRequiringFrequency={handleWaterRequiringFrequency}
               onNavigateToDetail={handleNavigateToDetail}
