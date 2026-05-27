@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import type { HomePlant } from "@/hooks/use-home-plants";
 import { computeStatus } from "@/lib/watering-countdown";
@@ -22,37 +23,19 @@ export interface PlantWateringCardProps {
   plant: HomePlant;
   /** Position 0-based en la lista ordenada — propagado al tracking del tap-to-detail. */
   position: number;
-  /**
-   * Caller (RegarPage) wires this to `useLogWatering.logWatering`.
-   * Optional to allow storybook/preview without DB.
-   */
   onWater?: (plant: HomePlant) => Promise<{ ok: boolean }>;
   /**
-   * Caller (RegarPage) wires this to `useLogWatering.revertWatering`.
-   * If absent, the toast does not show a Deshacer action.
-   */
-  onUndo?: (
-    plant: HomePlant,
-    previousLastWateredAt: string | null,
-  ) => Promise<{ ok: boolean }>;
-  /**
-   * Tap on "Cada N días" / "Sin frecuencia" text. Caller (RegarPage) opens
-   * the picker singleton pre-filled with the plant's current intervalDays.
+   * Tap on "Cada N días" / "Sin frecuencia" text, or the toast "Modificar
+   * frecuencia" action. Caller opens the picker pre-filled with the
+   * plant's current intervalDays.
    */
   onEditFrequency?: (plant: HomePlant) => void;
   /**
-   * D-14 case 2: invoked when the user taps "Regar" but the plant has no
-   * watering interval configured. Caller (RegarPage) opens the picker first;
-   * on save, the picker's onSave invokes editInterval and then automatically
-   * chains logWatering. Card does NOT proceed with the normal optimistic
-   * flow in this case.
+   * Invoked when the user taps "Regar" on a pending-first plant. Caller
+   * opens the picker first (prefilled with the IA recommendation when
+   * available); on save, the picker chains logWatering.
    */
   onWaterRequiringFrequency?: (plant: HomePlant) => void;
-  /**
-   * D-17 evento 5 + Success Criterion #6: tap en el área principal de la card
-   * (foto + nombre + frecuencia + badge — NO el botón Regar) navega al detalle.
-   * Caller (RegarPage) hace el track ANTES del navigate.
-   */
   onNavigateToDetail?: (plant: HomePlant, position: number) => void;
 }
 
@@ -76,7 +59,6 @@ export function PlantWateringCard({
   plant,
   position,
   onWater,
-  onUndo,
   onEditFrequency,
   onWaterRequiringFrequency,
   onNavigateToDetail,
@@ -137,18 +119,17 @@ export function PlantWateringCard({
 
   const handleWater = async () => {
     // VERIFICATION ajuste #2: prevent double-tap during the 1s flash window.
-    // Without this guard, a quick second tap fires 2 UPDATE + 2 track + 2 toast.
     if (flashing) return;
 
-    // D-14 case 2: la planta no tiene intervalo configurado. Delegamos al
-    // padre para abrir el picker primero y encadenar editInterval → logWatering.
-    if (plant.wateringIntervalDays === null) {
+    // Pending-first: open the picker (prefilled with IA recommendation if any)
+    // so the user can confirm/adjust before the first watering is logged.
+    if (status === "pending-first") {
       if (onWaterRequiringFrequency) {
         onWaterRequiringFrequency(plant);
         return;
       }
       console.warn(
-        "[PlantWateringCard] plant has no intervalDays but no onWaterRequiringFrequency wired:",
+        "[PlantWateringCard] pending-first plant with no onWaterRequiringFrequency wired:",
         plant.id,
       );
     }
@@ -158,29 +139,20 @@ export function PlantWateringCard({
       return;
     }
 
-    // Capture previous BEFORE optimistic mutation (for undo target).
-    const previousLastWateredAt = plant.lastWateredAt;
-
-    // 1. Optimistic update visible
     const newTimestamp = new Date().toISOString();
     setOptimisticLastWatered(newTimestamp);
-    // 2. Flash animation 1s
     setFlashing(true);
     window.setTimeout(() => setFlashing(false), 1000);
 
-    // 3. Persist immediately
     const result = await onWater(plant);
 
     if (!result.ok) {
-      // Rollback optimistic + toast error
       setOptimisticLastWatered(undefined);
       setFlashing(false);
       toast.error("No se pudo guardar el riego. Inténtalo de nuevo.");
       return;
     }
 
-    // 4. Build the toast copy. If the plant has no intervalDays yet,
-    // the correct flow lives in sub-phase 3-04 — here we show a fallback.
     const newStatus = computeStatus({
       lastWateredAt: newTimestamp,
       intervalDays: plant.wateringIntervalDays,
@@ -190,25 +162,13 @@ export function PlantWateringCard({
         ? `✓ Regada · Siguiente riego en ${newStatus.daysRemaining} días`
         : "✓ Regada · Configura la frecuencia para ver el próximo riego";
 
-    // 5. Sonner toast with Deshacer action (when onUndo wired).
     toast(toastMessage, {
       duration: 4000,
-      ...(onUndo
+      ...(onEditFrequency
         ? {
             action: {
-              label: "Deshacer",
-              onClick: async () => {
-                setOptimisticLastWatered(previousLastWateredAt);
-                setFlashing(false);
-                const undoResult = await onUndo(plant, previousLastWateredAt);
-                if (!undoResult.ok) {
-                  toast.error(
-                    "No se pudo deshacer el riego. Refresca para sincronizar.",
-                  );
-                } else {
-                  setOptimisticLastWatered(undefined);
-                }
-              },
+              label: "Modificar frecuencia",
+              onClick: () => onEditFrequency(plant),
             },
           }
         : {}),
@@ -266,10 +226,11 @@ export function PlantWateringCard({
               e.stopPropagation();
               handleEditFrequency();
             }}
-            className="font-body text-sm text-muted-foreground text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            className="font-body text-sm text-muted-foreground text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded inline-flex items-center gap-1.5"
             aria-label={`Frecuencia de riego: ${intervalLabel}. Pulsa para editar.`}
           >
-            {intervalLabel}
+            <span>{intervalLabel}</span>
+            <Pencil className="size-3 shrink-0" strokeWidth={2} aria-hidden />
           </button>
           <p className="font-body text-xs text-muted-foreground italic">
             {statusText}
