@@ -214,7 +214,6 @@ plant_identified
 |---|---|---|---|
 | `calendar_opened` | `home_count`, `overdue_count`, `pending_first_time_count` | `src/pages/RegarPage.tsx` | Usuario navega a `/regar` y el hook `useHomePlants` resuelve (disparar **una vez por montaje**, gated con flag local `trackedOpen` para evitar inflar la métrica) |
 | `watering_logged` | `plant_search_id`, `days_remaining_before`, `interval_days`, `was_first_time` | `src/hooks/use-log-watering.ts` | Tras el UPDATE exitoso de `last_watered_at`, **antes** del dispatch de `mp:plant-watered`. NO se dispara en el optimistic update — solo cuando la DB confirma |
-| `watering_undone` | `plant_search_id` | `src/hooks/use-log-watering.ts` | Tras el UPDATE de revert (deshacer) exitoso, **antes** del dispatch de `mp:plant-watered`. Mide tasa de mistaps |
 | `watering_frequency_edited` | `plant_search_id`, `prev_interval`, `new_interval`, `source` | `src/hooks/use-edit-watering-interval.ts` | Tras el UPDATE exitoso de `watering_interval_days`, **antes** del dispatch de `mp:plant-frequency-updated` |
 | `calendar_card_navigated_to_detail` | `plant_search_id`, `position` | `src/components/PlantWateringCard.tsx` (handler en `src/pages/RegarPage.tsx`) | Usuario toca el área principal de la card (foto + nombre, NO el botón Regar). Disparar **antes** del `navigate(`/planta/${id}`)` |
 
@@ -232,17 +231,14 @@ plant_identified
 - `interval_days`: frecuencia configurada al momento del log (puede ser null si la planta era pending-first sin intervalo IA).
 - `was_first_time`: boolean. True si la planta no tenía `last_watered_at` antes del log (i.e. era pending-first por only-null lastWatered).
 
-**`watering_undone`**
-- `plant_search_id`: UUID. Permite analizar qué plantas se deshacen más (¿confusión UX? ¿botón demasiado prominente?).
-
 **`watering_frequency_edited`**
 - `plant_search_id`: UUID.
 - `prev_interval`: valor previo (null si IA no dio frecuencia).
 - `new_interval`: nuevo valor [1, 60].
 - `source`: enum derivado por el caller (RegarPage):
-  - `'null_filled_in_by_user'`: `prev_interval === null` (IA no dio frecuencia, usuario rellenó por primera vez). Este es típicamente el flujo D-14 case 2.
-  - `'user_override'`: `prev_interval !== null AND new_interval !== prev_interval`. Usuario sobreescribió la frecuencia IA.
-  - `'ia_initial'`: `prev_interval !== null AND new_interval === prev_interval`. No-op edit (usuario abrió picker y guardó sin cambiar) — debería ser raro.
+  - `'null_filled_in_by_user'`: `prev_interval === null` (IA no dio frecuencia, usuario rellenó por primera vez).
+  - `'user_override'`: `prev_interval !== null AND new_interval !== prev_interval`. Usuario sobreescribió la frecuencia IA o la propia.
+  - Cuando `new_interval === prev_interval` el hook **no se llama** — la edición es un no-op y se salta el UPDATE.
 
 **`calendar_card_navigated_to_detail`**
 - `plant_search_id`: UUID.
@@ -260,7 +256,8 @@ Funnel onboarding del calendario — primera planta regada:
 ```
 plant_identified → classification_action_clicked (action: 'home') → classification_completed
   → calendar_opened (con pending_first_time_count >= 1)
-  → watering_frequency_edited (con source: 'null_filled_in_by_user')  [si IA dio null]
+  → watering_frequency_edited (con source: 'null_filled_in_by_user' o 'user_override')
+                                                                    [solo si el usuario cambió la sugerencia IA]
   → watering_logged (con was_first_time: true)
 ```
 
@@ -271,8 +268,8 @@ calendar_opened
   → result_section_click (en /planta/:id)
 ```
 
-Funnel de mistaps (signal de UX issues):
+Funnel de ajuste post-riego (señal de frecuencia mal calibrada por IA):
 ```
 watering_logged
-  → watering_undone (en los 4s siguientes)              [tasa alta = botón Regar demasiado fácil de pulsar]
+  → watering_frequency_edited (en los 4s siguientes via toast "Modificar frecuencia")
 ```
