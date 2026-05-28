@@ -12,7 +12,7 @@
 - [x] **Phase 1: Android Native** — Empaquetar la app con Capacitor y generar APK funcional para Android
 - [ ] **Phase 2: Prompt Optimization** — Mejorar precision de IA y devolver watering_interval_days estructurado
 - [x] **Phase 02.1: Foundations: Classification + Result Actions + Reveal** — 3 acciones en result screen, columna context en DB, banner para usuarios existentes (completed 2026-05-14)
-- [ ] **Phase 3: Calendar v0** — Lista minima de "Mis plantas" con frecuencia de riego sugerida, condicional al modo casa
+- [x] **Phase 3: Calendar v0** — Lista minima de "Mis plantas" con frecuencia de riego sugerida, condicional al modo casa (completed 2026-05-28, Android v1.1.0 / versionCode 4 publicada en internal testing)
 - [x] **Phase 03.1: Plant Map v0** — Mapa con pins de descubrimientos geolocalizados, condicional al modo explorador (completed 2026-05-17)
 - [x] **Phase 4: Response Time Optimization** — Reducir latencia percibida del analisis de plantas
 - [ ] **Phase 04.1: My Plants Load Time Optimization** — Acelerar la pantalla `/mis-plantas` (history)
