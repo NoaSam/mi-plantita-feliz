@@ -116,6 +116,86 @@ export const MOCK_WILD_WITH_COORDS = [
 ];
 
 // ---------------------------------------------------------------------------
+// Phase 3 — Home plants (for /regar tests)
+// ---------------------------------------------------------------------------
+
+// Fixed anchor to keep status assertions deterministic (no midnight drift).
+// E2E specs pair this with `page.clock.install({ time: FIXED_TEST_NOW })`.
+const FIXED_TEST_NOW = new Date("2026-05-17T12:00:00Z").getTime();
+
+function isoDaysAgo(days: number): string {
+  return new Date(FIXED_TEST_NOW - days * 86_400_000).toISOString();
+}
+
+export const MOCK_HOME_PLANTS = [
+  {
+    id: "home-001",
+    name: "Monstera deliciosa (Monstera deliciosa)",
+    description: "Planta tropical de hojas grandes.",
+    care: "Riego semanal, luz indirecta.",
+    diagnosis: "Saludable.",
+    image_url: "data:image/jpeg;base64,/9j/home001",
+    context: "home" as const,
+    watering_interval_days: 7,
+    last_watered_at: isoDaysAgo(3), // X = 4 → "normal"
+    created_at: "2026-05-10T10:00:00Z",
+    user_id: MOCK_USER.id,
+  },
+  {
+    id: "home-002",
+    name: "Pothos dorado (Epipremnum aureum)",
+    description: "Planta colgante muy resistente.",
+    care: "Riego cada 10 días.",
+    diagnosis: "Hojas amarillas en la base.",
+    image_url: "data:image/jpeg;base64,/9j/home002",
+    context: "home" as const,
+    watering_interval_days: 10,
+    last_watered_at: isoDaysAgo(10), // X = 0 → "urgent"
+    created_at: "2026-04-15T10:00:00Z",
+    user_id: MOCK_USER.id,
+  },
+  {
+    id: "home-003",
+    name: "Ficus elastica (Ficus elastica)",
+    description: "Árbol de interior de hojas brillantes.",
+    care: "Luz brillante, riego moderado.",
+    diagnosis: "Buen estado.",
+    image_url: "data:image/jpeg;base64,/9j/home003",
+    context: "home" as const,
+    watering_interval_days: 7,
+    last_watered_at: isoDaysAgo(12), // X = -5 → "overdue"
+    created_at: "2026-03-20T10:00:00Z",
+    user_id: MOCK_USER.id,
+  },
+  {
+    id: "home-004",
+    name: "Begonia maculata",
+    description: "Begonia con motas blancas.",
+    care: "Luz filtrada, ambiente húmedo.",
+    diagnosis: "Buen estado.",
+    image_url: "data:image/jpeg;base64,/9j/home004",
+    context: "home" as const,
+    watering_interval_days: null, // IA didn't determine → pending-first, picker opens empty
+    last_watered_at: null,
+    created_at: "2026-05-15T10:00:00Z",
+    user_id: MOCK_USER.id,
+  },
+  {
+    id: "home-005",
+    name: "Aloe vera",
+    description: "Suculenta resistente.",
+    care: "Riego escaso, sol directo.",
+    diagnosis: "Buen estado.",
+    image_url: "data:image/jpeg;base64,/9j/home005",
+    context: "home" as const,
+    watering_interval_days: 14, // IA recommended → pending-first, picker prefilled with 14
+    last_watered_at: null,
+    created_at: "2026-05-16T10:00:00Z",
+    user_id: MOCK_USER.id,
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Supabase URL detection
 // ---------------------------------------------------------------------------
 

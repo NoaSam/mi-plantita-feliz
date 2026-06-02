@@ -39,7 +39,7 @@ export default function CookieConsentBanner() {
     <div
       role="dialog"
       aria-label="Configuración de cookies"
-      className="fixed bottom-0 left-0 right-0 z-50 p-4 pb-safe"
+      className="fixed bottom-0 left-0 right-0 z-40 p-4 pb-[max(1rem,calc(env(safe-area-inset-bottom)+4.5rem))]"
     >
       <div className="max-w-md mx-auto bg-background border-2 border-foreground rounded-2xl p-5 shadow-lg">
         {/* Header */}

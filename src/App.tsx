@@ -10,11 +10,13 @@ import History from "./pages/History";
 import PlantDetail from "./pages/PlantDetail";
 import SettingsPage from "./pages/Settings";
 import MapPage from "./pages/MapPage";
+import RegarPage from "./pages/RegarPage";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 import CookiePolicy from "./pages/legal/CookiePolicy";
 import LegalNotice from "./pages/legal/LegalNotice";
 import TermsOfService from "./pages/legal/TermsOfService";
+import HistoryRelocationNotice from "@/components/HistoryRelocationNotice";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -50,12 +52,18 @@ const App = () => (
       <BrowserRouter>
         <ScrollToTop />
         <PendingClassificationListener />
+        <HistoryRelocationNotice />
         <Routes>
           <Route path="/" element={<AppLayout><Index /></AppLayout>} />
-          <Route path="/mis-plantas" element={<AppLayout><History /></AppLayout>} />
+          {/* D-03: /mis-plantas redirige a /ajustes/mis-plantas (backwards compat para bookmarks). */}
+          <Route path="/mis-plantas" element={<Navigate to="/ajustes/mis-plantas" replace />} />
+          <Route path="/ajustes/mis-plantas" element={<AppLayout><History /></AppLayout>} />
           <Route path="/planta/:id" element={<AppLayout><PlantDetail /></AppLayout>} />
           <Route path="/ajustes" element={<AppLayout><SettingsPage /></AppLayout>} />
           <Route path="/mapa" element={<AppLayout fullBleed><MapPage /></AppLayout>} />
+          {/* Phase 3 (D-02): /regar — layout normal (no fullBleed); lista vertical scroll. */}
+          <Route path="/regar" element={<AppLayout><RegarPage /></AppLayout>} />
+          {/* /login y /signup mantienen el redirect a /mis-plantas que ahora redirige a /ajustes/mis-plantas (chain funciona). */}
           <Route path="/login" element={<Navigate to="/mis-plantas" replace />} />
           <Route path="/signup" element={<Navigate to="/mis-plantas" replace />} />
           {/* Legal pages — accessible without login */}

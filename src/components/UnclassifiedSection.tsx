@@ -41,7 +41,7 @@ export default function UnclassifiedSection({ className }: UnclassifiedSectionPr
 
   const handleViewAll = () => {
     track("unclassified_section_clicked", { target: 'view_all' });
-    navigate("/mis-plantas?context=unclassified");
+    navigate("/ajustes/mis-plantas?context=unclassified");
   };
 
   return (

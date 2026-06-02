@@ -27,6 +27,12 @@
     --accent: 16 76% 61%;
     --accent-foreground: 0 0% 100%;
 
+    /* Phase 3 (D-15): amarillo cálido suave para urgencia de riego.
+       NO usar para destructive/error — solo para countdown urgente/atrasado.
+       Background suave para badges; foreground saturado para texto/borde. */
+    --soft-warn: 38 80% 60%;
+    --soft-warn-bg: 48 85% 92%;
+
     --destructive: 16 76% 61%;
     --destructive-foreground: 0 0% 100%;
 

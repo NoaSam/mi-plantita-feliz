@@ -20,25 +20,22 @@ test.describe("Smoke tests", () => {
   }) => {
     await page.goto("/");
 
-    // Should see 2 tabs when anonymous
     const tabs = page.locator("nav button");
     await expect(tabs).toHaveCount(2);
 
-    // Navigate to Mis plantas
     await page.getByRole("button", { name: "Mis plantas" }).click();
-    await expect(page).toHaveURL("/mis-plantas");
+    await expect(page).toHaveURL("/ajustes/mis-plantas");
 
-    // Navigate back to Inicio
     await page.getByRole("button", { name: "Inicio" }).click();
     await expect(page).toHaveURL("/");
   });
 
-  test("/login redirects to /mis-plantas", async ({
+  test("/login redirects to /ajustes/mis-plantas", async ({
     page,
     asAnonymous,
   }) => {
     await page.goto("/login");
-    await expect(page).toHaveURL("/mis-plantas");
+    await expect(page).toHaveURL("/ajustes/mis-plantas");
   });
 
   test("legal pages are accessible without login", async ({

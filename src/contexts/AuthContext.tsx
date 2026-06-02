@@ -42,10 +42,21 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // Identify on any path that yields a valid session (fresh login OR
+      // restored session on app boot). Without INITIAL_SESSION, persistent
+      // users never reach posthog.identify and appear as anonymous forever.
+      if (
+        (event === "SIGNED_IN" || event === "INITIAL_SESSION") &&
+        session?.user
+      ) {
+        identifyUser(session.user.id, { email: session.user.email });
+      }
+
       // Claim anonymous searches before updating user state so the history
       // query (triggered by setUser) sees the claimed rows.
+      // Only runs on a fresh sign-in — for INITIAL_SESSION the user already
+      // had a session, so any anon rows were claimed in a previous boot.
       if (event === "SIGNED_IN" && session?.user) {
-        identifyUser(session.user.id, { email: session.user.email });
         // Order matters: claim transfers rows to the user (sets user_id) BEFORE
         // the UPDATE of context runs in processPendingClassification (which is
         // gated by RLS on user_id = auth.uid()). Per D-13.

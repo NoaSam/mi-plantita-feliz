@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Leaf, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, Leaf, Search, Trash2 } from "lucide-react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -98,9 +98,32 @@ export default function HistoryPage() {
     handleExitEdit();
   };
 
+  const handleBack = () => {
+    // Phase 3 (03-01) moved this page from /mis-plantas → /ajustes/mis-plantas.
+    // It now lives as a sub-route under Settings, so the user needs a way back
+    // to /ajustes. Mirror PlantDetail's defensive fallback for iOS PWA standalone
+    // where window.history may be empty on a deep link.
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/ajustes", { replace: true });
+    }
+  };
+
   return (
     <RequireAuth>
       <div className="px-6 py-8 pb-24">
+        {/* Back navigation — Phase 3 (03-01) made this a sub-route under /ajustes */}
+        <button
+          type="button"
+          onClick={handleBack}
+          aria-label="Volver a ajustes"
+          className="inline-flex items-center gap-1.5 mb-4 -ml-1 py-2 pr-3 pl-1 rounded-lg text-foreground hover:bg-foreground/5 active:bg-foreground/10 transition-colors"
+        >
+          <ArrowLeft className="size-5" strokeWidth={2} />
+          <span className="font-body text-sm font-medium">Atrás</span>
+        </button>
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="font-display text-2xl font-bold text-foreground">

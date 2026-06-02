@@ -201,3 +201,75 @@ plant_identified
   → map_pin_tapped (con pin_index_among_total: 0 — el descubrimiento que acaban de hacer)
   → map_navigated_to_detail (from: 'pin_sheet')
 ```
+
+---
+
+## Phase 3 — Calendar v0
+
+**Status:** Implementado en Phase 3. Los archivos `.tsx` / `.ts` son `src/pages/RegarPage.tsx`, `src/components/PlantWateringCard.tsx`, `src/hooks/use-log-watering.ts` y `src/hooks/use-edit-watering-interval.ts`.
+
+### Eventos del calendario de riego
+
+| Evento | Propiedades | Archivo | Cuándo se dispara |
+|---|---|---|---|
+| `calendar_opened` | `home_count`, `overdue_count`, `pending_first_time_count` | `src/pages/RegarPage.tsx` | Usuario navega a `/regar` y el hook `useHomePlants` resuelve (disparar **una vez por montaje**, gated con flag local `trackedOpen` para evitar inflar la métrica) |
+| `watering_logged` | `plant_search_id`, `days_remaining_before`, `interval_days`, `was_first_time` | `src/hooks/use-log-watering.ts` | Tras el UPDATE exitoso de `last_watered_at`, **antes** del dispatch de `mp:plant-watered`. NO se dispara en el optimistic update — solo cuando la DB confirma |
+| `watering_frequency_edited` | `plant_search_id`, `prev_interval`, `new_interval`, `source` | `src/hooks/use-edit-watering-interval.ts` | Tras el UPDATE exitoso de `watering_interval_days`, **antes** del dispatch de `mp:plant-frequency-updated` |
+| `calendar_card_navigated_to_detail` | `plant_search_id`, `position` | `src/components/PlantWateringCard.tsx` (handler en `src/pages/RegarPage.tsx`) | Usuario toca el área principal de la card (foto + nombre, NO el botón Regar). Disparar **antes** del `navigate(`/planta/${id}`)` |
+
+### Detalle de propiedades
+
+**`calendar_opened`**
+- `home_count`: número total de plantas casa del usuario (= `plants.length` del hook `useHomePlants`).
+- `overdue_count`: cuántas plantas tienen `daysRemaining < 0` (atrasadas) en el momento del open.
+- `pending_first_time_count`: cuántas plantas tienen `status === 'pending-first'` (sin `last_watered_at` o sin `watering_interval_days`).
+- Disparar **una sola vez por montaje** de `RegarPage` (flag in-component `trackedOpen`).
+
+**`watering_logged`**
+- `plant_search_id`: UUID de la fila.
+- `days_remaining_before`: signed integer; negativo si atrasada al momento del log, 0 si era "Toca regar hoy", positivo si el usuario regó anticipadamente, **null** si era pending-first (no había countdown).
+- `interval_days`: frecuencia configurada al momento del log (puede ser null si la planta era pending-first sin intervalo IA).
+- `was_first_time`: boolean. True si la planta no tenía `last_watered_at` antes del log (i.e. era pending-first por only-null lastWatered).
+
+**`watering_frequency_edited`**
+- `plant_search_id`: UUID.
+- `prev_interval`: valor previo (null si IA no dio frecuencia).
+- `new_interval`: nuevo valor [1, 60].
+- `source`: enum derivado por el caller (RegarPage):
+  - `'null_filled_in_by_user'`: `prev_interval === null` (IA no dio frecuencia, usuario rellenó por primera vez).
+  - `'user_override'`: `prev_interval !== null AND new_interval !== prev_interval`. Usuario sobreescribió la frecuencia IA o la propia.
+  - Cuando `new_interval === prev_interval` el hook **no se llama** — la edición es un no-op y se salta el UPDATE.
+
+**`calendar_card_navigated_to_detail`**
+- `plant_search_id`: UUID.
+- `position`: índice **0-based** en la lista ordenada (por urgencia, ver D-09). Permite analizar si los usuarios prefieren explorar las plantas urgentes (índice bajo) o navegan a cualquiera.
+
+### Funnel previsto (para análisis posterior)
+
+Funnel principal — riego completado:
+```
+calendar_opened (con home_count >= 1)
+  → watering_logged (con was_first_time = false)        [riego habitual]
+```
+
+Funnel onboarding del calendario — primera planta regada:
+```
+plant_identified → classification_action_clicked (action: 'home') → classification_completed
+  → calendar_opened (con pending_first_time_count >= 1)
+  → watering_frequency_edited (con source: 'null_filled_in_by_user' o 'user_override')
+                                                                    [solo si el usuario cambió la sugerencia IA]
+  → watering_logged (con was_first_time: true)
+```
+
+Funnel de exploración:
+```
+calendar_opened
+  → calendar_card_navigated_to_detail (con position bajo → planta urgente)
+  → result_section_click (en /planta/:id)
+```
+
+Funnel de ajuste post-riego (señal de frecuencia mal calibrada por IA):
+```
+watering_logged
+  → watering_frequency_edited (en los 4s siguientes via toast "Modificar frecuencia")
+```
