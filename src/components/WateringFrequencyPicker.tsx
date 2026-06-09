@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { Minus, Plus } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -10,11 +11,11 @@ import { Button } from "@/components/ui/button";
 
 export interface WateringFrequencyPickerProps {
   open: boolean;
-  /** Pre-fill value. Null → empty input. */
+  /** Pre-fill value. Null → falls back to DEFAULT_DAYS (7). */
   currentIntervalDays: number | null;
   /** Plant common name for the dialog subtitle. */
   plantName: string;
-  /** Called with the validated new value (already clamped 1-60). */
+  /** Called with the value (already clamped 1-60). */
   onSave: (newDays: number) => void;
   /** Called when user cancels (button or overlay/Esc). */
   onCancel: () => void;
@@ -22,24 +23,21 @@ export interface WateringFrequencyPickerProps {
 
 const MIN_DAYS = 1;
 const MAX_DAYS = 60;
+const DEFAULT_DAYS = 7;
+
+function clamp(n: number): number {
+  if (n < MIN_DAYS) return MIN_DAYS;
+  if (n > MAX_DAYS) return MAX_DAYS;
+  return n;
+}
 
 /**
- * D-13: bottom sheet con input numérico para editar la frecuencia de riego.
+ * Bottom-sheet stepper to edit the watering frequency.
  *
- * Visual idiom verbatim de `PlantMapSheet`:
- * - side="bottom", rounded-t-2xl
- * - drag handle visual
- * - pb-[max(1.5rem,env(safe-area-inset-bottom))] para iOS home indicator
- * - max-h-[75dvh]
- *
- * Input: type="number" min={1} max={60}, clamped via onChange + onBlur.
- * Mobile: `inputMode="numeric"` levanta el numpad sin teclado completo.
- *
- * A11y:
- * - Input con label visible "Días entre riegos" + aria-describedby helper.
- * - Buttons: Cancelar (outline) + Guardar (hero/primary), stacked vertical.
- * - Focus management: al abrir, foco al input automáticamente.
- * - Esc o overlay tap cierra (heredado del shadcn Sheet behavior).
+ * Stepper (− / + buttons + display) instead of a number input — avoids the
+ * iOS Safari keyboard overlaying our sheet in the PWA, and is faster UX on
+ * mobile for a 1-60 range. No native picker, no keyboard, no invalid input
+ * possible.
  */
 export function WateringFrequencyPicker({
   open,
@@ -48,48 +46,24 @@ export function WateringFrequencyPicker({
   onSave,
   onCancel,
 }: WateringFrequencyPickerProps) {
-  const [value, setValue] = useState<string>(
-    currentIntervalDays !== null ? String(currentIntervalDays) : "",
+  const [value, setValue] = useState<number>(
+    currentIntervalDays !== null ? clamp(currentIntervalDays) : DEFAULT_DAYS,
   );
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const helperId = useId();
-  const errorId = useId();
-  const [showError, setShowError] = useState(false);
 
-  // Reset/refill el value cuando el sheet se abre con nuevo plant.
   useEffect(() => {
     if (open) {
-      setValue(currentIntervalDays !== null ? String(currentIntervalDays) : "");
-      setShowError(false);
-      window.setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }, 100);
+      setValue(
+        currentIntervalDays !== null ? clamp(currentIntervalDays) : DEFAULT_DAYS,
+      );
     }
   }, [open, currentIntervalDays]);
 
-  const handleSave = () => {
-    const parsed = parseInt(value, 10);
-    if (!Number.isFinite(parsed) || parsed < MIN_DAYS || parsed > MAX_DAYS) {
-      setShowError(true);
-      return;
-    }
-    onSave(parsed);
-  };
+  const increment = () => setValue((v) => clamp(v + 1));
+  const decrement = () => setValue((v) => clamp(v - 1));
+  const handleSave = () => onSave(value);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setValue(e.target.value);
-    if (showError) setShowError(false);
-  };
-
-  const handleBlur = () => {
-    const parsed = parseInt(value, 10);
-    if (Number.isFinite(parsed) && parsed > MAX_DAYS) {
-      setValue(String(MAX_DAYS));
-    } else if (Number.isFinite(parsed) && parsed < MIN_DAYS && parsed !== 0) {
-      setValue(String(MIN_DAYS));
-    }
-  };
+  const atMin = value <= MIN_DAYS;
+  const atMax = value >= MAX_DAYS;
 
   return (
     <Sheet
@@ -115,39 +89,42 @@ export function WateringFrequencyPicker({
         </SheetHeader>
 
         <div className="flex flex-col gap-2 mb-6">
-          <label
-            htmlFor="watering-frequency-input"
-            className="font-body text-sm font-semibold text-foreground"
-          >
+          <p className="font-body text-sm font-semibold text-foreground">
             Días entre riegos
-          </label>
-          <input
-            ref={inputRef}
-            id="watering-frequency-input"
-            type="number"
-            inputMode="numeric"
-            min={MIN_DAYS}
-            max={MAX_DAYS}
-            value={value}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            aria-describedby={`${helperId} ${showError ? errorId : ""}`.trim()}
-            aria-invalid={showError}
-            className="w-full px-4 py-3 bg-secondary border-2 border-foreground rounded-2xl font-display text-2xl font-bold text-foreground text-center focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
-            placeholder="7"
-          />
-          <p id={helperId} className="font-body text-xs text-muted-foreground">
+          </p>
+          <div className="flex items-center justify-between gap-3 bg-secondary border-2 border-foreground rounded-2xl p-2">
+            <button
+              type="button"
+              onClick={decrement}
+              disabled={atMin}
+              aria-label="Disminuir un día"
+              className="size-12 shrink-0 flex items-center justify-center rounded-xl bg-background border-2 border-foreground active:translate-x-[2px] active:translate-y-[2px] disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
+              style={{ boxShadow: atMin ? "none" : "var(--shadow-press)" }}
+            >
+              <Minus className="size-5" strokeWidth={2.5} />
+            </button>
+            <output
+              data-testid="watering-stepper-value"
+              aria-live="polite"
+              aria-atomic="true"
+              className="font-display text-4xl font-bold text-foreground tabular-nums"
+            >
+              {value}
+            </output>
+            <button
+              type="button"
+              onClick={increment}
+              disabled={atMax}
+              aria-label="Aumentar un día"
+              className="size-12 shrink-0 flex items-center justify-center rounded-xl bg-background border-2 border-foreground active:translate-x-[2px] active:translate-y-[2px] disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
+              style={{ boxShadow: atMax ? "none" : "var(--shadow-press)" }}
+            >
+              <Plus className="size-5" strokeWidth={2.5} />
+            </button>
+          </div>
+          <p className="font-body text-xs text-muted-foreground">
             Entre {MIN_DAYS} y {MAX_DAYS} días.
           </p>
-          {showError && (
-            <p
-              id={errorId}
-              className="font-body text-xs text-destructive"
-              role="alert"
-            >
-              Introduce un número entre {MIN_DAYS} y {MAX_DAYS}.
-            </p>
-          )}
         </div>
 
         <SheetFooter className="flex flex-col gap-2 sm:flex-col p-0">
