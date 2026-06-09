@@ -83,9 +83,9 @@ test.describe("Calendar (/regar)", () => {
     await expect(toast).toBeVisible({ timeout: 5000 });
     await toast.getByRole("button", { name: "Modificar frecuencia" }).click();
 
-    const input = page.locator('input[type="number"]');
-    await expect(input).toBeVisible({ timeout: 5000 });
-    await expect(input).toHaveValue("7");
+    const stepper = page.getByTestId("watering-stepper-value");
+    await expect(stepper).toBeVisible({ timeout: 5000 });
+    await expect(stepper).toHaveText("7");
   });
 
   test("tap on frequency text opens picker + save updates the card", async ({
@@ -105,19 +105,21 @@ test.describe("Calendar (/regar)", () => {
       .click();
 
     await expect(page.getByText("Frecuencia de riego").first()).toBeVisible();
-    const input = page.locator('input[type="number"]');
-    await expect(input).toHaveValue("7");
+    const stepper = page.getByTestId("watering-stepper-value");
+    await expect(stepper).toHaveText("7");
 
-    await input.fill("10");
+    const plusBtn = page.getByRole("button", { name: "Aumentar un día" });
+    for (let i = 0; i < 3; i += 1) await plusBtn.click();
+    await expect(stepper).toHaveText("10");
     await page.getByRole("button", { name: "Guardar" }).click();
 
     await expect(
       page.getByText(/Frecuencia actualizada · Cada 10 días/),
     ).toBeVisible({ timeout: 5000 });
-    await expect(input).not.toBeVisible();
+    await expect(stepper).not.toBeVisible();
   });
 
-  test("pending-first plant without IA recommendation: picker opens empty, single toast after save", async ({
+  test("pending-first plant without IA recommendation: picker defaults to 7, single toast after save", async ({
     page,
     asAuthenticated: _asAuth,
   }) => {
@@ -135,11 +137,13 @@ test.describe("Calendar (/regar)", () => {
 
     await begoniaCard.getByRole("button", { name: /^Regar Begonia/ }).click();
 
-    const input = page.locator('input[type="number"]');
-    await expect(input).toBeVisible({ timeout: 5000 });
-    await expect(input).toHaveValue("");
+    const stepper = page.getByTestId("watering-stepper-value");
+    await expect(stepper).toBeVisible({ timeout: 5000 });
+    await expect(stepper).toHaveText("7");
 
-    await input.fill("5");
+    const minusBtn = page.getByRole("button", { name: "Disminuir un día" });
+    for (let i = 0; i < 2; i += 1) await minusBtn.click();
+    await expect(stepper).toHaveText("5");
     await page.getByRole("button", { name: "Guardar" }).click();
 
     await expect(
@@ -168,9 +172,9 @@ test.describe("Calendar (/regar)", () => {
 
     await aloeCard.getByRole("button", { name: /^Regar Aloe/ }).click();
 
-    const input = page.locator('input[type="number"]');
-    await expect(input).toBeVisible({ timeout: 5000 });
-    await expect(input).toHaveValue("14");
+    const stepper = page.getByTestId("watering-stepper-value");
+    await expect(stepper).toBeVisible({ timeout: 5000 });
+    await expect(stepper).toHaveText("14");
 
     await page.getByRole("button", { name: "Guardar" }).click();
 
