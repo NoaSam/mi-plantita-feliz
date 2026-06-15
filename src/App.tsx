@@ -11,6 +11,8 @@ import PlantDetail from "./pages/PlantDetail";
 import SettingsPage from "./pages/Settings";
 import MapPage from "./pages/MapPage";
 import RegarPage from "./pages/RegarPage";
+import RecoverPasswordPage from "./pages/auth/RecoverPasswordPage";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 import CookiePolicy from "./pages/legal/CookiePolicy";
@@ -66,6 +68,9 @@ const App = () => (
           {/* /login y /signup mantienen el redirect a /mis-plantas que ahora redirige a /ajustes/mis-plantas (chain funciona). */}
           <Route path="/login" element={<Navigate to="/mis-plantas" replace />} />
           <Route path="/signup" element={<Navigate to="/mis-plantas" replace />} />
+          {/* Sub-fase 03.2 — recuperación y cambio de contraseña (rutas públicas). */}
+          <Route path="/auth/recuperar" element={<RecoverPasswordPage />} />
+          <Route path="/auth/reset" element={<ResetPasswordPage />} />
           {/* Legal pages — accessible without login */}
           <Route path="/privacidad" element={<PrivacyPolicy />} />
           <Route path="/cookies" element={<CookiePolicy />} />

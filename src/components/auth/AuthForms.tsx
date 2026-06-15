@@ -110,6 +110,14 @@ function LoginForm() {
         {errors.password && (
           <p className="text-accent text-base">{errors.password.message}</p>
         )}
+        <div className="flex justify-end">
+          <Link
+            to="/auth/recuperar"
+            className="text-sm text-primary underline underline-offset-2"
+          >
+            ¿No recuerdas tu contraseña?
+          </Link>
+        </div>
       </div>
 
       {serverError && <ServerError message={serverError} />}
