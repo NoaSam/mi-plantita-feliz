@@ -5,9 +5,11 @@ import {
   Download,
   FileText,
   Leaf,
+  Lock,
   Trash2,
   UserX,
 } from "lucide-react";
+import { ChangePasswordSheet } from "@/components/auth/ChangePasswordSheet";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -59,6 +61,7 @@ export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   // --- Data export ---
 
@@ -139,6 +142,15 @@ export default function SettingsPage() {
             <p className="text-base text-muted-foreground break-all">
               {user.email}
             </p>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setChangePasswordOpen(true)}
+              className="w-full justify-start gap-2"
+            >
+              <Lock className="size-5" />
+              Cambiar contraseña
+            </Button>
             <Button
               variant="outline"
               size="lg"
@@ -250,6 +262,11 @@ export default function SettingsPage() {
         <Leaf className="size-8 text-primary/40" strokeWidth={1.2} />
         <p className="font-display text-base font-semibold">Mi jardín</p>
       </div>
+
+      <ChangePasswordSheet
+        open={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
     </div>
   );
 }
