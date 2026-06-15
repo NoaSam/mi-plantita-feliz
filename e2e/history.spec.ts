@@ -44,20 +44,20 @@ test.describe("Plant history", () => {
     await expect(page.getByText("Ficus elastica")).not.toBeVisible();
   });
 
-  test("card expands to show full details", async ({
+  test("clicking a card navigates to /planta/:id", async ({
     page,
     asAuthenticated,
   }) => {
     await page.goto("/mis-plantas");
-    await expect(page.getByText("Monstera deliciosa")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Monstera deliciosa")).toBeVisible({
+      timeout: 5000,
+    });
 
-    // Click on the first card to expand
     await page.getByText("Monstera deliciosa").click();
 
-    // Should show expanded content
-    await expect(page.getByText("Qué es")).toBeVisible();
-    await expect(page.getByText("Cuidados")).toBeVisible();
-    await expect(page.getByText("Diagnóstico")).toBeVisible();
+    // History entries used to expand inline (pre-Phase 02.1). They now
+    // navigate to the standalone PlantDetail page.
+    await expect(page).toHaveURL(/\/planta\/.+/, { timeout: 5000 });
   });
 
   test("empty state shows message", async ({

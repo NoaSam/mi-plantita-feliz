@@ -41,13 +41,11 @@ test.describe("Plant map (/mapa)", () => {
     // AC4: navigate directly to /mapa loads MapPage (not NotFound).
     await page.goto("/mapa");
 
-    // AC5: exactly N markers rendered in the DOM. Bumped timeout: webkit needs
-    // a beat for the addInitScript localStorage + auth subscription to settle.
-    await expect(page.locator(".leaflet-marker-icon").first()).toBeVisible({
-      timeout: 10000,
-    });
+    // AC5: exactly N markers rendered. toHaveCount auto-polls (more stable
+    // across WebKit than chaining .first().toBeVisible()).
     await expect(page.locator(".leaflet-marker-icon")).toHaveCount(
       MOCK_WILD_WITH_COORDS.length,
+      { timeout: 10000 },
     );
 
     // AC11: OSM attribution link visible.
@@ -121,6 +119,7 @@ test.describe("Plant map (/mapa)", () => {
     await expect(page.locator(".leaflet-container")).toBeVisible({ timeout: 10000 });
     await expect(page.locator(".leaflet-marker-icon")).toHaveCount(
       MOCK_WILD_WITH_COORDS.length,
+      { timeout: 10000 },
     );
     // No toast on tile failure (SPEC Constraints).
     await expect(page.locator("[data-sonner-toast]")).toHaveCount(0);
