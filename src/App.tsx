@@ -54,11 +54,13 @@ const App = () => (
       <BrowserRouter>
         <ScrollToTop />
         <PendingClassificationListener />
-        <HistoryRelocationNotice />
         <Routes>
           <Route path="/" element={<AppLayout><Index /></AppLayout>} />
-          {/* D-03: /mis-plantas redirige a /ajustes/mis-plantas (backwards compat para bookmarks). */}
-          <Route path="/mis-plantas" element={<Navigate to="/ajustes/mis-plantas" replace />} />
+          {/* D-03: /mis-plantas redirige a /ajustes/mis-plantas (backwards compat para bookmarks).
+              Bug fix (2026-06-15): el toast de relocate vivía a nivel app y disparaba en
+              cualquier ruta. Ahora el handler hace el redirect + fires el toast solo cuando
+              la usuaria llega vía /mis-plantas. */}
+          <Route path="/mis-plantas" element={<HistoryRelocationNotice />} />
           <Route path="/ajustes/mis-plantas" element={<AppLayout><History /></AppLayout>} />
           <Route path="/planta/:id" element={<AppLayout><PlantDetail /></AppLayout>} />
           <Route path="/ajustes" element={<AppLayout><SettingsPage /></AppLayout>} />
