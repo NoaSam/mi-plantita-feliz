@@ -19,6 +19,9 @@
 |---|---|---|---|
 | `user_signed_in` | `user_id` | `src/services/auth.service.ts` | Login exitoso con email/password |
 | `user_signed_up` | — | `src/services/auth.service.ts` | Registro de nuevo usuario completado |
+| `password_recovery_requested` | `email_domain` | `src/services/auth.service.ts` | Usuario solicitó el enlace de recuperación. Solo guardamos el dominio para evitar PII en analítica. |
+| `password_recovery_completed` | — | `src/pages/auth/ResetPasswordPage.tsx` | Usuario guardó la nueva contraseña tras seguir el enlace del email. |
+| `password_changed` | `source` | `src/components/auth/ChangePasswordSheet.tsx` | Usuario cambió la contraseña desde Ajustes con la actual verificada. `source: 'settings'`. |
 | `plant_identified` | `plant_name`, `logged_in`, `winning_model`, `models`, `consensus_reached`, `has_location` | `src/hooks/use-plant-identifier.ts` | Planta identificada con éxito |
 | `plant_identification_failed` | `error` | `src/hooks/use-plant-identifier.ts` | Error al identificar planta |
 | `result_section_click` | `section`, `section_label`, `plant_name` | `src/components/PlantResultView.tsx` | Usuario abre una sección del acordeón de resultados |
