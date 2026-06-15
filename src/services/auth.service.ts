@@ -82,3 +82,29 @@ export async function signUp(email: string, password: string) {
     error: error ? normalizeError(error.message) : null,
   };
 }
+
+export async function requestPasswordRecovery(email: string) {
+  const redirectTo =
+    (isNative() ? PRODUCTION_URL : window.location.origin) + "/auth/reset";
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
+  if (!error) {
+    const domain = email.includes("@") ? email.split("@")[1] : "unknown";
+    track("password_recovery_requested", { email_domain: domain });
+  }
+  return { error: error ? normalizeError(error.message) : null };
+}
+
+export async function updatePassword(newPassword: string) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  return { error: error ? normalizeError(error.message) : null };
+}
+
+export async function verifyCurrentPassword(email: string, password: string) {
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    return { ok: false as const, error: normalizeError(error.message) };
+  }
+  return { ok: true as const, error: null };
+}
