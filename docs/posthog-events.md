@@ -5,6 +5,16 @@
 - **Proyecto:** EU Cloud (`eu.i.posthog.com`)
 - **Helper:** `src/lib/track.ts` — wrapper sobre `posthog.capture()`
 - **Persistencia:** `localStorage`
+- **Dev hygiene:** PostHog NO se inicializa en `localhost`/`127.0.0.1` (no-Capacitor). `npm run dev` no contamina la analítica de producción.
+
+## Super-properties automáticas
+
+Estas propiedades se añaden a **todos los eventos** vía `posthog.register()` en `initPostHog()`:
+
+| Propiedad | Valor | Para qué |
+|---|---|---|
+| `app_version` | `1.2.0` (lee `package.json` via `__APP_VERSION__` define) | Filtrar por versión del frontend. iOS PWA / web se actualizan al instante; Android va en lotes (versionName del APK). |
+| `app_platform` | `"android"` (Capacitor) o `"web"` (PWA/desktop) | Distinguir el shell sin tener que parsear `$current_url`. |
 
 ## Eventos automáticos
 
