@@ -58,6 +58,17 @@ export function useWildPlantsWithCoords(): UseWildPlantsWithCoordsReturn {
     };
   }, []);
 
+  // Sync state reset on user identity change (verbatim from useHomePlants).
+  // Without this, on WebKit the gap between authLoading=false and user being
+  // set is large enough that MapPage's redirect-on-empty branch fires before
+  // the wild-plants query has had a chance to run.
+  const [trackedUserId, setTrackedUserId] = useState<string | undefined>(user?.id);
+  if (trackedUserId !== user?.id) {
+    setTrackedUserId(user?.id);
+    setIsLoading(true);
+    setPlants([]);
+  }
+
   const load = useCallback(async () => {
     if (!user) {
       if (!mountedRef.current) return;
