@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-last_updated: "2026-05-28T00:00:00.000Z"
+status: "Phase 3 cerrada. Migración Supabase aplicada a prod. Android beta v1.1.0 publicada. Pendiente: merge a main tras validación beta."
+last_updated: "2026-08-12T09:51:25.992Z"
 progress:
   total_phases: 10
   completed_phases: 6
