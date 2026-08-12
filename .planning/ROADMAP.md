@@ -15,7 +15,7 @@
 - [x] **Phase 3: Calendar v0** — Lista minima de "Mis plantas" con frecuencia de riego sugerida, condicional al modo casa (completed 2026-05-28, Android v1.1.0 / versionCode 4 publicada en internal testing)
 - [x] **Phase 03.1: Plant Map v0** — Mapa con pins de descubrimientos geolocalizados, condicional al modo explorador (completed 2026-05-17)
 - [x] **Phase 4: Response Time Optimization** — Reducir latencia percibida del analisis de plantas
-- [ ] **Phase 04.1: My Plants Load Time Optimization** — Acelerar la pantalla `/mis-plantas` (history)
+- [ ] **Phase 04.1: Mobile Load Time Optimization** — Acelerar el tiempo de carga de las 3 pantallas de listado: `/mis-plantas`, `/regar`, `/mapa`
 - [ ] **Phase 5: Identification Engine v2 — Pl@ntNet + 1 LLM** *(candidate)* — Separar identificación (Pl@ntNet, especializado) de generación de cuidados/diagnóstico (1 LLM en vez de 3)
 - [ ] **Phase 6: Backfill imágenes históricas base64 → Storage** *(candidate)* — Migrar las ~124 filas legacy de `plant_searches.image_url` (data:image/jpeg;base64,...) a URLs HTTPS en Supabase Storage; reducir tamaño DB y eliminar riesgo OOM en Capacitor
 
@@ -128,15 +128,24 @@ Plans:
 - [x] 04-01-PLAN.md — Edge function: Promise.race first-winner + SSE streaming response
 - [x] 04-02-PLAN.md — Client hook: SSE reader + browser-image-compression + test update
 
-### Phase 04.1: My Plants Load Time Optimization (INSERTED)
-**Goal**: La pantalla `/mis-plantas` (history) carga visiblemente más rápido en mobile — métrica concreta (p50/p90 antes/después) a definir en discuss-phase
-**Depends on**: Phase 02.1 (la pantalla ya existe con context chips), Phase 4 (patrones de perf ya validados en la app)
-**Requirements**: TBD (a derivar durante discuss-phase — hipótesis: imágenes pesadas sin lazy/thumbnails, query sin paginación, falta de skeleton, queries N+1)
-**Success Criteria**: TBD (mínimo: time-to-first-content < 1.5s en 4G mobile, scroll suave a 60fps con 50+ items)
+### Phase 04.1: Mobile Load Time Optimization (INSERTED)
+**Goal**: Las 3 pantallas de listado (`/mis-plantas`, `/regar`, `/mapa`) cargan visiblemente más rápido en mobile — métrica concreta (p50/p90 antes/después) a definir en discuss-phase.
+**Depends on**: Phase 02.1 (`/mis-plantas` con context chips), Phase 3 (`/regar`), Phase 03.1 (`/mapa`), Phase 4 (patrones de perf ya validados en la edge function)
+**Reported by CPO 2026-08-12**: "tarda mucho en cargar" en las 3 pantallas. Alcance ampliado desde el scope original que era solo `/mis-plantas`. Es feedback subjetivo — la primera tarea de discuss-phase será medir para tener números reales.
+**Requirements**: TBD (a derivar durante discuss-phase). Hipótesis iniciales:
+  - `/mis-plantas`: imágenes pesadas sin lazy/thumbnails (probable causa dominante — muchas filas legacy son base64 de ~1.5MB), query sin paginación, no hay skeleton
+  - `/regar`: mismo problema de imágenes casa; sort + status compute en cliente sobre lista completa; sin virtualization
+  - `/mapa`: leaflet + tile fetch bloqueante; pins renderizan solo tras query completa; sin skeleton mientras cargan tiles
+  - Denominador común: fotos legacy en base64 inline (Phase 6 backfill mitigaría raíz)
+**Success Criteria**: TBD (mínimo por pantalla: time-to-first-content < 1.5s en 4G mobile; scroll suave a 60fps con 50+ items en `/mis-plantas` y `/regar`; `/mapa` render de pins < 2s)
 **Plans:** 0 plans
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 04.1 to break down)
+
+**Consideraciones de orden**:
+- Puede tener sentido hacer Phase 6 (backfill base64) ANTES si la mayor parte del peso viene de esas fotos legacy — se convertiría en el primer plan de esta phase.
+- Alternativa: dividir en 3 phases (04.1a, 04.1b, 04.1c) si en discuss-phase se ve que las causas divergen mucho.
 
 ### Phase 5: Identification Engine v2 — Pl@ntNet + 1 LLM (CANDIDATE)
 
