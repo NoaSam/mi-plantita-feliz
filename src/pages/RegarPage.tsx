@@ -13,6 +13,7 @@ import { PlantWateringCard } from "@/components/PlantWateringCard";
 import { WateringFrequencyPicker } from "@/components/WateringFrequencyPicker";
 import { computeStatus } from "@/lib/watering-countdown";
 import { track } from "@/lib/track";
+import { usePerfScreenLoaded } from "@/hooks/use-perf-screen-loaded";
 
 /**
  * /regar — ¿Toca regar? — Calendario de riego.
@@ -85,6 +86,14 @@ export default function RegarPage() {
     });
     setTrackedOpen(true);
   }, [isLoading, trackedOpen, plants]);
+
+  // Phase 04.1 Plan 03 — TTFC instrumentation. Guarded by plants.length > 0
+  // to mirror MapPage: the component Navigates to "/" when plants is empty,
+  // so we only measure the case where content actually renders.
+  // MUST be called BEFORE any early return to satisfy Rules of Hooks.
+  usePerfScreenLoaded("regar", !isLoading && plants.length > 0, {
+    plants_count: plants.length,
+  });
 
   const sortedPlants = useMemo(() => {
     return [...plants].sort((a, b) => {

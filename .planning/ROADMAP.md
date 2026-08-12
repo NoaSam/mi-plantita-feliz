@@ -15,9 +15,9 @@
 - [x] **Phase 3: Calendar v0** — Lista minima de "Mis plantas" con frecuencia de riego sugerida, condicional al modo casa (completed 2026-05-28, Android v1.1.0 / versionCode 4 publicada en internal testing)
 - [x] **Phase 03.1: Plant Map v0** — Mapa con pins de descubrimientos geolocalizados, condicional al modo explorador (completed 2026-05-17)
 - [x] **Phase 4: Response Time Optimization** — Reducir latencia percibida del analisis de plantas
-- [ ] **Phase 04.1: Mobile Load Time Optimization** — Acelerar el tiempo de carga de las 3 pantallas de listado: `/mis-plantas`, `/regar`, `/mapa`
+- [x] **Phase 04.1: Mobile Load Time Optimization** — Acelerar el tiempo de carga de las 3 pantallas de listado: `/mis-plantas`, `/regar`, `/mapa` (completed 2026-08-12)
 - [ ] **Phase 5: Identification Engine v2 — Pl@ntNet + 1 LLM** *(candidate)* — Separar identificación (Pl@ntNet, especializado) de generación de cuidados/diagnóstico (1 LLM en vez de 3)
-- [ ] **Phase 6: Backfill imágenes históricas base64 → Storage** *(candidate)* — Migrar las ~124 filas legacy de `plant_searches.image_url` (data:image/jpeg;base64,...) a URLs HTTPS en Supabase Storage; reducir tamaño DB y eliminar riesgo OOM en Capacitor
+- [x] **Phase 6: Backfill imágenes históricas base64 → Storage** — **Folded into Phase 04.1** (backfill executed 2026-08-12 via `npm run backfill:images`; ~98 rows migrated). Kept as historical reference; the goal was fulfilled by Plan 04.1-01.
 
 ---
 
@@ -138,10 +138,13 @@ Plans:
   - `/mapa`: leaflet + tile fetch bloqueante; pins renderizan solo tras query completa; sin skeleton mientras cargan tiles
   - Denominador común: fotos legacy en base64 inline (Phase 6 backfill mitigaría raíz)
 **Success Criteria**: TBD (mínimo por pantalla: time-to-first-content < 1.5s en 4G mobile; scroll suave a 60fps con 50+ items en `/mis-plantas` y `/regar`; `/mapa` render de pins < 2s)
-**Plans:** 0 plans
+**Plans:** 4/4 plans executed
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 04.1 to break down)
+- [x] 04.1-01-PLAN.md — Backfill legacy base64 images to Supabase Storage (CPO manual execution per D-05, BLOCKING wave 1)
+- [x] 04.1-02-PLAN.md — Thumbnail URL helper + `<img>` lazy/decoding/width/height + preconnect hints (wave 2)
+- [x] 04.1-03-PLAN.md — `perf_screen_loaded` PostHog event + `usePerfScreenLoaded` hook wired into 3 pages (wave 3)
+- [x] 04.1-04-PLAN.md — VERIFICATION.md checklist + ROADMAP updates + CPO manual go/no-go checkpoint (wave 4)
 
 **Consideraciones de orden**:
 - Puede tener sentido hacer Phase 6 (backfill base64) ANTES si la mayor parte del peso viene de esas fotos legacy — se convertiría en el primer plan de esta phase.
@@ -180,7 +183,10 @@ Plans:
 
 ### Phase 6: Backfill imágenes históricas base64 → Storage (CANDIDATE)
 
-**Status:** Candidate — NOT scheduled. Independiente de Phase 5; las dos pueden hacerse en cualquier orden.
+**Status:** **FOLDED INTO Phase 04.1** (executed 2026-08-12 via `npm run backfill:images`, plan 04.1-01; ~98 rows migrated, 0 failed). This section is preserved as historical context (rationale, tradeoffs, findings) that motivated the work — the actual execution and success criteria were absorbed into Phase 04.1's plan 01.
+
+**Absorbed by:** [.planning/phases/04.1-mobile-load-time-optimization/04.1-01-PLAN.md](phases/04.1-mobile-load-time-optimization/04.1-01-PLAN.md)
+
 
 **Goal:** Migrar las filas legacy de `plant_searches.image_url` que están como base64 data URIs a URLs HTTPS de Supabase Storage. Dejar 0 filas con `image_url LIKE 'data:%'` y todas con `image_url LIKE 'https://%supabase.co/storage/%'`.
 
@@ -237,9 +243,9 @@ Plans:
 | 3. Calendar v0 | 1/5 | In Progress | - |
 | 03.1. Plant Map v0 | 8/8 | Complete    | 2026-05-17 |
 | 4. Response Time Optimization | 2/2 | Complete | 2026-04-28 |
-| 04.1. My Plants Load Time Optimization | 0/? | Not started | - |
+| 04.1. My Plants Load Time Optimization | 4/4 | Complete | 2026-08-12 |
 | 5. Identification Engine v2 (Pl@ntNet + 1 LLM) | 0/? | Candidate | - |
-| 6. Backfill base64 → Storage | 0/? | Candidate | - |
+| 6. Backfill base64 → Storage | — | Folded into 04.1 | 2026-08-12 |
 
 ---
 

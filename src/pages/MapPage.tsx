@@ -10,6 +10,7 @@ import { FitBoundsOnMount } from "@/components/FitBoundsOnMount";
 import { PlantMapSheet } from "@/components/PlantMapSheet";
 import { buildPlantPinIcon } from "@/lib/build-plant-pin-icon";
 import { track } from "@/lib/track";
+import { usePerfScreenLoaded } from "@/hooks/use-perf-screen-loaded";
 
 /**
  * /mapa — Plant discovery map.
@@ -53,6 +54,13 @@ export default function MapPage() {
     track("map_opened", { pin_count: plants.length });
     setTrackedOpen(true);
   }, [isLoading, trackedOpen, plants.length]);
+
+  // Phase 04.1 Plan 03 — TTFC instrumentation. Guarded by plants.length > 0
+  // because /mapa redirects to "/" when empty — we only want to measure the
+  // real render path. MUST be called BEFORE any early return (Rules of Hooks).
+  usePerfScreenLoaded("mapa", !isLoading && plants.length > 0, {
+    plants_count: plants.length,
+  });
 
   if (isLoading) {
     return (

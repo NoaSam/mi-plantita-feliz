@@ -3,6 +3,7 @@ import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import type { HomePlant } from "@/hooks/use-home-plants";
 import { computeStatus } from "@/lib/watering-countdown";
+import { getThumbnailUrl } from "@/lib/thumbnail-url";
 
 /**
  * Splittea "Common (Scientific)" en sus dos partes.
@@ -210,10 +211,14 @@ export function PlantWateringCard({
         className="w-full flex items-start gap-3 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring rounded-xl"
         aria-label={`Ver detalle de ${commonName}`}
       >
+        {/* Photo — 64×64 display (size-16 = 4rem = 64px); 2× for retina */}
         <img
-          src={plant.imageUrl}
+          src={getThumbnailUrl(plant.imageUrl, 128)}
           alt=""
           loading="lazy"
+          decoding="async"
+          width={64}
+          height={64}
           className="size-16 shrink-0 object-cover rounded-xl border-2 border-foreground"
         />
         <div className="flex-1 min-w-0 flex flex-col gap-1">

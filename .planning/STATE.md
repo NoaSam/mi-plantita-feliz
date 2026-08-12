@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-last_updated: "2026-05-28T00:00:00.000Z"
+status: executing
+last_updated: "2026-08-12T11:34:00.000Z"
 progress:
   total_phases: 10
-  completed_phases: 6
-  total_plans: 30
-  completed_plans: 30
+  completed_phases: 7
+  total_plans: 34
+  completed_plans: 34
   percent: 100
 ---
 
@@ -22,15 +22,17 @@ progress:
 
 **Core value:** Cualquier persona puede sacar una foto a una planta y saber al instante qué es, cómo cuidarla y si tiene algún problema — sin saber nada de botánica.
 
-**Current focus:** Phase 3 cerrada. Android v1.1.0 (versionCode 4) publicada en internal testing 2026-05-28. Pendiente: validación de beta testers Android + merge `feat/phase-3-calendar-v0` → `main` para liberar iOS PWA / web.
+**Current focus:** Phase 04.1 — mobile-load-time-optimization
 
 ---
 
 ## Current Position
 
+Phase: 04.1 (mobile-load-time-optimization) — EXECUTING (awaiting CPO verification checkpoint)
+Plan: 4 of 4 (04.1-01, 04.1-02, 04.1-03, 04.1-04 docs done; CPO manual verification pending — see 04.1-VERIFICATION.md)
 **Phase:** 3 (Calendar v0) — ✅ completada
 **Plan:** todas (01-05) ✅ completadas + 8 commits post-UAT con fixes CPO
-**Status:** Phase 3 cerrada. Migración Supabase aplicada a prod. Android beta v1.1.0 publicada. Pendiente: merge a main tras validación beta.
+**Status:** Executing Phase 04.1
 **Completed:** Phase 1, 2, 02.1, 02.2, 03.1, 4 (merged to main 2026-05-21) + Phase 3 cerrada (en feat/phase-3-calendar-v0; pendiente merge tras Android beta validation)
 
 ```
@@ -52,6 +54,10 @@ progress:
 
 ### Key Decisions
 
+- Phase 04.1 Plan 04: VERIFICATION.md written in Spanish, 4 blocks (A: SQL, B: device throttled, C: PostHog event, D: post-deploy trends). Bloque D marked NOT blocking for merge — merge decision on A+B+C only.
+- Phase 04.1 Plan 04: Phase 6 (backfill candidate) marked 'FOLDED INTO Phase 04.1' in ROADMAP with cross-reference to plan 04.1-01; historical rationale sections preserved.
+- Phase 04.1 Plan 03: usePerfScreenLoaded hook uses useEffect (NOT useLayoutEffect) + useRef firing-guard — fires perf_screen_loaded PostHog event once per mount
+- Phase 04.1 Plan 03: /regar and /mapa both use `!isLoading && plants.length > 0` isReady formula to avoid firing with plants_count=0 on the redirect-to-/ path
 - Capacitor elegido sobre React Native: reutiliza 100% del código React existente
 - Service worker debe desactivarse en build Android para evitar conflictos con plugins
 - Imágenes deben migrar de base64 a Supabase Storage antes de Capacitor (riesgo OOM)
@@ -82,8 +88,8 @@ progress:
 ## Session Continuity
 
 Para resumir: leer `.planning/ROADMAP.md` y `.planning/REQUIREMENTS.md`.
-Última sesión: 2026-05-21 — Ejecutado Plan 03-01 (Nav restructure) en feat/phase-3-calendar-v0; 6 commits atómicos; 110/110 tests passing.
-Siguiente acción: Ejecutar Plan 03-02 (regar list — lista de plantas casa con cards y estados visuales).
+Última sesión: 2026-08-12 — Ejecutado Plan 04.1-04 (docs closure — VERIFICATION.md + ROADMAP updates). 2 commits (d9ba77f docs verification checklist, d0e6a92 ROADMAP updates + Phase 6 folded in). No production code touched. Docs-only.
+Siguiente acción: **CHECKPOINT BLOCKING** — CPO ejecuta `.planning/phases/04.1-mobile-load-time-optimization/04.1-VERIFICATION.md` (~20 min) contra su iPhone en `mi-plantita-feliz.vercel.app`. Decisión APPROVED → merge a `main`. NEEDS ADJUSTMENT → path A (Pro upgrade) o path B (thumbnails en backfill).
 
 ---
 
