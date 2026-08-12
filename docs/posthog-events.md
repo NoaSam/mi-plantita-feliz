@@ -286,3 +286,57 @@ Funnel de ajuste post-riego (señal de frecuencia mal calibrada por IA):
 watering_logged
   → watering_frequency_edited (en los 4s siguientes via toast "Modificar frecuencia")
 ```
+
+---
+
+## Phase 04.1 — Mobile Load Time Optimization
+
+**Status:** Implementado en Phase 04.1. Mide el tiempo percibido de carga de las 3 pantallas de listado en usuarios reales, en iPhones PWA y Android Capacitor. El dato se lee en el dashboard PostHog "Perf 04.1" para verificar 24-48h post-deploy si los fixes de imágenes + preconnect están reduciendo el TTFC en condiciones reales.
+
+### Eventos de performance
+
+| Evento | Propiedades | Archivo | Cuándo se dispara |
+|---|---|---|---|
+| `perf_screen_loaded` | `screen`, `ttfc_ms`, `plants_count` (+ super-props auto) | `src/hooks/use-perf-screen-loaded.ts` (llamado desde `src/pages/History.tsx`, `src/pages/RegarPage.tsx`, `src/pages/MapPage.tsx`) | Una vez por montaje del component, en el `useEffect` post-commit donde `isReady === true` (típicamente `!isLoading`, o `!isLoading && plants.length > 0` para `/regar` y `/mapa` que redirigen a `/` cuando la lista está vacía) |
+
+### Detalle de propiedades
+
+**`perf_screen_loaded`**
+
+| Prop | Tipo | Descripción |
+|---|---|---|
+| `screen` | `"mis-plantas" \| "regar" \| "mapa"` | Identificador de la pantalla medida. Enum literal, nunca un valor derivado de input de usuario. |
+| `ttfc_ms` | `number` | Time-to-First-Content en ms desde `performance.now()` (0 = navigation start). Es un over-estimate ligero del true first-paint — el `useEffect` corre post-commit pero antes de que el browser pinte las imágenes. Aceptable per D-10 (±25% de tolerancia); queremos que el número incluya cualquier data-readiness lag post-mount. |
+| `plants_count` | `number` | Nº de items rendereados. Puede ser `0` en `/mis-plantas` (empty state válido: "No hay plantas guardadas"). En `/regar` y `/mapa` el redirect a `/` previene el disparo con `0`. |
+| `app_version` | `string` | Super-property auto (ver §Super-properties automáticas). Ejemplo: `"1.2.0"`. |
+| `app_platform` | `"web" \| "android"` | Super-property auto. Distingue iOS PWA / desktop vs Android Capacitor. |
+
+**Umbrales objetivo (D-10):**
+- `/mis-plantas`: p50 `ttfc_ms` < **1500** con 20 plantas
+- `/regar`: p50 `ttfc_ms` < **1500** con 5-10 plantas casa
+- `/mapa`: p50 `ttfc_ms` < **2000** (mide render del shell — no incluye espera a tiles OSM)
+
+**Consumido por:** Dashboard PostHog "Perf 04.1" — comparar p50/p90 pre/post-deploy, filtrado por `app_platform` y `screen`.
+
+**Notas de implementación:**
+- Hook `usePerfScreenLoaded(screen, isReady, extraProps)` en `src/hooks/use-perf-screen-loaded.ts`. Fires una única vez por montaje via `useRef` firing-guard. Usa `useEffect` (NO `useLayoutEffect`) para no bloquear el pintado.
+- Coexiste con `calendar_opened` (RegarPage) y `map_opened` (MapPage). NO los reemplaza — son eventos con propósitos distintos:
+  - `calendar_opened` / `map_opened` = "el usuario abrió esta pantalla" (evento de intención / uso).
+  - `perf_screen_loaded` = "la pantalla terminó de estar lista para pintar" (evento de performance).
+- El evento NO carga PII: solo enum de pantalla, integer de tiempo, integer de conteo. No user_id (viene por identify), no coordenadas, no nombres de plantas.
+
+### Funnel previsto (para análisis posterior)
+
+Análisis de perf pre/post-deploy Phase 04.1 (agregado):
+```
+perf_screen_loaded (screen: 'mis-plantas')
+  → p50, p90 comparados vs baseline pre-deploy 04.1
+  → filtrar por app_platform: 'web' (iPhone PWA) vs 'android' (Capacitor)
+  → correlar con plants_count buckets (0-9, 10-19, 20+)
+```
+
+Análisis de correlación TTFC × comportamiento:
+```
+perf_screen_loaded (screen: 'regar', ttfc_ms alto)
+  → watering_logged (evento siguiente)         [¿tiempos altos correlan con drop-off?]
+```

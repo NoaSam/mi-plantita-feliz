@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { usePlantHistory } from "@/hooks/use-plant-history";
 import { track } from "@/lib/track";
 import { getThumbnailUrl } from "@/lib/thumbnail-url";
+import { usePerfScreenLoaded } from "@/hooks/use-perf-screen-loaded";
 import RequireAuth from "@/components/auth/RequireAuth";
 import HistorySummary from "@/components/HistorySummary";
 import ContextChip from "@/components/ContextChip";
@@ -98,6 +99,13 @@ export default function HistoryPage() {
     setConfirmOpen(false);
     handleExitEdit();
   };
+
+  // Phase 04.1 Plan 03 — TTFC instrumentation. Empty state counts as content
+  // ready (History renders "No hay plantas guardadas" without redirecting),
+  // so we fire the event even when history.length === 0.
+  usePerfScreenLoaded("mis-plantas", !isLoading, {
+    plants_count: history.length,
+  });
 
   const handleBack = () => {
     // Phase 3 (03-01) moved this page from /mis-plantas → /ajustes/mis-plantas.
