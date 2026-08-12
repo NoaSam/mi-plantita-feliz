@@ -1,0 +1,39 @@
+# Supabase Free tier pauses a project after 7 consecutive days of inactivity.
+# This workflow pings the REST endpoint every 3 days so the "days inactive"
+# counter never reaches 7. Zero cost — public REST call with the anon key.
+#
+# The anon key is safe to check into git (it is the "publishable" key already
+# shipped in the web bundle via .env → import.meta.env). Row-level security
+# gates all reads; no data leak.
+
+name: Supabase keepalive
+
+on:
+  schedule:
+    # Every 3 days at 03:12 UTC. Non-round time avoids the top-of-hour rush
+    # that GitHub Actions delays. Cron minute 12 is chosen arbitrarily.
+    - cron: "12 3 */3 * *"
+  # Allow manual trigger from the Actions tab.
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping REST endpoint
+        env:
+          SUPABASE_URL: https://sdxfxkqzgnonxfshbjfc.supabase.co
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkeGZ4a3F6Z25vbnhmc2hiamZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMzAwODEsImV4cCI6MjA5MDkwNjA4MX0.JfxZ5_d9-AEt3kkjrRq-FnDlTDwtexSCBsyUHzLcM78
+        run: |
+          echo "Pinging Supabase to prevent Free tier pause..."
+          HTTP_CODE=$(curl -sS -o /tmp/body.txt -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/plant_searches?limit=1&select=id" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+          echo "HTTP status: $HTTP_CODE"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Response body:"
+            cat /tmp/body.txt
+            exit 1
+          fi
+          echo "OK — Supabase project is awake."
