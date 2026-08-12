@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-08-12T13:35:00.000Z"
+last_updated: "2026-08-12T11:34:00.000Z"
 progress:
   total_phases: 10
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 34
   completed_plans: 34
   percent: 100
@@ -28,8 +28,8 @@ progress:
 
 ## Current Position
 
-Phase: 04.1 (mobile-load-time-optimization) — EXECUTING
-Plan: 3 of 4 (04.1-01, 04.1-02, 04.1-03 done; 04.1-04 pending)
+Phase: 04.1 (mobile-load-time-optimization) — EXECUTING (awaiting CPO verification checkpoint)
+Plan: 4 of 4 (04.1-01, 04.1-02, 04.1-03, 04.1-04 docs done; CPO manual verification pending — see 04.1-VERIFICATION.md)
 **Phase:** 3 (Calendar v0) — ✅ completada
 **Plan:** todas (01-05) ✅ completadas + 8 commits post-UAT con fixes CPO
 **Status:** Executing Phase 04.1
@@ -54,6 +54,8 @@ Plan: 3 of 4 (04.1-01, 04.1-02, 04.1-03 done; 04.1-04 pending)
 
 ### Key Decisions
 
+- Phase 04.1 Plan 04: VERIFICATION.md written in Spanish, 4 blocks (A: SQL, B: device throttled, C: PostHog event, D: post-deploy trends). Bloque D marked NOT blocking for merge — merge decision on A+B+C only.
+- Phase 04.1 Plan 04: Phase 6 (backfill candidate) marked 'FOLDED INTO Phase 04.1' in ROADMAP with cross-reference to plan 04.1-01; historical rationale sections preserved.
 - Phase 04.1 Plan 03: usePerfScreenLoaded hook uses useEffect (NOT useLayoutEffect) + useRef firing-guard — fires perf_screen_loaded PostHog event once per mount
 - Phase 04.1 Plan 03: /regar and /mapa both use `!isLoading && plants.length > 0` isReady formula to avoid firing with plants_count=0 on the redirect-to-/ path
 - Capacitor elegido sobre React Native: reutiliza 100% del código React existente
@@ -86,8 +88,8 @@ Plan: 3 of 4 (04.1-01, 04.1-02, 04.1-03 done; 04.1-04 pending)
 ## Session Continuity
 
 Para resumir: leer `.planning/ROADMAP.md` y `.planning/REQUIREMENTS.md`.
-Última sesión: 2026-08-12 — Ejecutado Plan 04.1-03 (TTFC instrumentation via usePerfScreenLoaded hook + wire into 3 pages + document event); 3 commits atómicos (RED test + GREEN impl + wiring/docs); 179/179 unit tests · 26/26 e2e regar+smoke passing · 0 regressions.
-Siguiente acción: Ejecutar Plan 04.1-04 (verification + deploy validation — last plan of Phase 04.1).
+Última sesión: 2026-08-12 — Ejecutado Plan 04.1-04 (docs closure — VERIFICATION.md + ROADMAP updates). 2 commits (d9ba77f docs verification checklist, d0e6a92 ROADMAP updates + Phase 6 folded in). No production code touched. Docs-only.
+Siguiente acción: **CHECKPOINT BLOCKING** — CPO ejecuta `.planning/phases/04.1-mobile-load-time-optimization/04.1-VERIFICATION.md` (~20 min) contra su iPhone en `mi-plantita-feliz.vercel.app`. Decisión APPROVED → merge a `main`. NEEDS ADJUSTMENT → path A (Pro upgrade) o path B (thumbnails en backfill).
 
 ---
 
