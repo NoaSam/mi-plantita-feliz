@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase 3 cerrada. Migración Supabase aplicada a prod. Android beta v1.1.0 publicada. Pendiente: merge a main tras validación beta."
-last_updated: "2026-08-12T09:51:25.992Z"
+status: executing
+last_updated: "2026-08-12T11:05:30.989Z"
 progress:
   total_phases: 10
   completed_phases: 6
-  total_plans: 30
-  completed_plans: 30
-  percent: 100
+  total_plans: 34
+  completed_plans: 32
+  percent: 94
 ---
 
 # State: Mi Plantita Feliz
@@ -22,15 +22,17 @@ progress:
 
 **Core value:** Cualquier persona puede sacar una foto a una planta y saber al instante qué es, cómo cuidarla y si tiene algún problema — sin saber nada de botánica.
 
-**Current focus:** Phase 3 cerrada. Android v1.1.0 (versionCode 4) publicada en internal testing 2026-05-28. Pendiente: validación de beta testers Android + merge `feat/phase-3-calendar-v0` → `main` para liberar iOS PWA / web.
+**Current focus:** Phase 04.1 — mobile-load-time-optimization
 
 ---
 
 ## Current Position
 
+Phase: 04.1 (mobile-load-time-optimization) — EXECUTING
+Plan: 1 of 4
 **Phase:** 3 (Calendar v0) — ✅ completada
 **Plan:** todas (01-05) ✅ completadas + 8 commits post-UAT con fixes CPO
-**Status:** Phase 3 cerrada. Migración Supabase aplicada a prod. Android beta v1.1.0 publicada. Pendiente: merge a main tras validación beta.
+**Status:** Executing Phase 04.1
 **Completed:** Phase 1, 2, 02.1, 02.2, 03.1, 4 (merged to main 2026-05-21) + Phase 3 cerrada (en feat/phase-3-calendar-v0; pendiente merge tras Android beta validation)
 
 ```
