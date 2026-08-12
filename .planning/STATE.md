@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-08-12T11:05:30.989Z"
+last_updated: "2026-08-12T13:35:00.000Z"
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 34
-  completed_plans: 32
-  percent: 94
+  completed_plans: 34
+  percent: 100
 ---
 
 # State: Mi Plantita Feliz
@@ -29,7 +29,7 @@ progress:
 ## Current Position
 
 Phase: 04.1 (mobile-load-time-optimization) — EXECUTING
-Plan: 1 of 4
+Plan: 3 of 4 (04.1-01, 04.1-02, 04.1-03 done; 04.1-04 pending)
 **Phase:** 3 (Calendar v0) — ✅ completada
 **Plan:** todas (01-05) ✅ completadas + 8 commits post-UAT con fixes CPO
 **Status:** Executing Phase 04.1
@@ -54,6 +54,8 @@ Plan: 1 of 4
 
 ### Key Decisions
 
+- Phase 04.1 Plan 03: usePerfScreenLoaded hook uses useEffect (NOT useLayoutEffect) + useRef firing-guard — fires perf_screen_loaded PostHog event once per mount
+- Phase 04.1 Plan 03: /regar and /mapa both use `!isLoading && plants.length > 0` isReady formula to avoid firing with plants_count=0 on the redirect-to-/ path
 - Capacitor elegido sobre React Native: reutiliza 100% del código React existente
 - Service worker debe desactivarse en build Android para evitar conflictos con plugins
 - Imágenes deben migrar de base64 a Supabase Storage antes de Capacitor (riesgo OOM)
@@ -84,8 +86,8 @@ Plan: 1 of 4
 ## Session Continuity
 
 Para resumir: leer `.planning/ROADMAP.md` y `.planning/REQUIREMENTS.md`.
-Última sesión: 2026-05-21 — Ejecutado Plan 03-01 (Nav restructure) en feat/phase-3-calendar-v0; 6 commits atómicos; 110/110 tests passing.
-Siguiente acción: Ejecutar Plan 03-02 (regar list — lista de plantas casa con cards y estados visuales).
+Última sesión: 2026-08-12 — Ejecutado Plan 04.1-03 (TTFC instrumentation via usePerfScreenLoaded hook + wire into 3 pages + document event); 3 commits atómicos (RED test + GREEN impl + wiring/docs); 179/179 unit tests · 26/26 e2e regar+smoke passing · 0 regressions.
+Siguiente acción: Ejecutar Plan 04.1-04 (verification + deploy validation — last plan of Phase 04.1).
 
 ---
 

@@ -138,12 +138,12 @@ Plans:
   - `/mapa`: leaflet + tile fetch bloqueante; pins renderizan solo tras query completa; sin skeleton mientras cargan tiles
   - Denominador común: fotos legacy en base64 inline (Phase 6 backfill mitigaría raíz)
 **Success Criteria**: TBD (mínimo por pantalla: time-to-first-content < 1.5s en 4G mobile; scroll suave a 60fps con 50+ items en `/mis-plantas` y `/regar`; `/mapa` render de pins < 2s)
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 - [x] 04.1-01-PLAN.md — Backfill legacy base64 images to Supabase Storage (CPO manual execution per D-05, BLOCKING wave 1)
 - [x] 04.1-02-PLAN.md — Thumbnail URL helper + `<img>` lazy/decoding/width/height + preconnect hints (wave 2)
-- [ ] 04.1-03-PLAN.md — `perf_screen_loaded` PostHog event + `usePerfScreenLoaded` hook wired into 3 pages (wave 3)
+- [x] 04.1-03-PLAN.md — `perf_screen_loaded` PostHog event + `usePerfScreenLoaded` hook wired into 3 pages (wave 3)
 - [ ] 04.1-04-PLAN.md — VERIFICATION.md checklist + ROADMAP updates + CPO manual go/no-go checkpoint (wave 4)
 
 **Consideraciones de orden**:
@@ -240,7 +240,7 @@ Plans:
 | 3. Calendar v0 | 1/5 | In Progress | - |
 | 03.1. Plant Map v0 | 8/8 | Complete    | 2026-05-17 |
 | 4. Response Time Optimization | 2/2 | Complete | 2026-04-28 |
-| 04.1. My Plants Load Time Optimization | 2/4 | In Progress|  |
+| 04.1. My Plants Load Time Optimization | 3/4 | In Progress|  |
 | 5. Identification Engine v2 (Pl@ntNet + 1 LLM) | 0/? | Candidate | - |
 | 6. Backfill base64 → Storage | 0/? | Candidate | - |
 
