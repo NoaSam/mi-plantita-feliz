@@ -14,6 +14,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { usePlantHistory } from "@/hooks/use-plant-history";
 import { track } from "@/lib/track";
+import { getThumbnailUrl } from "@/lib/thumbnail-url";
 import RequireAuth from "@/components/auth/RequireAuth";
 import HistorySummary from "@/components/HistorySummary";
 import ContextChip from "@/components/ContextChip";
@@ -213,10 +214,14 @@ export default function HistoryPage() {
                     />
                   )}
 
-                  {/* Photo */}
+                  {/* Photo — 80×80 display (size-20 = 5rem = 80px); 2× for retina */}
                   <img
-                    src={item.imageUrl}
+                    src={getThumbnailUrl(item.imageUrl, 160)}
                     alt={item.name}
+                    loading="lazy"
+                    decoding="async"
+                    width={80}
+                    height={80}
                     className="size-20 rounded-xl object-cover border-2 border-foreground shrink-0"
                   />
 

@@ -19,6 +19,13 @@
     <meta name="twitter:title" content="Mi jardín">
     <meta name="twitter:description" content="Identifica y cuida tus plantas con una foto. Mi jardín.">
     <meta name="twitter:image" content="/pwa-512.png">
+    <!-- Preconnect hints — perf phase 04.1 (warm TCP+TLS before React mounts) -->
+    <!-- OSM tile CDN (used by /mapa — leaflet splits requests across a/b/c subdomains) -->
+    <link rel="preconnect" href="https://a.tile.openstreetmap.org" crossorigin>
+    <link rel="preconnect" href="https://b.tile.openstreetmap.org" crossorigin>
+    <link rel="preconnect" href="https://c.tile.openstreetmap.org" crossorigin>
+    <!-- Supabase Storage CDN (used by /mis-plantas and /regar for card images) -->
+    <link rel="preconnect" href="https://sdxfxkqzgnonxfshbjfc.supabase.co" crossorigin>
 </head>
   <body>
     <div id="root"></div>
