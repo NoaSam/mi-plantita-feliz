@@ -48,3 +48,9 @@ android/keystore.properties
 
 # Capacitor
 capacitor.config.ts.bak
+
+# Claude Code local state (agent-memory, worktrees, settings.local.json)
+.claude/
+
+# Supabase CLI local cache
+supabase/.temp/
