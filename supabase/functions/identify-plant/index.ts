@@ -87,35 +87,55 @@ interface ModelResult {
 
 // ─── Model callers ─────────────────────────────────────────────────────────────
 
+// Per-LLM timeout budget. Kept below the client's own INVOKE_TIMEOUT_MS (30s)
+// so a stuck provider surfaces as an aborted fetch in Promise.allSettled
+// rather than as a client-side timeout with the edge function still running.
+// The remaining time budget after 15s is used by storage upload + DB inserts
+// + the return trip to the client.
+const LLM_TIMEOUT_MS = 15_000;
+
+// Normalize an AbortError from AbortSignal.timeout into the same
+// TIMEOUT:<model> shape our downstream error handling / analytics uses.
+function isAbortError(e: unknown): boolean {
+  return e instanceof Error && (e.name === "AbortError" || e.name === "TimeoutError");
+}
+
 async function callClaude(base64Data: string, mediaType: string): Promise<string> {
   const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
   if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2048,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: mediaType, data: base64Data },
-            },
-            { type: "text", text: USER_MESSAGE },
-          ],
-        },
-      ],
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+      headers: {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 2048,
+        system: SYSTEM_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: { type: "base64", media_type: mediaType, data: base64Data },
+              },
+              { type: "text", text: USER_MESSAGE },
+            ],
+          },
+        ],
+      }),
+    });
+  } catch (e) {
+    if (isAbortError(e)) throw new Error(`TIMEOUT:claude:${LLM_TIMEOUT_MS}ms`);
+    throw e;
+  }
 
   if (!response.ok) {
     const t = await response.text();
@@ -135,26 +155,33 @@ async function callGemini(base64Data: string, mediaType: string): Promise<string
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
   if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { inlineData: { mimeType: mediaType, data: base64Data } },
-              { text: USER_MESSAGE },
-            ],
-          },
-        ],
-        generationConfig: { maxOutputTokens: 2048 },
-      }),
-    }
-  );
+  let response: Response;
+  try {
+    response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { inlineData: { mimeType: mediaType, data: base64Data } },
+                { text: USER_MESSAGE },
+              ],
+            },
+          ],
+          generationConfig: { maxOutputTokens: 2048 },
+        }),
+      }
+    );
+  } catch (e) {
+    if (isAbortError(e)) throw new Error(`TIMEOUT:gemini:${LLM_TIMEOUT_MS}ms`);
+    throw e;
+  }
 
   if (!response.ok) {
     const t = await response.text();
@@ -174,33 +201,40 @@ async function callOpenAI(base64Data: string, mediaType: string): Promise<string
   const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
   if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "gpt-4o",
-      max_tokens: 2048,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: [
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:${mediaType};base64,${base64Data}`,
-                detail: "high",
+  let response: Response;
+  try {
+    response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        max_tokens: 2048,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: [
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mediaType};base64,${base64Data}`,
+                  detail: "high",
+                },
               },
-            },
-            { type: "text", text: USER_MESSAGE },
-          ],
-        },
-      ],
-    }),
-  });
+              { type: "text", text: USER_MESSAGE },
+            ],
+          },
+        ],
+      }),
+    });
+  } catch (e) {
+    if (isAbortError(e)) throw new Error(`TIMEOUT:gpt4o:${LLM_TIMEOUT_MS}ms`);
+    throw e;
+  }
 
   if (!response.ok) {
     const t = await response.text();
@@ -352,12 +386,27 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // STEP 1: Call all models in parallel
+    // STEP 1: Call all models in parallel (each guarded by LLM_TIMEOUT_MS).
+    // If one hangs / errors, the other two still produce a consensus.
+    const step1Start = Date.now();
     const settled = await Promise.allSettled([
       callModelTimed("claude", () => callClaude(base64Data, mediaType)),
       callModelTimed("gemini", () => callGemini(base64Data, mediaType)),
       callModelTimed("gpt4o",  () => callOpenAI(base64Data, mediaType)),
     ]);
+    const step1Ms = Date.now() - step1Start;
+
+    // Per-invocation timing log — makes future slow-day incidents diagnosable
+    // from Supabase Functions logs alone (no external tracing needed).
+    const perModelSummary = settled.map((s, i) => {
+      const modelName = (["claude", "gemini", "gpt4o"] as const)[i];
+      if (s.status === "fulfilled") {
+        const r = s.value;
+        return `${modelName}=${r.success ? "ok" : (r.errorMessage ?? "fail")}(${r.responseMs}ms)`;
+      }
+      return `${modelName}=REJECTED`;
+    }).join(" ");
+    console.log(`[identify] STEP 1 done in ${step1Ms}ms — ${perModelSummary}`);
 
     const allResults = settled
       .filter((s): s is PromiseFulfilledResult<ModelResult> => s.status === "fulfilled")
