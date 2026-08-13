@@ -273,4 +273,4 @@ android/app/build/outputs/bundle/release/app-release.aab
 
 - `docs/play-store-listing.md` — Textos y keywords para el listing
 - `store-assets/` — Icono, feature graphic y screenshots
-- `capacitor.config.ts` — Config de Capacitor (appId: `com.miplantitafeliz.app`)
+- `capacitor.config.ts` — Config de Capacitor (appId: `app.mijardin.plantas`)

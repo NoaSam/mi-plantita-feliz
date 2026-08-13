@@ -9,7 +9,7 @@ App móvil para identificar plantas a partir de fotos. El usuario sube o toma un
 - **Almacenamiento:** Supabase (auth + base de datos para historial de búsquedas y fotos)
 - **Despliegue:** Vercel (mi-plantita-feliz.vercel.app)
 - **iOS:** PWA instalable (manifest.json + service worker). Sin store.
-- **Android:** App nativa con Capacitor (en beta). AppID: `com.miplantitafeliz.app`. Build: `npm run android`.
+- **Android:** App nativa con Capacitor (en beta). AppID: `app.mijardin.plantas` (inmutable — Play Store lo usa como identificador único). Nombre del launcher: "Mi jardin". Build: `npm run android`.
 
 ## Origen del código
 Código generado inicialmente en Lovable y migrado a este repo vía GitHub. Se está refactorizando para calidad de producción.
