@@ -240,7 +240,7 @@ Plans:
 | 1. Android Native | 5/5 | Complete | - |
 | 2. Prompt Optimization | 0/? | Not started | - |
 | 02.1. Foundations | 7/7 | Complete    | 2026-05-15 |
-| 3. Calendar v0 | 1/5 | In Progress | - |
+| 3. Calendar v0 | 5/5 | Complete    | 2026-05-28 |
 | 03.1. Plant Map v0 | 8/8 | Complete    | 2026-05-17 |
 | 4. Response Time Optimization | 2/2 | Complete | 2026-04-28 |
 | 04.1. My Plants Load Time Optimization | 4/4 | Complete | 2026-08-12 |

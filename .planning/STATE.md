@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-08-12T11:34:00.000Z"
+status: idle
+last_updated: "2026-08-13T00:00:00.000Z"
 progress:
   total_phases: 10
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 34
   completed_plans: 34
   percent: 100
@@ -14,7 +14,7 @@ progress:
 
 # State: Mi Plantita Feliz
 
-**Last updated:** 2026-05-28
+**Last updated:** 2026-08-13
 
 ---
 
@@ -22,18 +22,15 @@ progress:
 
 **Core value:** Cualquier persona puede sacar una foto a una planta y saber al instante qué es, cómo cuidarla y si tiene algún problema — sin saber nada de botánica.
 
-**Current focus:** Phase 04.1 — mobile-load-time-optimization
+**Current focus:** Ninguna fase activa — decidir siguiente (candidatos: Phase 2 Prompt Optimization, Phase 5 Pl@ntNet)
 
 ---
 
 ## Current Position
 
-Phase: 04.1 (mobile-load-time-optimization) — EXECUTING (awaiting CPO verification checkpoint)
-Plan: 4 of 4 (04.1-01, 04.1-02, 04.1-03, 04.1-04 docs done; CPO manual verification pending — see 04.1-VERIFICATION.md)
-**Phase:** 3 (Calendar v0) — ✅ completada
-**Plan:** todas (01-05) ✅ completadas + 8 commits post-UAT con fixes CPO
-**Status:** Executing Phase 04.1
-**Completed:** Phase 1, 2, 02.1, 02.2, 03.1, 4 (merged to main 2026-05-21) + Phase 3 cerrada (en feat/phase-3-calendar-v0; pendiente merge tras Android beta validation)
+**Status:** Idle — sin fase activa
+**Last closed:** Phase 04.1 (mobile-load-time-optimization) — ✅ APPROVED por CPO 2026-08-13 (código ya en `main` vía PRs #13 + #14; VERIFICATION.md cerrado)
+**Completed:** Phase 1, 2, 02.1, 02.2, 03.1, 3, 4, 04.1 (código en `main`) + Phase 6 folded into 04.1
 
 ```
 [Phase 1] [>>] [Phase 2] [ ] [Phase 3] [ ] [Phase 4]
@@ -88,8 +85,11 @@ Plan: 4 of 4 (04.1-01, 04.1-02, 04.1-03, 04.1-04 docs done; CPO manual verificat
 ## Session Continuity
 
 Para resumir: leer `.planning/ROADMAP.md` y `.planning/REQUIREMENTS.md`.
-Última sesión: 2026-08-12 — Ejecutado Plan 04.1-04 (docs closure — VERIFICATION.md + ROADMAP updates). 2 commits (d9ba77f docs verification checklist, d0e6a92 ROADMAP updates + Phase 6 folded in). No production code touched. Docs-only.
-Siguiente acción: **CHECKPOINT BLOCKING** — CPO ejecuta `.planning/phases/04.1-mobile-load-time-optimization/04.1-VERIFICATION.md` (~20 min) contra su iPhone en `mi-plantita-feliz.vercel.app`. Decisión APPROVED → merge a `main`. NEEDS ADJUSTMENT → path A (Pro upgrade) o path B (thumbnails en backfill).
+Última sesión: 2026-08-13 — CPO cierra Phase 04.1 (APPROVED). El problema "tarda mucho en cargar" reportado por CPO ya está resuelto en producción; código en `main` desde PRs #13 (feat/04.1) + #14 (fix perf hook anchor).
+Siguiente acción: decidir siguiente fase. Candidatos priorizables:
+  1. **Phase 2 — Prompt Optimization** (dependencia dura de Phase 5)
+  2. **Phase 5 — Identification Engine v2 (Pl@ntNet + 1 LLM)** — candidate, requiere Phase 2 baseline primero
+  3. **Reconciliar Phase 3** — ROADMAP dice "In Progress 1/5" pero commits sugieren cerrada; verificar merge status de `feat/phase-3-calendar-v0`
 
 ---
 
