@@ -10,8 +10,18 @@ vi.mock("@/lib/track", () => ({
 describe("usePerfScreenLoaded", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Stable performance.now() value for deterministic assertions.
-    vi.spyOn(performance, "now").mockReturnValue(1234);
+    // The hook calls performance.now() twice per useful mount:
+    //   1st call — captured lazily by useRef at mount (anchor)
+    //   2nd call — inside useEffect when isReady=true (fires event)
+    // Returning 1000 then 2234 makes the delta 1234, keeping existing
+    // ttfc_ms assertions valid. Any further calls (re-renders,
+    // rerenders-that-refetch-props) get 2234 too — still no-op due to
+    // firing guard.
+    let calls = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => {
+      calls += 1;
+      return calls === 1 ? 1000 : 2234;
+    });
   });
 
   afterEach(() => {
@@ -63,13 +73,19 @@ describe("usePerfScreenLoaded", () => {
     expect(track).toHaveBeenCalledTimes(1); // still 1
   });
 
-  it("Test 5 — ttfc_ms reflects Math.round(performance.now()) at effect time", () => {
-    vi.spyOn(performance, "now").mockReturnValue(987.6);
+  it("Test 5 — ttfc_ms reflects Math.round(performance.now() - mountAnchor)", () => {
+    // Override the beforeEach mock: mount at 100.2ms, effect at 1088.0ms
+    // → delta = 987.8 → Math.round = 988
+    let n = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => {
+      n += 1;
+      return n === 1 ? 100.2 : 1088.0;
+    });
     renderHook(() => usePerfScreenLoaded("mis-plantas", true));
     expect(track).toHaveBeenCalledWith(
       "perf_screen_loaded",
       expect.objectContaining({
-        ttfc_ms: 988, // Math.round(987.6) = 988
+        ttfc_ms: 988,
       }),
     );
   });

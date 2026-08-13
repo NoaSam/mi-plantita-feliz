@@ -7,11 +7,11 @@ export type PerfScreenName = "mis-plantas" | "regar" | "mapa";
  * Fire PostHog event `perf_screen_loaded` exactly once per component mount,
  * on the first render where `isReady === true`.
  *
- * Measures Time-to-First-Content (TTFC) as `Math.round(performance.now())` at
- * the effect execution time. This is a slight over-estimate of the true
- * first-paint (React commits, then browser paints; useEffect runs after
- * commit but before paint), which is acceptable per D-10 (±25% tolerance):
- * we WANT the number to include any post-mount data-readiness lag.
+ * Measures Time-to-First-Content (TTFC) as the delta between component mount
+ * and content-ready. This anchors on the mount instant (captured lazily via
+ * useRef with a `performance.now()` init) rather than on
+ * `performance.timeOrigin`, so navigations inside a long-lived SPA session
+ * produce per-route TTFCs instead of accumulating time since app boot.
  *
  * Uses `useEffect` (NOT `useLayoutEffect`) to avoid blocking paint —
  * documented anti-pattern in RESEARCH.md.
@@ -34,11 +34,17 @@ export function usePerfScreenLoaded(
   extraProps?: Record<string, unknown>,
 ): void {
   const fired = useRef(false);
+  // Anchor the timer at the mount instant, not at performance.timeOrigin.
+  // The default-value initializer runs exactly once per component instance,
+  // so `mountedAt.current` remains stable across renders and reflects the
+  // moment this component started mounting — the correct zero for a per-
+  // screen TTFC measurement inside a client-side-routed SPA.
+  const mountedAt = useRef(performance.now());
 
   useEffect(() => {
     if (!isReady || fired.current) return;
     fired.current = true;
-    const ttfc_ms = Math.round(performance.now());
+    const ttfc_ms = Math.round(performance.now() - mountedAt.current);
     track("perf_screen_loaded", {
       screen,
       ttfc_ms,
