@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: idle
-last_updated: "2026-08-15T00:00:00.000Z"
+status: Idle — sin fase activa
+last_updated: "2026-08-15T18:14:55.807Z"
 progress:
   total_phases: 10
-  completed_phases: 8
+  completed_phases: 7
   total_plans: 34
   completed_plans: 34
   percent: 100
@@ -33,6 +33,7 @@ progress:
 **Completed:** Phase 1, 2, 02.1, 02.2, 03.1, 3, 4, 04.1 (código en `main`) + Phase 6 folded into 04.1
 
 **Android releases:**
+
 - v1.1.0 / versionCode 4 — 2026-05-28 — publicada en internal testing (Phase 3 baseline)
 - v1.3.0 / versionCode 6 — 2026-08-15 — **en producción y live** en Play Store (bundle Phase 03.2 + 04.1 + fixes edge-fn timeout y perf hook). URL pública: https://play.google.com/store/apps/details?id=app.mijardin.plantas. Notas de release: mejoras de velocidad en listas, menor consumo de datos, identificación más fiable.
 
@@ -92,6 +93,7 @@ progress:
 Para resumir: leer `.planning/ROADMAP.md` y `.planning/REQUIREMENTS.md`.
 Última sesión: 2026-08-15 — Release Android v1.3.0 (versionCode 6): **live en producción de Play Store**. Bundle: Phase 03.2 + Phase 04.1 + fix edge fn timeout + fix perf hook. Descartado draft antiguo v1.2.0/vCode 5 (nunca llegó a subirse, pre-Phase 04.1). Reconciliación de docs previa (Phase 3 marcada complete, STATE de executing→idle, branches limpias local+remoto).
 Siguiente acción: decidir siguiente fase. Candidatos priorizables:
+
   1. **Phase 2 — Prompt Optimization** (dependencia dura de Phase 5)
   2. **Phase 5 — Identification Engine v2 (Pl@ntNet + 1 LLM)** — candidate, requiere Phase 2 baseline primero
   3. **Rename app** — pendiente decidir si unificar nombre (launcher "Mi jardin" vs store "Mi Jardín" vs producto "Mi Plantita Feliz")
