@@ -16,7 +16,8 @@
 - [x] **Phase 03.1: Plant Map v0** — Mapa con pins de descubrimientos geolocalizados, condicional al modo explorador (completed 2026-05-17)
 - [x] **Phase 4: Response Time Optimization** — Reducir latencia percibida del analisis de plantas
 - [x] **Phase 04.1: Mobile Load Time Optimization** — Acelerar el tiempo de carga de las 3 pantallas de listado: `/mis-plantas`, `/regar`, `/mapa` (completed 2026-08-12)
-- [ ] **Phase 5: Identification Engine v2 — Pl@ntNet + 1 LLM** *(candidate)* — Separar identificación (Pl@ntNet, especializado) de generación de cuidados/diagnóstico (1 LLM en vez de 3)
+- [ ] **Phase 5: PlantNet as Fourth Identification Provider** — Añadir PlantNet como 4º proveedor en paralelo con los 3 LLMs actuales, como observador silencioso. Persistir su JSON completo, extender `docs/model-evaluation-queries.sql` para comparar accuracy top-1 vs LLMs. Sin cambios visibles al usuario, sin cambios en el consenso, sin kill-switch (misma arquitectura, un proveedor más). Deliverable = datos SQL para decidir en fase futura si merece darle voto real.
+- [ ] **Phase 5.1: Identification Engine v2 — Pl@ntNet gana voto (o reemplaza LLMs)** *(candidate)* — Basándose en datos de Phase 5, decidir si (a) dar voto real a PlantNet en el consenso con threshold de score, (b) reducir a Pl@ntNet + 1 LLM (visión original), o (c) descartar. Trigger: >10 puntos de diferencia sostenida en top-1 accuracy vs LLMs.
 - [x] **Phase 6: Backfill imágenes históricas base64 → Storage** — **Folded into Phase 04.1** (backfill executed 2026-08-12 via `npm run backfill:images`; ~98 rows migrated). Kept as historical reference; the goal was fulfilled by Plan 04.1-01.
 
 ---
@@ -150,36 +151,37 @@ Plans:
 - Puede tener sentido hacer Phase 6 (backfill base64) ANTES si la mayor parte del peso viene de esas fotos legacy — se convertiría en el primer plan de esta phase.
 - Alternativa: dividir en 3 phases (04.1a, 04.1b, 04.1c) si en discuss-phase se ve que las causas divergen mucho.
 
-### Phase 5: Identification Engine v2 — Pl@ntNet + 1 LLM (CANDIDATE)
+### Phase 5: PlantNet as Fourth Identification Provider
 
-**Status:** Candidate — NOT scheduled; pending Phase 3 + Phase 4 outcomes and benchmark data from Phase 2.
+**Status:** Context gathered 2026-08-15 — ready for planning.
+**Directory:** `.planning/phases/05-plantnet-fourth-provider/`
+**Context:** [05-CONTEXT.md](phases/05-plantnet-fourth-provider/05-CONTEXT.md)
 
-**Goal:** Separar las 2 tareas que hoy hacen los 3 LLMs a la vez. Usar Pl@ntNet (API especializada en identificación, state-of-the-art libre, free tier 500 req/día) para resolver "qué planta es", y un único LLM generalista para resolver "cómo se cuida + diagnóstico visual + watering_interval_days". Reducir de 3 llamadas LLM por identificación a 1 Pl@ntNet + 1 LLM.
+**Goal:** Añadir PlantNet como 4º proveedor en paralelo con los 3 LLMs actuales (Claude Sonnet 4, Gemini 2.5 Flash Lite, GPT-4o) en `supabase/functions/identify-plant/`. PlantNet corre como **observador silencioso**: se guarda su JSON completo, se extiende `docs/model-evaluation-queries.sql` para comparar accuracy top-1 vs LLMs sobre el golden set de Phase 2, pero NO influye en el consenso ni en lo que ve el usuario.
 
-**Depends on:** Phase 2 (benchmark con golden set debe estar corrido — necesitamos saber la línea base de accuracy del prompt-only 3-LLM antes de comparar)
+**Depends on:** Nada bloqueante. Phase 2 ya entregó el golden set + benchmark infra que se reutilizan.
 
-**Requirements:** TBD — candidatos: nueva acc-01 (accuracy de identificación), nueva cost-01 (reducción de coste por identificación), reuso de PROM-01 (watering_interval_days sigue siendo número estructurado)
+**Requirements:** Derivar durante planning. Candidatos:
+- Nueva PLANT-01: PlantNet responde en paralelo con los 3 LLMs y su respuesta JSON completa se persiste en `model_evaluations`
+- Nueva PLANT-02: `docs/model-evaluation-queries.sql` tiene sección nueva de queries comparativas PlantNet vs LLMs
+- Nueva PLANT-03: la latencia P95 percibida por el usuario NO empeora (Promise.race first-winner sigue devolviendo el primer LLM ganador; PlantNet completa en paralelo sin bloquear)
 
-**Success Criteria** *(borrador, sujeto a discuss-phase):*
-  1. La accuracy de identificación (PRIMARY metric del benchmark Phase 2) sube ≥10 puntos vs el baseline 3-LLM
-  2. El coste medio por identificación baja ≥40% (1 Pl@ntNet + 1 LLM vs 3 LLMs)
-  3. La latencia P95 percibida no empeora (Pl@ntNet ~1-2s + LLM ~2-3s en secuencia vs 3 LLMs ~3-5s en paralelo)
-  4. El campo `watering_interval_days` sigue saliendo como `number | null` sin cambios de contrato hacia el cliente
-  5. El diagnóstico de salud ("hojas amarillas...") sigue funcionando — el LLM sigue viendo la foto
-  6. Hay un kill-switch (env var o config) para volver a 3-LLM si Pl@ntNet falla
+**Success Criteria:**
+  1. PlantNet responde y su JSON completo se guarda en `model_evaluations` (o schema equivalente) para ≥95% de identificaciones nuevas
+  2. `docs/model-evaluation-queries.sql` incluye queries nuevas para: success rate PlantNet vs LLMs, top-1 accuracy PlantNet contra golden set, latencia comparada, casos de divergencia PlantNet vs winner LLM
+  3. El flujo visible al usuario es idéntico a antes de la fase (cero cambios de UX, cero regresiones en tests existentes)
+  4. La latencia P95 no empeora vs baseline actual
+  5. Existe la primera pasada de análisis: la CPO corre las queries SQL contra datos reales/golden set y anota conclusiones preliminares sobre si Phase 5.1 tiene sentido
 
-**Plans:** TBD
+**Key tradeoffs (post-reshape 2026-08-15):**
+- **Pro:** Cero riesgo de regresión — misma arquitectura, un proveedor más. Los 3 LLMs siguen decidiendo el output.
+- **Pro:** Coste marginal bajo — free tier PlantNet (500/día) cubre el volumen actual (~15-30 identificaciones/día).
+- **Pro:** Reutiliza patrón existente de `model_evaluations` + `docs/model-evaluation-queries.sql`.
+- **Pro:** Genera datos reales para decidir Phase 5.1 (dar voto real a PlantNet) o Phase 5.2 (reemplazo total) con evidencia.
+- **Contra:** +1 proveedor externo → +1 API key, +1 SLA a monitorizar (mitigado por failure silencioso: PlantNet cae → guarda null y sigue el flujo).
+- **Contra:** No reduce coste ni simplifica arquitectura (esos objetivos se posponen a Phase 5.1/5.2 con datos).
 
-**Key tradeoffs documentados** *(de la discusión 2026-05-17 con la dueña):*
-- **Pro:** Pl@ntNet es especialista — entrenado con millones de fotos verificadas por expertos botánicos; supera a LLMs generalistas en accuracy de identificación de plantas, especialmente común-de-hogar.
-- **Pro:** Coste — free tier 500 req/día cubre el inicio; paid es ~$30/mes por 5K req/día (muy por debajo del coste de 3 LLMs por identificación).
-- **Pro:** El consensus actual deja de ser necesario (Pl@ntNet es de facto el experto), simplifica `consensus.ts` o lo retira del path de identificación.
-- **Contra:** +1 proveedor externo (Pl@ntNet) → +1 API key, +1 billing, +1 SLA del cual depender.
-- **Contra:** Cultivares ornamentales raros / plantas no-cultivadas pueden quedar peor cubiertos que con LLMs generalistas → mitigación: fallback a 1 LLM cuando Pl@ntNet `score < threshold`.
-- **Contra:** Invalida el benchmark de Phase 2 (mide la arquitectura 3-LLM); habrá que re-benchmarkearlo o rediseñarlo para esta phase.
-- **Contra:** Pl@ntNet no devuelve diagnóstico de salud ni nombre común en español → el LLM sigue siendo necesario para esas 2 piezas (de ahí "Pl@ntNet + 1 LLM", no "Pl@ntNet solo").
-
-**Nota:** La idea surgió mientras la dueña preguntaba si Pl@ntNet podía usarse como ground-truth para el benchmark de Phase 2 (sí — y se usó para eso). El uso como ground-truth no implica el uso en producción; esta phase es la decisión separada de meter Pl@ntNet al runtime.
+**Reshape note (2026-08-15):** El scope original de Phase 5 era reemplazar 3 LLMs por Pl@ntNet + 1 LLM. La CPO decidió en discuss-phase priorizar **medir antes de reemplazar**: primero añadir PlantNet como observador silencioso y recopilar datos comparativos vía SQL queries documentadas. La visión original queda como Phase 5.1 candidate (voto real) o Phase 5.2 candidate (reemplazo total), decidida en función de los datos.
 
 ### Phase 6: Backfill imágenes históricas base64 → Storage (CANDIDATE)
 
@@ -244,7 +246,8 @@ Plans:
 | 03.1. Plant Map v0 | 8/8 | Complete    | 2026-05-17 |
 | 4. Response Time Optimization | 2/2 | Complete | 2026-04-28 |
 | 04.1. My Plants Load Time Optimization | 4/4 | Complete | 2026-08-12 |
-| 5. Identification Engine v2 (Pl@ntNet + 1 LLM) | 0/? | Candidate | - |
+| 5. PlantNet as Fourth Provider | 0/? | Ready for planning | - |
+| 5.1. Identification Engine v2 — voto real / reemplazo | 0/? | Candidate (post-Phase 5 data) | - |
 | 6. Backfill base64 → Storage | — | Folded into 04.1 | 2026-08-12 |
 
 ---
