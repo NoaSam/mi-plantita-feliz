@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Idle — sin fase activa
+status: discussing
 last_updated: "2026-08-15T18:14:55.807Z"
 progress:
   total_phases: 10
@@ -22,15 +22,16 @@ progress:
 
 **Core value:** Cualquier persona puede sacar una foto a una planta y saber al instante qué es, cómo cuidarla y si tiene algún problema — sin saber nada de botánica.
 
-**Current focus:** Ninguna fase activa — decidir siguiente (candidatos: Phase 2 Prompt Optimization, Phase 5 Pl@ntNet)
+**Current focus:** Phase 5 — PlantNet as Fourth Identification Provider (CONTEXT.md capturado 2026-08-15, ready for planning)
 
 ---
 
 ## Current Position
 
-**Status:** Idle — sin fase activa
+**Status:** Discussing — Phase 5 context capturado
 **Last closed:** Phase 04.1 (mobile-load-time-optimization) — ✅ APPROVED por CPO 2026-08-13 (código ya en `main` vía PRs #13 + #14; VERIFICATION.md cerrado)
 **Completed:** Phase 1, 2, 02.1, 02.2, 03.1, 3, 4, 04.1 (código en `main`) + Phase 6 folded into 04.1
+**In progress:** Phase 5 (PlantNet as Fourth Provider) — CONTEXT.md ready, siguiente = `/gsd-plan-phase 5`
 
 **Android releases:**
 
@@ -91,12 +92,11 @@ progress:
 ## Session Continuity
 
 Para resumir: leer `.planning/ROADMAP.md` y `.planning/REQUIREMENTS.md`.
-Última sesión: 2026-08-15 — Release Android v1.3.0 (versionCode 6): **live en producción de Play Store**. Bundle: Phase 03.2 + Phase 04.1 + fix edge fn timeout + fix perf hook. Descartado draft antiguo v1.2.0/vCode 5 (nunca llegó a subirse, pre-Phase 04.1). Reconciliación de docs previa (Phase 3 marcada complete, STATE de executing→idle, branches limpias local+remoto).
-Siguiente acción: decidir siguiente fase. Candidatos priorizables:
+Última sesión: 2026-08-15 (tarde) — `/gsd-discuss-phase 5` completada. Phase 5 reshaped: en vez de "reemplazo total 3-LLM → PlantNet + 1 LLM", la CPO decidió **añadir PlantNet como 4º proveedor en modo observador silencioso** + queries SQL para análisis. La visión original queda como Phase 5.1 candidate. CONTEXT.md, DISCUSSION-LOG.md y ROADMAP.md actualizados. Directorio renombrado a `05-plantnet-fourth-provider/`.
+Siguiente acción: `/gsd-plan-phase 5` para generar plan de ejecución con task breakdown.
 
-  1. **Phase 2 — Prompt Optimization** (dependencia dura de Phase 5)
-  2. **Phase 5 — Identification Engine v2 (Pl@ntNet + 1 LLM)** — candidate, requiere Phase 2 baseline primero
-  3. **Rename app** — pendiente decidir si unificar nombre (launcher "Mi jardin" vs store "Mi Jardín" vs producto "Mi Plantita Feliz")
+Otros pendientes (no bloquean):
+- **Rename app** — decidir si unificar nombre (launcher "Mi jardin" vs store "Mi Jardín" vs producto "Mi Plantita Feliz")
 
 ---
 
