@@ -173,6 +173,26 @@ Plans:
   4. La latencia P95 no empeora vs baseline actual
   5. Existe la primera pasada de análisis: la CPO corre las queries SQL contra datos reales/golden set y anota conclusiones preliminares sobre si Phase 5.1 tiene sentido
 
+**Plans:** 5 plans (planned 2026-08-15)
+
+Plans:
+
+**Wave 1 — Foundation (parallel)**
+- [ ] 05-01-PLAN.md — [BLOCKING] CPO decide tratamiento contaminación golden set + modeling ground truth (D-10/D-11 en addendum CONTEXT.md)
+
+**Wave 2 — Schema migration (blocked on Wave 1)**
+- [ ] 05-02-PLAN.md — [BLOCKING] Migración `20260815000000_extend_model_evaluations_for_plantnet.sql` (widen CHECK + add raw_response jsonb) + supabase db push + regenerate types + CPO añade PLANTNET_API_KEY secret
+
+**Wave 3 — Edge function extension (blocked on Wave 2)**
+- [ ] 05-03-PLAN.md — Extender identify-plant/index.ts con callPlantnetTimed + 4ª promesa Promise.allSettled + split llmResults/plantnetResult + 4ª fila insert con raw_response=JSON completo. `consensus.ts` SIN cambios (D-01). Client response idéntica (D-02). Failure silencioso (D-09).
+
+**Wave 4 — Analytics docs (blocked on Wave 2, parallel with Wave 3)**
+- [ ] 05-04-PLAN.md — Extender docs/model-evaluation-queries.sql con sección PHASE 5 (4 queries: A success rate, B accuracy vs golden set según D-10/D-11, C latencia P95, D + D-BIS divergencia PlantNet vs winner-LLM) + tabla auxiliar `golden_set_ground_truth` con GRANTs si D-11=B1
+
+**Wave 5 — Verification + CPO sign-off (blocked on Wave 3 + Wave 4)**
+- [ ] 05-05-PLAN.md — VERIFICATION.md checklist (6 bloques: PLANT-01 datos crudos, PLANT-03 latencia, divergencia, query B, cliente D-02, regresión tests) + CPO manual go/no-go sign-off
+
+
 **Key tradeoffs (post-reshape 2026-08-15):**
 - **Pro:** Cero riesgo de regresión — misma arquitectura, un proveedor más. Los 3 LLMs siguen decidiendo el output.
 - **Pro:** Coste marginal bajo — free tier PlantNet (500/día) cubre el volumen actual (~15-30 identificaciones/día).
