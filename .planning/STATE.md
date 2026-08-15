@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: idle
-last_updated: "2026-08-13T00:00:00.000Z"
+last_updated: "2026-08-15T00:00:00.000Z"
 progress:
   total_phases: 10
   completed_phases: 8
@@ -14,7 +14,7 @@ progress:
 
 # State: Mi Plantita Feliz
 
-**Last updated:** 2026-08-13
+**Last updated:** 2026-08-15
 
 ---
 
@@ -31,6 +31,10 @@ progress:
 **Status:** Idle — sin fase activa
 **Last closed:** Phase 04.1 (mobile-load-time-optimization) — ✅ APPROVED por CPO 2026-08-13 (código ya en `main` vía PRs #13 + #14; VERIFICATION.md cerrado)
 **Completed:** Phase 1, 2, 02.1, 02.2, 03.1, 3, 4, 04.1 (código en `main`) + Phase 6 folded into 04.1
+
+**Android releases:**
+- v1.1.0 / versionCode 4 — 2026-05-28 — publicada en internal testing (Phase 3 baseline)
+- v1.3.0 / versionCode 6 — 2026-08-15 — internal testing + **producción en revisión** (bundle Phase 03.2 + 04.1 + fixes edge-fn timeout y perf hook). Notas de release: mejoras de velocidad en listas, menor consumo de datos, identificación más fiable.
 
 ```
 [Phase 1] [>>] [Phase 2] [ ] [Phase 3] [ ] [Phase 4]
@@ -60,8 +64,9 @@ progress:
 - Imágenes deben migrar de base64 a Supabase Storage antes de Capacitor (riesgo OOM)
 - watering_interval_days debe ser un campo numérico estructurado — prerrequisito del calendario
 - Lista de riego (no push notifications) para validar hábito antes de invertir en FCM
-- appId: com.miplantitafeliz.app (no com.mijardin.app) — decisión de producto confirmada
-- android/ excluido de git — se genera por máquina desde capacitor.config.ts + dist/
+- **appId real: `app.mijardin.plantas`** (inmutable — Play Store lo usa como identificador único). Nota histórica: CLAUDE.md mencionaba `com.miplantitafeliz.app` pero era erróneo; corregido 2026-08-13.
+- **Launcher name:** "Mi jardin" (sin tilde). Store listing name: "Mi Jardín: Identifica Plantas". No coinciden con el nombre de producto "Mi Plantita Feliz" — pendiente decidir si se unifican en un release futuro.
+- android/ excluido de git — se genera por máquina desde capacitor.config.ts + dist/. Consecuencia: `versionCode` en `android/app/build.gradle` es LOCAL — no queda trazado en repo. La trazabilidad de qué commit corresponde a qué versionCode va por commit message + git tag + STATE.md.
 - Phase 3 D-03: /mis-plantas vive ahora en /ajustes/mis-plantas (Opción A) con redirect chain desde la URL antigua para bookmarks y login/signup redirects
 - Phase 3 D-04: aviso de migración via toast Sonner 8s + flag localStorage `mp_seen_history_relocation_notice` (lifecycle-only component)
 
@@ -85,11 +90,11 @@ progress:
 ## Session Continuity
 
 Para resumir: leer `.planning/ROADMAP.md` y `.planning/REQUIREMENTS.md`.
-Última sesión: 2026-08-13 — CPO cierra Phase 04.1 (APPROVED). El problema "tarda mucho en cargar" reportado por CPO ya está resuelto en producción; código en `main` desde PRs #13 (feat/04.1) + #14 (fix perf hook anchor).
+Última sesión: 2026-08-15 — Release Android v1.3.0 (versionCode 6): subido a internal testing + promocionado a producción (en revisión Google, 1-3 días). Bundle: Phase 03.2 + Phase 04.1 + fix edge fn timeout + fix perf hook. Descartado draft antiguo v1.2.0/vCode 5 (nunca llegó a subirse, pre-Phase 04.1). Reconciliación de docs previa (Phase 3 marcada complete, STATE de executing→idle, branches limpias local+remoto).
 Siguiente acción: decidir siguiente fase. Candidatos priorizables:
   1. **Phase 2 — Prompt Optimization** (dependencia dura de Phase 5)
   2. **Phase 5 — Identification Engine v2 (Pl@ntNet + 1 LLM)** — candidate, requiere Phase 2 baseline primero
-  3. **Reconciliar Phase 3** — ROADMAP dice "In Progress 1/5" pero commits sugieren cerrada; verificar merge status de `feat/phase-3-calendar-v0`
+  3. **Rename app** — pendiente decidir si unificar nombre (launcher "Mi jardin" vs store "Mi Jardín" vs producto "Mi Plantita Feliz")
 
 ---
 
