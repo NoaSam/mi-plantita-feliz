@@ -34,7 +34,7 @@ progress:
 
 **Android releases:**
 - v1.1.0 / versionCode 4 — 2026-05-28 — publicada en internal testing (Phase 3 baseline)
-- v1.3.0 / versionCode 6 — 2026-08-15 — internal testing + **producción en revisión** (bundle Phase 03.2 + 04.1 + fixes edge-fn timeout y perf hook). Notas de release: mejoras de velocidad en listas, menor consumo de datos, identificación más fiable.
+- v1.3.0 / versionCode 6 — 2026-08-15 — **en producción y live** en Play Store (bundle Phase 03.2 + 04.1 + fixes edge-fn timeout y perf hook). URL pública: https://play.google.com/store/apps/details?id=app.mijardin.plantas. Notas de release: mejoras de velocidad en listas, menor consumo de datos, identificación más fiable.
 
 ```
 [Phase 1] [>>] [Phase 2] [ ] [Phase 3] [ ] [Phase 4]
@@ -90,7 +90,7 @@ progress:
 ## Session Continuity
 
 Para resumir: leer `.planning/ROADMAP.md` y `.planning/REQUIREMENTS.md`.
-Última sesión: 2026-08-15 — Release Android v1.3.0 (versionCode 6): subido a internal testing + promocionado a producción (en revisión Google, 1-3 días). Bundle: Phase 03.2 + Phase 04.1 + fix edge fn timeout + fix perf hook. Descartado draft antiguo v1.2.0/vCode 5 (nunca llegó a subirse, pre-Phase 04.1). Reconciliación de docs previa (Phase 3 marcada complete, STATE de executing→idle, branches limpias local+remoto).
+Última sesión: 2026-08-15 — Release Android v1.3.0 (versionCode 6): **live en producción de Play Store**. Bundle: Phase 03.2 + Phase 04.1 + fix edge fn timeout + fix perf hook. Descartado draft antiguo v1.2.0/vCode 5 (nunca llegó a subirse, pre-Phase 04.1). Reconciliación de docs previa (Phase 3 marcada complete, STATE de executing→idle, branches limpias local+remoto).
 Siguiente acción: decidir siguiente fase. Candidatos priorizables:
   1. **Phase 2 — Prompt Optimization** (dependencia dura de Phase 5)
   2. **Phase 5 — Identification Engine v2 (Pl@ntNet + 1 LLM)** — candidate, requiere Phase 2 baseline primero
