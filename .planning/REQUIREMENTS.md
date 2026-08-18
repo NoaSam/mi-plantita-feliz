@@ -41,6 +41,12 @@
 - [ ] **PERF-02**: El cliente consume la respuesta como stream SSE via raw fetch() en lugar de supabase.functions.invoke() buffered
 - [ ] **PERF-03**: La compresion de imagen usa browser-image-compression con Web Worker (no bloquea main thread) a 800px max
 
+### Identification Providers
+
+- [ ] **PLANT-01**: PlantNet responde en paralelo con los 3 LLMs actuales y su respuesta JSON completa se persiste en `model_evaluations` para ≥95% de identificaciones nuevas
+- [ ] **PLANT-02**: `docs/model-evaluation-queries.sql` incluye queries copy-pasteables a Supabase SQL Editor: success rate por modelo, top-1 accuracy PlantNet vs LLMs contra golden set, latencia comparada, casos de divergencia PlantNet vs winner LLM
+- [ ] **PLANT-03**: La latencia P95 percibida por el usuario NO empeora vs baseline actual (Promise.race first-winner sigue devolviendo el primer LLM ganador; PlantNet completa en paralelo sin bloquear)
+
 ## v2 Requirements
 
 - **RIEG-07**: Historial de riegos por planta (últimos 5 eventos)
@@ -85,10 +91,13 @@
 | PERF-01 | Fase 5 | Pendiente |
 | PERF-02 | Fase 5 | Pendiente |
 | PERF-03 | Fase 5 | Pendiente |
+| PLANT-01 | Fase 5 | Pendiente |
+| PLANT-02 | Fase 5 | Pendiente |
+| PLANT-03 | Fase 5 | Pendiente |
 
 **Cobertura:**
-- v1 requirements: 21 total
-- Mapeados a fases: 21
+- v1 requirements: 24 total
+- Mapeados a fases: 24
 - Sin mapear: 0
 
 ---
