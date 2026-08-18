@@ -16,7 +16,7 @@
 - [x] **Phase 03.1: Plant Map v0** — Mapa con pins de descubrimientos geolocalizados, condicional al modo explorador (completed 2026-05-17)
 - [x] **Phase 4: Response Time Optimization** — Reducir latencia percibida del analisis de plantas
 - [x] **Phase 04.1: Mobile Load Time Optimization** — Acelerar el tiempo de carga de las 3 pantallas de listado: `/mis-plantas`, `/regar`, `/mapa` (completed 2026-08-12)
-- [ ] **Phase 5: PlantNet as Fourth Identification Provider** — Añadir PlantNet como 4º proveedor en paralelo con los 3 LLMs actuales, como observador silencioso. Persistir su JSON completo, extender `docs/model-evaluation-queries.sql` para comparar accuracy top-1 vs LLMs. Sin cambios visibles al usuario, sin cambios en el consenso, sin kill-switch (misma arquitectura, un proveedor más). Deliverable = datos SQL para decidir en fase futura si merece darle voto real.
+- [ ] **Phase 5: PlantNet as Fourth Voter (Cross-Validated)** — Añadir PlantNet como 4º proveedor votante activo con regla de cross-validation (D-01): cuando su score ≥ 0.8 y algún LLM coincide con su científico, PlantNet manda el nombre científico y el LLM alineado aporta cuidados. Cuando ningún LLM coincide, se registra divergencia (DB flag + PostHog event). UX visible al usuario: cero cambios (D-02). Reshape 2026-08-18 tras benchmark que desmintió preocupación de latencia (PlantNet p50=307ms, gana race 10/10).
 - [ ] **Phase 5.1: Identification Engine v2 — Pl@ntNet gana voto (o reemplaza LLMs)** *(candidate)* — Basándose en datos de Phase 5, decidir si (a) dar voto real a PlantNet en el consenso con threshold de score, (b) reducir a Pl@ntNet + 1 LLM (visión original), o (c) descartar. Trigger: >10 puntos de diferencia sostenida en top-1 accuracy vs LLMs.
 - [x] **Phase 6: Backfill imágenes históricas base64 → Storage** — **Folded into Phase 04.1** (backfill executed 2026-08-12 via `npm run backfill:images`; ~98 rows migrated). Kept as historical reference; the goal was fulfilled by Plan 04.1-01.
 
@@ -173,24 +173,22 @@ Plans:
   4. La latencia P95 no empeora vs baseline actual
   5. Existe la primera pasada de análisis: la CPO corre las queries SQL contra datos reales/golden set y anota conclusiones preliminares sobre si Phase 5.1 tiene sentido
 
-**Plans:** 5 plans (planned 2026-08-15)
+**Plans:** 5 plans (planned 2026-08-18 post-reshape)
 
 Plans:
 
-**Wave 1 — Foundation (parallel)**
-- [ ] 05-01-PLAN.md — [BLOCKING] CPO decide tratamiento contaminación golden set + modeling ground truth (D-10/D-11 en addendum CONTEXT.md)
+**Wave 1 — Schema foundation**
+- [ ] 05-01-PLAN.md — [BLOCKING] Migración `20260818000000_extend_model_evaluations_for_plantnet.sql` (widen CHECK model 3→4 + add raw_response jsonb + add plant_searches.plantnet_diverged bool) + `supabase db push` + regenerate types + CPO registra PLANTNET_API_KEY secret
 
-**Wave 2 — Schema migration (blocked on Wave 1)**
-- [ ] 05-02-PLAN.md — [BLOCKING] Migración `20260815000000_extend_model_evaluations_for_plantnet.sql` (widen CHECK + add raw_response jsonb) + supabase db push + regenerate types + CPO añade PLANTNET_API_KEY secret
+**Wave 1 (paralelo con 05-01) — Cross-validation logic**
+- [ ] 05-02-PLAN.md — Extraer `matchScientific` como función pública en `consensus.ts` + añadir `applyPlantnetOverride(llmWinner, llmResults, plantnetResult)` implementando D-01/D-10/D-11 + tests unitarios exhaustivos (4 branches, threshold 0.8, rechazo de genus). `pickWinner` INTACTO.
 
-**Wave 3 — Edge function extension (blocked on Wave 2)**
-- [ ] 05-03-PLAN.md — Extender identify-plant/index.ts con callPlantnetTimed + 4ª promesa Promise.allSettled + split llmResults/plantnetResult + 4ª fila insert con raw_response=JSON completo. `consensus.ts` SIN cambios (D-01). Client response idéntica (D-02). Failure silencioso (D-09).
+**Wave 2 — Integration + docs (paralelo, blocked on Wave 1)**
+- [ ] 05-03-PLAN.md — Extender `identify-plant/index.ts` con `callPlantnetTimed` + 4ª promesa `Promise.allSettled` + split llmResults/plantnetResult + integración `applyPlantnetOverride` + 4ª fila insert con raw_response + flag `plant_searches.plantnet_diverged` en divergencia + dispatch server-side evento PostHog `plantnet_divergence` + deploy + smoke test manual (D-01/D-02/D-09/D-10/D-11/D-12/D-13, PLANT-01, PLANT-03)
+- [ ] 05-04-PLAN.md — Extender `docs/model-evaluation-queries.sql` con sección PHASE 5 (1 query de divergencia + 1 snapshot agregado) + documentar evento `plantnet_divergence` en `docs/posthog-events.md` (PLANT-02)
 
-**Wave 4 — Analytics docs (blocked on Wave 2, parallel with Wave 3)**
-- [ ] 05-04-PLAN.md — Extender docs/model-evaluation-queries.sql con sección PHASE 5 (4 queries: A success rate, B accuracy vs golden set según D-10/D-11, C latencia P95, D + D-BIS divergencia PlantNet vs winner-LLM) + tabla auxiliar `golden_set_ground_truth` con GRANTs si D-11=B1
-
-**Wave 5 — Verification + CPO sign-off (blocked on Wave 3 + Wave 4)**
-- [ ] 05-05-PLAN.md — VERIFICATION.md checklist (6 bloques: PLANT-01 datos crudos, PLANT-03 latencia, divergencia, query B, cliente D-02, regresión tests) + CPO manual go/no-go sign-off
+**Wave 3 — Verification + CPO sign-off**
+- [ ] 05-05-PLAN.md — VERIFICATION.md checklist (6 bloques: A cobertura datos, B cross-validation funciona, C divergencia registrada, D UX invisible, E latencia, F regresión) + CPO manual sign-off + actualizar ROADMAP/REQUIREMENTS/STATE
 
 
 **Key tradeoffs (post-reshape 2026-08-15):**
@@ -266,7 +264,7 @@ Plans:
 | 03.1. Plant Map v0 | 8/8 | Complete    | 2026-05-17 |
 | 4. Response Time Optimization | 2/2 | Complete | 2026-04-28 |
 | 04.1. My Plants Load Time Optimization | 4/4 | Complete | 2026-08-12 |
-| 5. PlantNet as Fourth Provider | 0/? | Ready for planning | - |
+| 5. PlantNet as Fourth Voter (Cross-Validated) | 0/5 | Ready to execute | - |
 | 5.1. Identification Engine v2 — voto real / reemplazo | 0/? | Candidate (post-Phase 5 data) | - |
 | 6. Backfill base64 → Storage | — | Folded into 04.1 | 2026-08-12 |
 
