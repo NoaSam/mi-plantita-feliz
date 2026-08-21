@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- Queries de evaluación de modelos — Supabase SQL Editor
--- Tabla: model_evaluations (3 filas por búsqueda: claude, gemini, gpt4o)
+-- Tabla: model_evaluations (4 filas por búsqueda desde Phase 5 deploy: claude, gemini, gpt4o, plantnet)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -335,3 +335,123 @@ WHERE consensus_group = 'correct'
   AND consensus_match_level IS NOT NULL
 GROUP BY consensus_match_level
 ORDER BY total DESC;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- PHASE 5 — PLANTNET COMO 4º VOTANTE (cross-validated override)
+--
+-- Desde el deploy de Phase 5, cada identificación tiene 4 filas en model_evaluations
+-- (una por proveedor: claude, gemini, gpt4o, plantnet). PlantNet vota activamente
+-- vía cross-validation (ver .planning/phases/05-plantnet-fourth-provider/05-CONTEXT.md
+-- D-01): cuando PlantNet devuelve score ≥ 0.8 y algún LLM coincide con su
+-- científico, PlantNet "manda" el nombre; cuando no coincide ningún LLM,
+-- se marca plant_searches.plantnet_diverged = true (divergencia registrada
+-- para análisis, pero LLMs siguen decidiendo).
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 13. DIVERGENCIAS PLANTNET VS LLM WINNER (últimos 30 días)
+--
+-- Responde: ¿en qué identificaciones PlantNet difirió del LLM ganador,
+-- con qué frecuencia, y en qué géneros/familias ocurre más?
+--
+-- Se considera divergencia: PlantNet devolvió score ≥ 0.8 pero ningún LLM
+-- coincidió con su científico a nivel exact/normalized (per D-11 no cuenta
+-- el match de género — Ficus lyrata vs Ficus benjamina es divergencia,
+-- no coincidencia). Ver Phase 5 D-01, D-10, D-11, D-12.
+--
+-- Cuando plantnet_diverged = true, el edge function además dispara el evento
+-- PostHog `plantnet_divergence` (ver docs/posthog-events.md § Phase 5).
+--
+-- Interpretación:
+--   - pocas divergencias (<5% de identificaciones) → PlantNet y LLMs concuerdan
+--     la mayoría del tiempo; el sistema es coherente
+--   - muchas divergencias (>20%) → posible señal de recalibración del umbral
+--     0.8 (D-10) o de que PlantNet detecta especies que los LLMs no distinguen
+--   - divergencias concentradas en un género (columna genero_llm) → puede
+--     merecer atención por si los cuidados del LLM no son fiables para esa
+--     familia
+-- ─────────────────────────────────────────────────────────────────────────────
+
+WITH divergencias AS (
+  SELECT
+    ps.id                                             AS plant_search_id,
+    ps.created_at                                     AS fecha,
+    ps.name                                           AS nombre_mostrado_al_usuario,
+    ps.model                                          AS llm_winner_model,
+    -- Fila del LLM winner (buscada en model_evaluations por is_winner=true)
+    me_llm.scientific_name                            AS llm_winner_scientific,
+    -- Fila de PlantNet (siempre presente si intentó llamar; puede ser success=false)
+    me_pn.scientific_name                             AS plantnet_scientific,
+    (me_pn.raw_response->'results'->0->>'score')::float
+                                                      AS plantnet_score,
+    -- Género extraído del científico del LLM (primera palabra, minúsculas)
+    LOWER(SPLIT_PART(TRIM(me_llm.scientific_name), ' ', 1))
+                                                      AS genero_llm,
+    LOWER(SPLIT_PART(TRIM(me_pn.scientific_name), ' ', 1))
+                                                      AS genero_plantnet,
+    -- Payload compacto para inspección rápida (top-3 de PlantNet)
+    jsonb_path_query_array(
+      me_pn.raw_response,
+      '$.results[0 to 2] ? (@.score >= 0.5)'
+    )                                                 AS plantnet_top3_snippet
+  FROM plant_searches ps
+  LEFT JOIN model_evaluations me_llm
+    ON me_llm.plant_search_id = ps.id
+   AND me_llm.is_winner = true
+  LEFT JOIN model_evaluations me_pn
+    ON me_pn.plant_search_id = ps.id
+   AND me_pn.model = 'plantnet'
+  WHERE ps.plantnet_diverged = true
+    AND ps.created_at >= NOW() - INTERVAL '30 days'
+)
+SELECT
+  fecha,
+  nombre_mostrado_al_usuario,
+  llm_winner_model,
+  llm_winner_scientific,
+  plantnet_scientific,
+  ROUND(plantnet_score::numeric, 2)                   AS plantnet_score,
+  CASE
+    WHEN genero_llm = genero_plantnet THEN 'mismo género, especies distintas'
+    ELSE 'géneros distintos'
+  END                                                 AS tipo_divergencia,
+  genero_llm,
+  genero_plantnet,
+  plant_search_id
+FROM divergencias
+ORDER BY fecha DESC;
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 13-BIS. RESUMEN AGREGADO DE DIVERGENCIAS (últimos 30 días)
+--
+-- Snapshot rápido para chequeo mensual: cuántas búsquedas totales, cuántas
+-- con PlantNet exitoso, cuántas con override aplicado, cuántas divergentes.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+WITH stats AS (
+  SELECT
+    COUNT(DISTINCT ps.id)                                              AS total_busquedas,
+    COUNT(DISTINCT ps.id) FILTER (WHERE ps.plantnet_diverged = true)   AS busquedas_divergentes,
+    COUNT(DISTINCT me.plant_search_id) FILTER (
+      WHERE me.model = 'plantnet' AND me.success = true
+    )                                                                  AS plantnet_exitoso,
+    COUNT(DISTINCT me.plant_search_id) FILTER (
+      WHERE me.model = 'plantnet' AND me.success = false
+    )                                                                  AS plantnet_fallido
+  FROM plant_searches ps
+  LEFT JOIN model_evaluations me ON me.plant_search_id = ps.id
+  WHERE ps.created_at >= NOW() - INTERVAL '30 days'
+)
+SELECT
+  total_busquedas,
+  plantnet_exitoso,
+  plantnet_fallido,
+  busquedas_divergentes,
+  ROUND(100.0 * plantnet_exitoso / NULLIF(total_busquedas, 0), 1)
+                                                                      AS pct_plantnet_exitoso,
+  ROUND(100.0 * busquedas_divergentes / NULLIF(plantnet_exitoso, 0), 1)
+                                                                      AS pct_divergencia_sobre_exitosos
+FROM stats;

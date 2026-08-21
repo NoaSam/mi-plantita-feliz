@@ -340,3 +340,37 @@ Análisis de correlación TTFC × comportamiento:
 perf_screen_loaded (screen: 'regar', ttfc_ms alto)
   → watering_logged (evento siguiente)         [¿tiempos altos correlan con drop-off?]
 ```
+
+
+## Phase 5 — PlantNet cross-validation (server-side event)
+
+**Status:** Live tras el deploy de Phase 5 (fecha real pendiente hasta que la CPO despliegue el edge function).
+
+Único evento server-side de la app hasta la fecha. Se dispara desde `supabase/functions/identify-plant/index.ts` cuando PlantNet difiere del LLM winner (ver `.planning/phases/05-plantnet-fourth-provider/05-CONTEXT.md` D-01 branch 4 + D-12).
+
+### Evento
+
+| Evento | Propiedades | Archivo | Cuándo se dispara |
+|---|---|---|---|
+| `plantnet_divergence` | `plantnet_scientific`, `plantnet_score`, `llm_winner_scientific`, `llm_winner_model`, `plant_search_id` | `supabase/functions/identify-plant/index.ts` | En cada identificación donde PlantNet devuelve `score ≥ 0.8` pero ningún LLM coincide con su científico a nivel exact/normalized (D-11: match de género NO cuenta). |
+
+### Detalle de propiedades
+
+- **`plantnet_scientific`** *(string)* — científico devuelto por PlantNet, lowercased (`scientificNameWithoutAuthor` del top-1 de `results[]`). Ej: `"ficus benjamina"`.
+- **`plantnet_score`** *(number, 0..1)* — score de confianza de PlantNet en el top-1. Umbral de override = 0.8 (D-10). En divergencias siempre será ≥ 0.8.
+- **`llm_winner_scientific`** *(string)* — científico del LLM que ganó el pickWinner (extractScientificName sobre el `name` del LLM). Ej: `"ficus lyrata"`.
+- **`llm_winner_model`** *(`"claude"` | `"gemini"` | `"gpt4o"`)* — modelo del LLM winner.
+- **`plant_search_id`** *(uuid)* — id de la fila en `plant_searches` (permite JOIN a la búsqueda completa para debug).
+
+### Distinct ID
+
+Usa `user_id` si está presente, si no `anonymous_id`, si no el fallback `"edge-fn-anon"`. Consistente con la vinculación de identidad del resto de la app (`plant_identified` sigue el mismo criterio).
+
+### Cómo consumirlo
+
+- **PostHog Dashboard:** filtra `event = 'plantnet_divergence'` en Insights o Trends. Útil para ver picos por día/semana o segmentar por `llm_winner_model` para detectar qué LLM difiere más.
+- **SQL alternativo:** la misma información es consultable en Supabase con las queries 13 y 13-BIS de `docs/model-evaluation-queries.sql`. Los dos canales son intencionalmente redundantes: PostHog para dashboards y alertas casi-real-time, SQL para retrospectiva completa cuando se necesita cruzar con otras columnas de plant_searches (contexto, familia, etc.).
+
+### Requisito de despliegue
+
+El edge function necesita `POSTHOG_PROJECT_API_KEY` (no la personal key) como Supabase Function Secret. Si no está registrada, el evento se skipea silenciosamente con un `console.warn` — la funcionalidad de override + flag DB sigue funcionando (los datos SQL no dependen de PostHog).
