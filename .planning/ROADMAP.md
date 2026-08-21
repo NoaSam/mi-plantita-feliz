@@ -184,8 +184,8 @@ Plans:
 - [x] 05-02-PLAN.md — Extraer `matchScientific` como función pública en `consensus.ts` + añadir `applyPlantnetOverride(llmWinner, llmResults, plantnetResult)` implementando D-01/D-10/D-11 + tests unitarios exhaustivos (4 branches, threshold 0.8, rechazo de genus). `pickWinner` INTACTO.
 
 **Wave 2 — Integration + docs (paralelo, blocked on Wave 1)**
-- [ ] 05-03-PLAN.md — Extender `identify-plant/index.ts` con `callPlantnetTimed` + 4ª promesa `Promise.allSettled` + split llmResults/plantnetResult + integración `applyPlantnetOverride` + 4ª fila insert con raw_response + flag `plant_searches.plantnet_diverged` en divergencia + dispatch server-side evento PostHog `plantnet_divergence` + deploy + smoke test manual (D-01/D-02/D-09/D-10/D-11/D-12/D-13, PLANT-01, PLANT-03)
-- [ ] 05-04-PLAN.md — Extender `docs/model-evaluation-queries.sql` con sección PHASE 5 (1 query de divergencia + 1 snapshot agregado) + documentar evento `plantnet_divergence` en `docs/posthog-events.md` (PLANT-02)
+- [x] 05-03-PLAN.md — Extender `identify-plant/index.ts` con `callPlantnetTimed` + 4ª promesa `Promise.allSettled` + split llmResults/plantnetResult + integración `applyPlantnetOverride` + 4ª fila insert con raw_response + flag `plant_searches.plantnet_diverged` en divergencia + dispatch server-side evento PostHog `plantnet_divergence` + deploy + smoke test manual (D-01/D-02/D-09/D-10/D-11/D-12/D-13, PLANT-01, PLANT-03)
+- [x] 05-04-PLAN.md — Extender `docs/model-evaluation-queries.sql` con sección PHASE 5 (1 query de divergencia + 1 snapshot agregado) + documentar evento `plantnet_divergence` en `docs/posthog-events.md` (PLANT-02)
 
 **Wave 3 — Verification + CPO sign-off**
 - [ ] 05-05-PLAN.md — VERIFICATION.md checklist (6 bloques: A cobertura datos, B cross-validation funciona, C divergencia registrada, D UX invisible, E latencia, F regresión) + CPO manual sign-off + actualizar ROADMAP/REQUIREMENTS/STATE
