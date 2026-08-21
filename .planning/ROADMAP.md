@@ -178,10 +178,10 @@ Plans:
 Plans:
 
 **Wave 1 — Schema foundation**
-- [ ] 05-01-PLAN.md — [BLOCKING] Migración `20260818000000_extend_model_evaluations_for_plantnet.sql` (widen CHECK model 3→4 + add raw_response jsonb + add plant_searches.plantnet_diverged bool) + `supabase db push` + regenerate types + CPO registra PLANTNET_API_KEY secret
+- [x] 05-01-PLAN.md — [BLOCKING] Migración `20260818000000_extend_model_evaluations_for_plantnet.sql` (widen CHECK model 3→4 + add raw_response jsonb + add plant_searches.plantnet_diverged bool) + `supabase db push` + regenerate types + CPO registra PLANTNET_API_KEY secret
 
 **Wave 1 (paralelo con 05-01) — Cross-validation logic**
-- [ ] 05-02-PLAN.md — Extraer `matchScientific` como función pública en `consensus.ts` + añadir `applyPlantnetOverride(llmWinner, llmResults, plantnetResult)` implementando D-01/D-10/D-11 + tests unitarios exhaustivos (4 branches, threshold 0.8, rechazo de genus). `pickWinner` INTACTO.
+- [x] 05-02-PLAN.md — Extraer `matchScientific` como función pública en `consensus.ts` + añadir `applyPlantnetOverride(llmWinner, llmResults, plantnetResult)` implementando D-01/D-10/D-11 + tests unitarios exhaustivos (4 branches, threshold 0.8, rechazo de genus). `pickWinner` INTACTO.
 
 **Wave 2 — Integration + docs (paralelo, blocked on Wave 1)**
 - [ ] 05-03-PLAN.md — Extender `identify-plant/index.ts` con `callPlantnetTimed` + 4ª promesa `Promise.allSettled` + split llmResults/plantnetResult + integración `applyPlantnetOverride` + 4ª fila insert con raw_response + flag `plant_searches.plantnet_diverged` en divergencia + dispatch server-side evento PostHog `plantnet_divergence` + deploy + smoke test manual (D-01/D-02/D-09/D-10/D-11/D-12/D-13, PLANT-01, PLANT-03)
