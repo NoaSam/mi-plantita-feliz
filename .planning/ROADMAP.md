@@ -188,7 +188,7 @@ Plans:
 - [x] 05-04-PLAN.md — Extender `docs/model-evaluation-queries.sql` con sección PHASE 5 (1 query de divergencia + 1 snapshot agregado) + documentar evento `plantnet_divergence` en `docs/posthog-events.md` (PLANT-02)
 
 **Wave 3 — Verification + CPO sign-off**
-- [ ] 05-05-PLAN.md — VERIFICATION.md checklist (6 bloques: A cobertura datos, B cross-validation funciona, C divergencia registrada, D UX invisible, E latencia, F regresión) + CPO manual sign-off + actualizar ROADMAP/REQUIREMENTS/STATE
+- [x] 05-05-PLAN.md — VERIFICATION.md checklist (6 bloques: A cobertura datos, B cross-validation funciona, C divergencia registrada, D UX invisible, E latencia, F regresión) + CPO manual sign-off + actualizar ROADMAP/REQUIREMENTS/STATE
 
 
 **Key tradeoffs (post-reshape 2026-08-15):**
