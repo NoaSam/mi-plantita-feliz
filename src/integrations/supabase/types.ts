@@ -54,6 +54,7 @@ export type Database = {
           model: string
           plant_search_id: string
           raw_name: string | null
+          raw_response: Json | null
           response_ms: number | null
           scientific_name: string | null
           success: boolean
@@ -71,6 +72,7 @@ export type Database = {
           model: string
           plant_search_id: string
           raw_name?: string | null
+          raw_response?: Json | null
           response_ms?: number | null
           scientific_name?: string | null
           success?: boolean
@@ -88,6 +90,7 @@ export type Database = {
           model?: string
           plant_search_id?: string
           raw_name?: string | null
+          raw_response?: Json | null
           response_ms?: number | null
           scientific_name?: string | null
           success?: boolean
@@ -117,6 +120,7 @@ export type Database = {
           lng: number | null
           model: string | null
           name: string
+          plantnet_diverged: boolean
           user_id: string | null
           watering_interval_days: number | null
         }
@@ -134,6 +138,7 @@ export type Database = {
           lng?: number | null
           model?: string | null
           name: string
+          plantnet_diverged?: boolean
           user_id?: string | null
           watering_interval_days?: number | null
         }
@@ -151,6 +156,7 @@ export type Database = {
           lng?: number | null
           model?: string | null
           name?: string
+          plantnet_diverged?: boolean
           user_id?: string | null
           watering_interval_days?: number | null
         }
