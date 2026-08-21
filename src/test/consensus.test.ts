@@ -4,6 +4,8 @@ import {
   normalizeScientificName,
   extractGenus,
   computeConsensus,
+  matchScientific,  // ← nuevo (Task 1)
+  applyPlantnetOverride,  // ← nuevo (Task 2)
 } from "../../supabase/functions/identify-plant/consensus.ts";
 
 // ─── extractScientificName ────────────────────────────────────────────────────
@@ -101,6 +103,39 @@ describe("extractGenus", () => {
 
   it("returns null for empty string", () => {
     expect(extractGenus("")).toBeNull();
+  });
+});
+
+// ─── matchScientific ──────────────────────────────────────────────────────────
+
+describe("matchScientific", () => {
+  it("returns 'exact' when strings are identical", () => {
+    expect(matchScientific("epipremnum aureum", "epipremnum aureum")).toBe("exact");
+  });
+
+  it("returns 'normalized' when only differ by cultivar", () => {
+    expect(matchScientific("epipremnum aureum 'golden'", "epipremnum aureum")).toBe("normalized");
+  });
+
+  it("returns 'normalized' when only differ by infraspecific rank", () => {
+    expect(matchScientific("hedera helix var. hibernica", "hedera helix")).toBe("normalized");
+  });
+
+  it("returns 'genus' when same first word but different species", () => {
+    expect(matchScientific("ficus lyrata", "ficus benjamina")).toBe("genus");
+  });
+
+  it("returns null when different genus", () => {
+    expect(matchScientific("epipremnum aureum", "monstera deliciosa")).toBeNull();
+  });
+
+  it("returns null when either input is null", () => {
+    expect(matchScientific(null, "epipremnum aureum")).toBeNull();
+    expect(matchScientific("epipremnum aureum", null)).toBeNull();
+  });
+
+  it("returns null when either input is empty string", () => {
+    expect(matchScientific("", "epipremnum aureum")).toBeNull();
   });
 });
 

@@ -80,6 +80,46 @@ export function extractGenus(normalized: string): string | null {
   return genus && genus.length > 1 ? genus : null;
 }
 
+// ─── Scientific name matching (D-11) ──────────────────────────────────────────
+
+/**
+ * Compares two lowercased scientific names and returns the best match tier
+ * (exact > normalized > genus), or null if no match at any tier.
+ *
+ * - "exact": string equality after lowercase (input assumed already lowercased)
+ * - "normalized": equality after stripping cultivars, hybrid markers,
+ *   infraspecific ranks (spp/var/subsp/f/cv). Uses normalizeScientificName().
+ * - "genus": same first word (genus) but different species/lower ranks.
+ *
+ * Returns null when either input is null/empty or when normalized/genus
+ * comparison would compare against empty strings.
+ *
+ * Used by:
+ *  - computeConsensus (LLM ↔ LLM matching, all 3 tiers count)
+ *  - applyPlantnetOverride (PlantNet ↔ LLM matching, only exact + normalized
+ *    count per Phase 5 D-11; genus is intentionally rejected because within
+ *    the same genus care instructions can differ meaningfully — e.g.
+ *    Ficus lyrata vs Ficus benjamina).
+ */
+export function matchScientific(
+  a: string | null,
+  b: string | null,
+): ConsensusMatchLevel | null {
+  if (!a || !b) return null;
+
+  if (a === b) return "exact";
+
+  const na = normalizeScientificName(a);
+  const nb = normalizeScientificName(b);
+  if (na !== "" && na === nb) return "normalized";
+
+  const ga = extractGenus(na);
+  const gb = extractGenus(nb);
+  if (ga !== null && ga === gb) return "genus";
+
+  return null;
+}
+
 // ─── Consensus computation ────────────────────────────────────────────────────
 
 /**
@@ -125,16 +165,17 @@ export function computeConsensus(
     for (const b of enriched) {
       if (a.model === b.model) continue;
 
-      if (a.raw === b.raw) {
+      const tier = matchScientific(a.raw, b.raw);
+      if (tier === null) continue;
+
+      // Rank: exact > normalized > genus
+      if (tier === "exact") {
         bestTier = "exact";
-        break; // Can't do better
+        break;
       }
-
-      if (bestTier !== "normalized" && a.normalized === b.normalized && a.normalized !== "") {
+      if (tier === "normalized" && bestTier !== "exact") {
         bestTier = "normalized";
-      }
-
-      if (bestTier === null && a.genus !== null && a.genus === b.genus) {
+      } else if (tier === "genus" && bestTier === null) {
         bestTier = "genus";
       }
     }
