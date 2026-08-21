@@ -5,7 +5,7 @@ subsystem: database-schema
 tags: [migration, supabase, plantnet, model-evaluations, plant-searches]
 dependency_graph:
   requires: []
-  provides: [schema-plantnet-columns, types-plantnet-columns]
+  provides: [schema-plantnet-columns-file, secret-plantnet-api-key]
   affects: [plan-03-edge-function, plan-04-divergence-queries]
 tech_stack:
   added: []
@@ -15,95 +15,77 @@ key_files:
     - supabase/migrations/20260818000000_extend_model_evaluations_for_plantnet.sql
   modified: []
 decisions:
-  - "Sin GRANTs en la migración: model_evaluations y plant_searches son tablas existentes protegidas por la cláusula existing tables keep their grants (MIGRATION_CONVENTIONS.md)"
+  - "Sin GRANTs en la migración: model_evaluations y plant_searches son tablas existentes protegidas por 'existing tables keep their grants' (MIGRATION_CONVENTIONS.md)"
   - "Migración idempotente: drop constraint if exists + add constraint + add column if not exists — segura de re-ejecutar"
-  - "Task 2 (PLANTNET_API_KEY en Supabase Secrets) es un checkpoint human-action: requiere acción manual de la CPO antes de continuar con Task 3"
+  - "CPO eligió deferir supabase db push (Task 3) durante esta corrida — se aplicará manualmente cuando vuelva al terminal"
 metrics:
-  duration: "~5 min (Task 1 completada)"
-  completed_tasks: 1
+  duration: "Task 1 completada por agente + Task 2 confirmada por CPO"
+  completed_tasks: 2
   total_tasks: 3
+  deferred_tasks: 1
   completed_date: "2026-08-21"
 ---
 
 # Phase 5 Plan 01: Extend Schema for PlantNet + Register API Key
 
-**One-liner:** Migración SQL idempotente que extiende model_evaluations (CHECK constraint 3→4 valores + raw_response jsonb) y plant_searches (plantnet_diverged bool) para habilitar PlantNet como 4o proveedor votante.
+**One-liner:** Migración SQL idempotente creada (schema para PlantNet como 4º proveedor) + PLANTNET_API_KEY registrada por la CPO. El push a producción y regeneración de types se defiere a acción manual de la CPO.
 
-## Completed Tasks
+## Task 1 — Crear migración SQL (Completada)
 
-| Task | Name | Commit | Files |
-|------|------|--------|-------|
-| 1 | Crear migración SQL extend_model_evaluations_for_plantnet | f47aa5a | supabase/migrations/20260818000000_extend_model_evaluations_for_plantnet.sql |
+**Commit:** `f47aa5a` — `chore(05-01): add migration to extend model_evaluations for plantnet`
 
-## Checkpoint Reached — Task 2
+`supabase/migrations/20260818000000_extend_model_evaluations_for_plantnet.sql` (40 líneas):
+- **DROP + ADD constraint:** `model_evaluations_model_check` ampliado a 4 valores (`claude`, `gemini`, `gpt4o`, `plantnet`)
+- **ADD COLUMN:** `model_evaluations.raw_response jsonb` (nullable, D-03) — JSON completo PlantNet ~2-5KB
+- **ADD COLUMN:** `plant_searches.plantnet_diverged boolean not null default false` (D-12)
+- Sin GRANTs (tablas existentes, convención correcta)
+- Idempotente: `drop constraint if exists`, `add column if not exists`
 
-**Type:** checkpoint:human-action (blocking)
-**Status:** Pendiente de acción manual de la CPO.
+## Task 2 — CPO registra PLANTNET_API_KEY (Confirmada)
 
-Task 2 requiere que la CPO registre `PLANTNET_API_KEY` como Supabase Function Secret. Esta acción NO puede ser automatizada.
+CPO confirmó "Secret generada" — `PLANTNET_API_KEY` está en Supabase Function Secrets.
 
-### Pasos para la CPO
+## Task 3 — supabase db push + gen types (DEFERIDO)
 
-1. Abre https://supabase.com/dashboard/project/sdxrgxfmurshrnrnvhda/functions
-2. Ve a **Secrets** (Edge Functions → Secrets o "Manage secrets")
-3. Pulsa **New secret**
-4. **Name:** `PLANTNET_API_KEY` (en UPPER_SNAKE_CASE exactamente)
-5. **Value:** pega la API key generada en https://my.plantnet.org/account/api el 2026-08-18 durante el benchmark
-6. Guarda
-7. Verifica que aparece en la lista de secrets (Supabase oculta el valor pero muestra el nombre)
+**Status:** deferido por elección explícita de la CPO durante esta corrida.
 
-**Si la key se ha perdido:** regenerar en https://my.plantnet.org/account/api — revocar la vieja, generar nueva, pegarla en el secret.
+**Razón:** `SUPABASE_ACCESS_TOKEN` no está en el entorno del agente; la CPO no quiso exportarlo y se apartó del ordenador. Eligió Option 3 (skip migration) para no bloquear la sesión.
 
-**Verificacion:** Ir a https://supabase.com/dashboard/project/sdxrgxfmurshrnrnvhda/functions → Secrets: `PLANTNET_API_KEY` debe aparecer en la lista.
+**Trabajo pendiente para la CPO:**
 
-### Senhal de reanudacion
+```bash
+# 1. Link (una vez) — usa el project_id REAL de config.toml
+npx supabase link --project-ref sdxfxkqzgnonxfshbjfc
 
-Escribe "listo" o "done" cuando el secret este registrado. Si regeneraste la key, escribe "regenerada".
+# 2. Push migración
+npx supabase db push --linked
+
+# 3. Regenerar types
+npx supabase gen types typescript --project-id sdxfxkqzgnonxfshbjfc > src/integrations/supabase/types.ts
+
+# 4. Commit types
+git add src/integrations/supabase/types.ts
+git commit -m "chore(05-01): regenerate supabase types after db push"
+
+# 5. Verificar build
+npm run build
+```
 
 ## Deviations from Plan
 
-None — plan ejecutado exactamente como estaba escrito para Task 1.
+**D-01 (Task 3 deferida):** El plan asumía SUPABASE_ACCESS_TOKEN en el entorno del executor. No lo estaba. La CPO eligió deferir en lugar de exportar el token. La migración vive en `supabase/migrations/` sin aplicar — se aplicará con `supabase db push --linked` cuando la CPO vuelva.
 
-## Task 1 — Migración SQL (Completada)
-
-### Contenido creado
-
-`supabase/migrations/20260818000000_extend_model_evaluations_for_plantnet.sql` (40 lineas):
-
-- **DROP + ADD constraint:** `model_evaluations_model_check` ampliado de 3 a 4 valores (`claude`, `gemini`, `gpt4o`, `plantnet`)
-- **ADD COLUMN:** `model_evaluations.raw_response jsonb` (nullable, D-03) — guarda JSON completo PlantNet (~2-5KB)
-- **ADD COLUMN:** `plant_searches.plantnet_diverged boolean not null default false` (D-12) — marca divergencias PlantNet vs LLMs
-- Sin GRANTs (tablas existentes, convención correcta)
-- Completamente idempotente (`drop constraint if exists`, `add column if not exists`)
-
-### Verificaciones pasadas
-
-```
-SQL structure OK
-OK: migración creada con los 3 cambios esperados
-OK: no GRANTs presentes
-```
-
-## Pending Tasks (post-checkpoint)
-
-| Task | Name | Blocked by |
-|------|------|-----------|
-| 2 | [BLOCKING] CPO registra PLANTNET_API_KEY como Supabase Function Secret | Accion manual CPO |
-| 3 | [BLOCKING] Aplicar migración con supabase db push + regenerar types | Task 2 + SUPABASE_ACCESS_TOKEN en entorno |
-
-## Known Stubs
-
-None — Task 1 no genera stubs. El archivo de migración SQL es contenido final, no placeholder.
-
-## Threat Flags
-
-None — la migración no introduce nueva superficie de ataque. Los riesgos T-05-01-01 a T-05-01-05 del threat model del plan estan mitigados por la construccion idempotente de la migración.
+**D-02 (project_id documentado incorrecto):** Los documentos del plan 05 (05-01-PLAN.md, 05-03-PLAN.md, 05-CONTEXT.md) referencian project_id `sdxrgxfmurshrnrnvhda`. El real (per `supabase/config.toml`) es **`sdxfxkqzgnonxfshbjfc`**. Este summary usa el ID correcto. Los planes originales conservan el ID erróneo por historia; conviene corregir en la fase de fixes.
 
 ## Self-Check: PARTIAL
 
-- [x] supabase/migrations/20260818000000_extend_model_evaluations_for_plantnet.sql — FOUND (f47aa5a)
-- [ ] src/integrations/supabase/types.ts regenerado — PENDIENTE (Task 3 no ejecutada, bloqueada por checkpoint Task 2)
-- [ ] supabase db push aplicado — PENDIENTE (Task 3 no ejecutada)
-- [x] Commit f47aa5a existe en git log
+- [x] `supabase/migrations/20260818000000_extend_model_evaluations_for_plantnet.sql` existe (`f47aa5a`)
+- [x] Migración idempotente + sin GRANTs
+- [x] `PLANTNET_API_KEY` registrada por CPO (confirmación verbal)
+- [ ] `supabase db push` aplicada — **PENDIENTE (CPO manual)**
+- [ ] `src/integrations/supabase/types.ts` regenerado — **PENDIENTE (CPO manual)**
+- [ ] `npm run build` post-push — **PENDIENTE**
 
-Plan en estado checkpoint tras Task 1. Tasks 2 y 3 pendientes de reanudacion tras accion manual de la CPO.
+## Blocks
+
+Wave 2 Plan 03 (edge function extension) compilaría con TypeScript errors sin las columnas nuevas en types.ts. Mitigación durante esta corrida: augmentar types.ts manualmente como bridge (aditivo, no destructivo). Se documenta en 05-03 SUMMARY.
