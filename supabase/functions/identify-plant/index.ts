@@ -3,6 +3,8 @@ import {
   type ModelName,
   extractScientificName,
   computeConsensus,
+  applyPlantnetOverride,
+  type PlantnetOverrideInput,
 } from "./consensus.ts";
 
 const corsHeaders = {
@@ -93,6 +95,11 @@ interface ModelResult {
 // The remaining time budget after 15s is used by storage upload + DB inserts
 // + the return trip to the client.
 const LLM_TIMEOUT_MS = 15_000;
+
+// PlantNet timeout — deliberately shorter than LLM_TIMEOUT_MS so PlantNet
+// never gates the SSE first-winner. D-13 benchmark 2026-08-18 measured
+// PlantNet p95 = 695ms, so 10s is ~14× headroom.
+const PLANTNET_TIMEOUT_MS = 10_000;
 
 // Normalize an AbortError from AbortSignal.timeout into the same
 // TIMEOUT:<model> shape our downstream error handling / analytics uses.
@@ -250,6 +257,87 @@ async function callOpenAI(base64Data: string, mediaType: string): Promise<string
   return data.choices?.[0]?.message?.content || "";
 }
 
+// ─── PlantNet caller (Phase 5 — silent failure per D-09) ──────────────────────
+
+interface PlantnetEvaluationResult {
+  success: boolean;
+  rawName: string | null;         // top-1 scientificNameWithoutAuthor
+  scientificName: string | null;  // lowercased (matches LLMs' extractScientificName output)
+  score: number | null;           // results[0].score (0..1), needed for D-10 threshold
+  rawResponse: unknown | null;    // full JSON payload (D-03)
+  responseMs: number;
+  errorMessage: string | null;
+}
+
+async function callPlantnetTimed(
+  base64Data: string,
+  mediaType: string,
+): Promise<PlantnetEvaluationResult> {
+  const start = Date.now();
+  const PLANTNET_API_KEY = Deno.env.get("PLANTNET_API_KEY");
+  if (!PLANTNET_API_KEY) {
+    return {
+      success: false, rawName: null, scientificName: null, score: null, rawResponse: null,
+      responseMs: Date.now() - start,
+      errorMessage: "PLANTNET_API_KEY not configured",
+    };
+  }
+
+  try {
+    const binaryStr = atob(base64Data);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+    const form = new FormData();
+    form.append("images", new Blob([bytes], { type: mediaType }), "plant.jpg");
+    form.append("organs", "auto");
+
+    // nb-results=5, NO include-related-images (evita inflación storage — Pitfall #6 de RESEARCH.md)
+    const url = `https://my-api.plantnet.org/v2/identify/all?api-key=${PLANTNET_API_KEY}&nb-results=5&lang=es`;
+    const res = await fetch(url, {
+      method: "POST",
+      body: form,
+      signal: AbortSignal.timeout(PLANTNET_TIMEOUT_MS),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("plantnet API error:", res.status, text.substring(0, 200));
+      return {
+        success: false, rawName: null, scientificName: null, score: null, rawResponse: null,
+        responseMs: Date.now() - start,
+        errorMessage: res.status === 429
+          ? "RATE_LIMIT:plantnet:429"
+          : `API_ERROR:plantnet:${res.status}`,
+      };
+    }
+
+    const json = await res.json();
+    const top = json?.results?.[0];
+    const rawName = top?.species?.scientificNameWithoutAuthor ?? null;
+    const score  = typeof top?.score === "number" ? top.score : null;
+    const scientificName = typeof rawName === "string" ? rawName.toLowerCase() : null;
+
+    return {
+      success: rawName !== null,
+      rawName,
+      scientificName,
+      score,
+      rawResponse: json,
+      responseMs: Date.now() - start,
+      errorMessage: rawName === null ? "NO_RESULTS" : null,
+    };
+  } catch (e) {
+    return {
+      success: false, rawName: null, scientificName: null, score: null, rawResponse: null,
+      responseMs: Date.now() - start,
+      errorMessage: isAbortError(e)
+        ? `TIMEOUT:plantnet:${PLANTNET_TIMEOUT_MS}ms`
+        : (e instanceof Error ? e.message : "Unknown error"),
+    };
+  }
+}
+
 // ─── Parsing and extraction ────────────────────────────────────────────────────
 
 const FALLBACK_NAME        = "Planta no identificada";
@@ -386,37 +474,60 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // STEP 1: Call all models in parallel (each guarded by LLM_TIMEOUT_MS).
-    // If one hangs / errors, the other two still produce a consensus.
+    // STEP 1: Call all providers in parallel (LLMs guarded by LLM_TIMEOUT_MS,
+    // PlantNet by PLANTNET_TIMEOUT_MS). PlantNet is the 4th caller — its shape
+    // differs from LLMs and it does NOT participate in pickWinner (D-01).
     const step1Start = Date.now();
     const settled = await Promise.allSettled([
       callModelTimed("claude", () => callClaude(base64Data, mediaType)),
       callModelTimed("gemini", () => callGemini(base64Data, mediaType)),
       callModelTimed("gpt4o",  () => callOpenAI(base64Data, mediaType)),
+      callPlantnetTimed(base64Data, mediaType),
     ]);
     const step1Ms = Date.now() - step1Start;
 
-    // Per-invocation timing log — makes future slow-day incidents diagnosable
-    // from Supabase Functions logs alone (no external tracing needed).
-    const perModelSummary = settled.map((s, i) => {
-      const modelName = (["claude", "gemini", "gpt4o"] as const)[i];
-      if (s.status === "fulfilled") {
-        const r = s.value;
-        return `${modelName}=${r.success ? "ok" : (r.errorMessage ?? "fail")}(${r.responseMs}ms)`;
-      }
-      return `${modelName}=REJECTED`;
-    }).join(" ");
-    console.log(`[identify] STEP 1 done in ${step1Ms}ms — ${perModelSummary}`);
+    // SPLIT: the 3 first are LLMs (ModelResult), the 4th is PlantNet
+    // (PlantnetEvaluationResult). pickWinner + computeConsensus receive
+    // ONLY llmResults so the LLM consensus mechanic stays intact (D-01).
+    const llmSettled = settled.slice(0, 3) as PromiseSettledResult<ModelResult>[];
+    const plantnetSettled = settled[3] as PromiseSettledResult<PlantnetEvaluationResult>;
 
-    const allResults = settled
+    const llmResults = llmSettled
       .filter((s): s is PromiseFulfilledResult<ModelResult> => s.status === "fulfilled")
       .map((s) => s.value);
 
-    // STEP 2: Pick winner via consensus
-    const winner = pickWinner(allResults);
+    const plantnetResult: PlantnetEvaluationResult | null =
+      plantnetSettled.status === "fulfilled" ? plantnetSettled.value : null;
+
+    // Per-invocation timing log — makes future slow-day incidents diagnosable
+    // from Supabase Functions logs alone (no external tracing needed).
+    const perModelSummary = (() => {
+      const parts: string[] = [];
+      const llmNames = ["claude", "gemini", "gpt4o"] as const;
+      llmSettled.forEach((s, i) => {
+        if (s.status === "fulfilled") {
+          const r = s.value;
+          parts.push(`${llmNames[i]}=${r.success ? "ok" : (r.errorMessage ?? "fail")}(${r.responseMs}ms)`);
+        } else {
+          parts.push(`${llmNames[i]}=REJECTED`);
+        }
+      });
+      if (plantnetSettled.status === "fulfilled") {
+        const p = plantnetSettled.value;
+        const scoreStr = p.score !== null ? ` score=${p.score.toFixed(2)}` : "";
+        parts.push(`plantnet=${p.success ? "ok" : (p.errorMessage ?? "fail")}(${p.responseMs}ms)${scoreStr}`);
+      } else {
+        parts.push(`plantnet=REJECTED`);
+      }
+      return parts.join(" ");
+    })();
+    console.log(`[identify] STEP 1 done in ${step1Ms}ms — ${perModelSummary}`);
+
+    // STEP 2: Pick winner via LLM consensus (D-01: PlantNet does NOT participate)
+    const winner = pickWinner(llmResults);
 
     if (!winner) {
-      const isRateLimit = allResults.some((r) => r.errorMessage?.startsWith("RATE_LIMIT:"));
+      const isRateLimit = llmResults.some((r) => r.errorMessage?.startsWith("RATE_LIMIT:"));
       return new Response(
         JSON.stringify({
           error: isRateLimit
@@ -456,17 +567,49 @@ Deno.serve(async (req) => {
       console.error("Storage upload exception:", e);
     }
 
+    // STEP 2b: Cross-validation PlantNet override (Phase 5 D-01, D-10, D-11).
+    // Pure function from consensus.ts. If PlantNet failed or no match,
+    // returns winner unchanged. Diverged=true only when score>=0.8 and no LLM
+    // matched at exact/normalized tier.
+    const plantnetInput: PlantnetOverrideInput | null = plantnetResult
+      ? {
+          success: plantnetResult.success,
+          scientificName: plantnetResult.scientificName,
+          score: plantnetResult.score,
+        }
+      : null;
+
+    const override = applyPlantnetOverride(winner, llmResults, plantnetInput);
+    const finalWinner = override.winner as ModelResult;   // preserves plantInfo + all LLM fields
+    const diverged = override.diverged;
+
+    if (override.matchedLlm) {
+      console.log(
+        `[identify] PlantNet override: LLM winner was ${winner.model} (${winner.scientificName}), ` +
+        `PlantNet=${plantnetResult?.scientificName} (score=${plantnetResult?.score?.toFixed(2)}), ` +
+        `→ using ${override.matchedLlm} row with PlantNet's scientific name.`
+      );
+    }
+    if (diverged) {
+      console.log(
+        `[identify] PlantNet DIVERGENCE: LLM winner=${winner.scientificName}, ` +
+        `PlantNet=${plantnetResult?.scientificName} (score=${plantnetResult?.score?.toFixed(2)}), ` +
+        `no LLM matched → keeping LLM winner, flagging plantnet_diverged=true.`
+      );
+    }
+
     // STEP 4: DB insert — plant_searches
     const { data: searchRow, error: searchError } = await supabaseAdmin
       .from("plant_searches")
       .insert({
-        name:                   winner.plantInfo!.name,
-        description:            winner.plantInfo!.description,
-        care:                   winner.plantInfo!.care,
-        diagnosis:              winner.plantInfo!.diagnosis,
-        watering_interval_days: winner.plantInfo!.watering_interval_days,
+        name:                   finalWinner.plantInfo!.name,
+        description:            finalWinner.plantInfo!.description,
+        care:                   finalWinner.plantInfo!.care,
+        diagnosis:              finalWinner.plantInfo!.diagnosis,
+        watering_interval_days: finalWinner.plantInfo!.watering_interval_days,
         image_url:              imageUrl,
-        model:                  winner.model,
+        model:                  finalWinner.model,
+        plantnet_diverged:      diverged,   // Phase 5 D-12
         ...(user_id ? { user_id } : { user_id: null, anonymous_id: anonymous_id ?? null }),
         ...(typeof lat === "number" && isFinite(lat) && lat >= -90 && lat <= 90 &&
            typeof lng === "number" && isFinite(lng) && lng >= -180 && lng <= 180
@@ -479,27 +622,50 @@ Deno.serve(async (req) => {
       console.error("plant_searches insert error:", searchError);
     }
 
-    // STEP 5: Analytics — insert model_evaluations (fire-and-forget)
-    const consensusGroups = computeConsensus(allResults);
-    if (searchRow && allResults.length > 0) {
-      const evaluationRows = allResults.map((r) => {
+    // STEP 5: Analytics — insert model_evaluations (fire-and-forget).
+    // 4 rows per identification: 3 LLMs + 1 PlantNet (D-03). PlantNet row
+    // carries the full raw_response JSON; LLM rows leave raw_response null.
+    const consensusGroups = computeConsensus(llmResults);
+    if (searchRow && (llmResults.length > 0 || plantnetResult)) {
+      const llmRows = llmResults.map((r) => {
         const consensus = r.success ? (consensusGroups.get(r.model) ?? null) : null;
         return {
-          plant_search_id: searchRow.id,
-          model: r.model,
-          raw_name: r.rawName,
-          scientific_name: r.scientificName,
-          description: r.plantInfo?.description ?? null,
-          care: r.plantInfo?.care ?? null,
-          diagnosis: r.plantInfo?.diagnosis ?? null,
-          response_ms: r.responseMs,
-          success: r.success,
-          error_message: r.errorMessage,
-          is_winner: r.model === winner.model,
-          consensus_group: consensus?.verdict ?? null,
+          plant_search_id:       searchRow.id,
+          model:                 r.model,
+          raw_name:              r.rawName,
+          scientific_name:       r.scientificName,
+          description:           r.plantInfo?.description ?? null,
+          care:                  r.plantInfo?.care ?? null,
+          diagnosis:             r.plantInfo?.diagnosis ?? null,
+          response_ms:           r.responseMs,
+          success:               r.success,
+          error_message:         r.errorMessage,
+          is_winner:             r.model === finalWinner.model,
+          consensus_group:       consensus?.verdict ?? null,
           consensus_match_level: consensus?.matchLevel ?? null,
+          raw_response:          null,   // LLMs never populate raw_response
         };
       });
+
+      // 4th row: plantnet — inserted even on failure so we retain the record (D-09).
+      const plantnetRow = plantnetResult ? {
+        plant_search_id:       searchRow.id,
+        model:                 "plantnet" as const,
+        raw_name:              plantnetResult.rawName,
+        scientific_name:       plantnetResult.scientificName,
+        description:           null,
+        care:                  null,
+        diagnosis:             null,
+        response_ms:           plantnetResult.responseMs,
+        success:               plantnetResult.success,
+        error_message:         plantnetResult.errorMessage,
+        is_winner:             false,   // D-01: PlantNet never wins the row; LLM aligned always does
+        consensus_group:       null,
+        consensus_match_level: null,
+        raw_response:          plantnetResult.rawResponse,   // full JSON (D-03)
+      } : null;
+
+      const evaluationRows = plantnetRow ? [...llmRows, plantnetRow] : llmRows;
 
       // Don't await — let it complete in the background
       supabaseAdmin
@@ -510,29 +676,59 @@ Deno.serve(async (req) => {
         });
     }
 
-    // STEP 6: Return JSON
-    const modelsSummary = allResults.map((r) => {
+    // STEP 5b: PostHog event on divergence (D-12). Fire-and-forget with tight
+    // timeout — analytics failure MUST NOT affect the user response.
+    if (diverged && plantnetResult && winner) {
+      const POSTHOG_API_KEY = Deno.env.get("POSTHOG_PROJECT_API_KEY");
+      if (POSTHOG_API_KEY) {
+        const distinctId = user_id ?? anonymous_id ?? "edge-fn-anon";
+        const payload = {
+          api_key: POSTHOG_API_KEY,
+          event: "plantnet_divergence",
+          distinct_id: distinctId,
+          properties: {
+            plantnet_scientific:   plantnetResult.scientificName,
+            plantnet_score:        plantnetResult.score,
+            llm_winner_scientific: winner.scientificName,
+            llm_winner_model:      winner.model,
+            plant_search_id:       searchRow?.id ?? null,
+            $lib: "edge-function",
+          },
+        };
+        fetch("https://eu.i.posthog.com/capture/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(2_000),
+        }).catch((e) => console.error("posthog capture error:", e));
+      } else {
+        console.warn("[identify] POSTHOG_PROJECT_API_KEY not set — divergence event skipped");
+      }
+    }
+
+    // STEP 6: Return JSON — expose ONLY the 3 LLMs in `models` (D-02: PlantNet invisible)
+    const modelsSummary = llmResults.map((r) => {
       const consensus = r.success ? (consensusGroups.get(r.model) ?? null) : null;
       return {
         model: r.model,
         success: r.success,
         scientific_name: r.scientificName,
         response_ms: r.responseMs,
-        is_winner: r.model === winner.model,
+        is_winner: r.model === finalWinner.model,
         consensus_verdict: consensus?.verdict ?? null,
       };
     });
     const consensusReached =
-      consensusGroups.get(winner.model)?.verdict === "correct";
+      consensusGroups.get(finalWinner.model)?.verdict === "correct";
 
     return new Response(
       JSON.stringify({
-        name:                   winner.plantInfo!.name,
-        description:            winner.plantInfo!.description,
-        care:                   winner.plantInfo!.care,
-        diagnosis:              winner.plantInfo!.diagnosis,
-        watering_interval_days: winner.plantInfo!.watering_interval_days,
-        model:                  winner.model,
+        name:                   finalWinner.plantInfo!.name,
+        description:            finalWinner.plantInfo!.description,
+        care:                   finalWinner.plantInfo!.care,
+        diagnosis:              finalWinner.plantInfo!.diagnosis,
+        watering_interval_days: finalWinner.plantInfo!.watering_interval_days,
+        model:                  finalWinner.model,
         plant_search_id:        searchRow?.id ?? null,
         created_at:             searchRow?.created_at ?? null,
         models:                 modelsSummary,
