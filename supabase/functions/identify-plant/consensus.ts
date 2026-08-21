@@ -200,3 +200,112 @@ export function computeConsensus(
 
   return output;
 }
+
+// ─── PlantNet cross-validation override (Phase 5 D-01) ────────────────────────
+
+export const PLANTNET_OVERRIDE_SCORE_THRESHOLD = 0.8;  // D-10
+
+export interface PlantnetOverrideInput {
+  success: boolean;
+  scientificName: string | null;   // lowercased scientificNameWithoutAuthor
+  score: number | null;            // 0..1
+}
+
+/**
+ * Minimal shape needed from an LLM result for the override to work.
+ * We deliberately do NOT depend on the edge function's ModelResult type
+ * (which lives in index.ts and has non-portable fields like plantInfo).
+ * The edge function passes objects that satisfy this shape.
+ */
+export interface LlmWinnerInput {
+  model: ModelName;
+  scientificName: string | null;
+}
+
+export interface PlantnetOverrideResult<T extends LlmWinnerInput = LlmWinnerInput> {
+  /** The final winner. Same identity as `llmWinner` OR a different LLM's row
+   *  (from `llmResults`), with `scientificName` potentially replaced by
+   *  PlantNet's canonical name in override cases. */
+  winner: T;
+  /** True only when score >= threshold AND no LLM matched (branch 4). */
+  diverged: boolean;
+  /** The model name of the LLM PlantNet aligned with, if any (branch 3). */
+  matchedLlm: ModelName | null;
+}
+
+/**
+ * Applies PlantNet's vote as an override layer on top of the LLM consensus.
+ * See Phase 5 CONTEXT.md D-01 for the full decision tree.
+ *
+ * Rules (D-01 branches):
+ *   1. PlantNet failed / null / no score → return llmWinner untouched (D-09).
+ *   2. score < 0.8 → return llmWinner untouched (below the override threshold).
+ *   3. score >= 0.8 AND at least one LLM matches (via matchScientific at
+ *      'exact' or 'normalized' tier — genus NOT allowed per D-11) → return
+ *      the matched LLM with its scientificName replaced by PlantNet's.
+ *      If multiple LLMs match, prefer llmWinner itself; otherwise the first
+ *      matching LLM in llmResults.
+ *   4. score >= 0.8 AND no LLM matches → return llmWinner untouched but
+ *      mark diverged=true so the caller can flag plant_searches.plantnet_diverged
+ *      and dispatch the PostHog event (D-12).
+ *
+ * Pure function — no side effects. Testable in isolation.
+ *
+ * D-11: only 'exact' and 'normalized' tiers count as a match here. The 'genus'
+ * tier is intentionally rejected because within the same genus care instructions
+ * can differ meaningfully (e.g. Ficus lyrata vs Ficus benjamina). Accepting a
+ * genus match would break the coherence guarantee between the displayed
+ * scientific name and the LLM-provided care fields.
+ */
+export function applyPlantnetOverride<T extends LlmWinnerInput>(
+  llmWinner: T,
+  llmResults: T[],
+  plantnetResult: PlantnetOverrideInput | null,
+): PlantnetOverrideResult<T> {
+  // Branch 1: PlantNet unavailable
+  if (
+    plantnetResult === null ||
+    !plantnetResult.success ||
+    plantnetResult.scientificName === null ||
+    plantnetResult.score === null ||
+    !Number.isFinite(plantnetResult.score)
+  ) {
+    return { winner: llmWinner, diverged: false, matchedLlm: null };
+  }
+
+  // Branch 2: below threshold
+  if (plantnetResult.score < PLANTNET_OVERRIDE_SCORE_THRESHOLD) {
+    return { winner: llmWinner, diverged: false, matchedLlm: null };
+  }
+
+  // Branches 3 / 3-bis / 4: threshold met, look for a valid match
+  const plantnetSci = plantnetResult.scientificName;
+
+  const isValidMatch = (llmSci: string | null): boolean => {
+    const tier = matchScientific(llmSci, plantnetSci);
+    // D-11: only exact or normalized count; genus does not.
+    return tier === "exact" || tier === "normalized";
+  };
+
+  // Prefer llmWinner if it matches
+  if (isValidMatch(llmWinner.scientificName)) {
+    return {
+      winner: { ...llmWinner, scientificName: plantnetSci },
+      diverged: false,
+      matchedLlm: llmWinner.model,
+    };
+  }
+
+  // Otherwise pick the first LLM (in input order) that matches
+  const alignedLlm = llmResults.find((r) => r !== llmWinner && isValidMatch(r.scientificName));
+  if (alignedLlm) {
+    return {
+      winner: { ...alignedLlm, scientificName: plantnetSci },
+      diverged: false,
+      matchedLlm: alignedLlm.model,
+    };
+  }
+
+  // Branch 4: no valid match → preserve LLM winner, mark divergence
+  return { winner: llmWinner, diverged: true, matchedLlm: null };
+}
