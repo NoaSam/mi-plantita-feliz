@@ -4,6 +4,8 @@ import {
   normalizeScientificName,
   extractGenus,
   computeConsensus,
+  matchScientific,  // ← nuevo (Task 1)
+  applyPlantnetOverride,  // ← nuevo (Task 2)
 } from "../../supabase/functions/identify-plant/consensus.ts";
 
 // ─── extractScientificName ────────────────────────────────────────────────────
@@ -101,6 +103,39 @@ describe("extractGenus", () => {
 
   it("returns null for empty string", () => {
     expect(extractGenus("")).toBeNull();
+  });
+});
+
+// ─── matchScientific ──────────────────────────────────────────────────────────
+
+describe("matchScientific", () => {
+  it("returns 'exact' when strings are identical", () => {
+    expect(matchScientific("epipremnum aureum", "epipremnum aureum")).toBe("exact");
+  });
+
+  it("returns 'normalized' when only differ by cultivar", () => {
+    expect(matchScientific("epipremnum aureum 'golden'", "epipremnum aureum")).toBe("normalized");
+  });
+
+  it("returns 'normalized' when only differ by infraspecific rank", () => {
+    expect(matchScientific("hedera helix var. hibernica", "hedera helix")).toBe("normalized");
+  });
+
+  it("returns 'genus' when same first word but different species", () => {
+    expect(matchScientific("ficus lyrata", "ficus benjamina")).toBe("genus");
+  });
+
+  it("returns null when different genus", () => {
+    expect(matchScientific("epipremnum aureum", "monstera deliciosa")).toBeNull();
+  });
+
+  it("returns null when either input is null", () => {
+    expect(matchScientific(null, "epipremnum aureum")).toBeNull();
+    expect(matchScientific("epipremnum aureum", null)).toBeNull();
+  });
+
+  it("returns null when either input is empty string", () => {
+    expect(matchScientific("", "epipremnum aureum")).toBeNull();
   });
 });
 
@@ -223,5 +258,96 @@ describe("computeConsensus", () => {
     expect(out.get("claude")).toEqual({ verdict: "no_consensus", matchLevel: null });
     expect(out.get("gemini")).toEqual({ verdict: "no_consensus", matchLevel: null });
     expect(out.get("gpt4o")).toEqual({ verdict: "no_consensus", matchLevel: null });
+  });
+});
+
+// ─── applyPlantnetOverride (Phase 5 D-01) ─────────────────────────────────────
+
+describe("applyPlantnetOverride", () => {
+  const llmA = { model: "claude" as const, scientificName: "monstera deliciosa" };
+  const llmB = { model: "gemini" as const, scientificName: "epipremnum aureum" };
+  const llmC = { model: "gpt4o" as const,  scientificName: "ficus lyrata" };
+  const llms = [llmA, llmB, llmC];
+
+  it("returns winner untouched when plantnet is null (D-09)", () => {
+    const r = applyPlantnetOverride(llmA, llms, null);
+    expect(r.winner).toBe(llmA);
+    expect(r.diverged).toBe(false);
+    expect(r.matchedLlm).toBeNull();
+  });
+
+  it("returns winner untouched when plantnet.success is false", () => {
+    const r = applyPlantnetOverride(llmA, llms, {
+      success: false, scientificName: null, score: null,
+    });
+    expect(r.winner).toBe(llmA);
+    expect(r.diverged).toBe(false);
+  });
+
+  it("returns winner untouched when score below 0.8 threshold (branch 2)", () => {
+    const r = applyPlantnetOverride(llmA, llms, {
+      success: true, scientificName: "monstera deliciosa", score: 0.7,
+    });
+    expect(r.winner).toBe(llmA);
+    expect(r.diverged).toBe(false);
+    expect(r.matchedLlm).toBeNull();
+  });
+
+  it("overrides scientific name when score >= 0.8 and winner matches exact (branch 3)", () => {
+    const r = applyPlantnetOverride(llmA, llms, {
+      success: true, scientificName: "monstera deliciosa", score: 0.95,
+    });
+    expect(r.winner.model).toBe("claude");
+    expect(r.winner.scientificName).toBe("monstera deliciosa");
+    expect(r.diverged).toBe(false);
+    expect(r.matchedLlm).toBe("claude");
+  });
+
+  it("picks aligned LLM (not winner) when winner does not match but another does (branch 3-bis)", () => {
+    // winner is llmC (ficus lyrata); plantnet says monstera → llmA matches
+    const r = applyPlantnetOverride(llmC, llms, {
+      success: true, scientificName: "monstera deliciosa", score: 0.92,
+    });
+    expect(r.winner.model).toBe("claude");
+    expect(r.winner.scientificName).toBe("monstera deliciosa");
+    expect(r.diverged).toBe(false);
+    expect(r.matchedLlm).toBe("claude");
+  });
+
+  it("accepts normalized match (cultivar stripped)", () => {
+    const winnerWithCultivar = { model: "gemini" as const, scientificName: "epipremnum aureum 'golden'" };
+    const set = [llmA, winnerWithCultivar, llmC];
+    const r = applyPlantnetOverride(winnerWithCultivar, set, {
+      success: true, scientificName: "epipremnum aureum", score: 0.9,
+    });
+    expect(r.winner.model).toBe("gemini");
+    expect(r.winner.scientificName).toBe("epipremnum aureum");
+    expect(r.matchedLlm).toBe("gemini");
+  });
+
+  it("REJECTS genus-only match — falls through to divergence (D-11)", () => {
+    // llmC = ficus lyrata; plantnet says ficus benjamina (same genus, different species)
+    const r = applyPlantnetOverride(llmC, llms, {
+      success: true, scientificName: "ficus benjamina", score: 0.9,
+    });
+    expect(r.winner).toBe(llmC);           // preserved
+    expect(r.diverged).toBe(true);         // divergence recorded
+    expect(r.matchedLlm).toBeNull();       // no valid match
+  });
+
+  it("marks diverged=true when score >= 0.8 and no LLM matches (branch 4)", () => {
+    const r = applyPlantnetOverride(llmA, llms, {
+      success: true, scientificName: "sansevieria trifasciata", score: 0.88,
+    });
+    expect(r.winner).toBe(llmA);
+    expect(r.diverged).toBe(true);
+    expect(r.matchedLlm).toBeNull();
+  });
+
+  it("uses threshold 0.8 exactly (score = 0.8 counts as >= threshold)", () => {
+    const r = applyPlantnetOverride(llmA, llms, {
+      success: true, scientificName: "monstera deliciosa", score: 0.8,
+    });
+    expect(r.matchedLlm).toBe("claude");   // 0.8 is inclusive
   });
 });
