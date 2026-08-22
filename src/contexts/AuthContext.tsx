@@ -29,6 +29,17 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     const isEmailConfirm = params.has("email_confirmed");
     let handlingConfirm = false;
 
+    // Safety net: if Supabase Auth never fires INITIAL_SESSION (corrupt local
+    // tokens, network hang, service outage), render the app in unauthenticated
+    // mode instead of showing a spinner forever. onAuthStateChange will still
+    // update state later if/when it recovers.
+    const bootTimeout = setTimeout(() => {
+      setIsLoading((prev) => {
+        if (prev) console.warn("[auth] INITIAL_SESSION timeout after 5s — proceeding as unauthenticated");
+        return false;
+      });
+    }, 5_000);
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -77,11 +88,15 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
 
       if (event === "INITIAL_SESSION" || (handlingConfirm && event === "SIGNED_OUT")) {
+        clearTimeout(bootTimeout);
         setIsLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(bootTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {

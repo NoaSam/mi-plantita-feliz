@@ -22,6 +22,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const INVOKE_TIMEOUT_MS = 30_000;
 const SAFETY_TIMEOUT_MS = 45_000;
+const GET_SESSION_TIMEOUT_MS = 2_000;
 
 const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/identify-plant`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -70,7 +71,18 @@ export function usePlantIdentifier() {
       const compressed = await fileToBase64(compressedBlob);
 
       if (import.meta.env.DEV) console.log("[identify] step 3: getSession");
-      const { data: { session } } = await supabase.auth.getSession();
+      // Race getSession against a short timeout: if the Supabase Auth client
+      // is hung (corrupt local tokens, service outage), fall back to anonymous
+      // identification instead of hanging the whole request until SAFETY_TIMEOUT.
+      const session = await Promise.race([
+        supabase.auth.getSession().then(({ data }) => data.session),
+        new Promise<null>((resolve) =>
+          setTimeout(() => {
+            console.warn("[identify] getSession timeout after", GET_SESSION_TIMEOUT_MS, "ms — proceeding as anonymous");
+            resolve(null);
+          }, GET_SESSION_TIMEOUT_MS),
+        ),
+      ]);
       const loggedIn = !!session?.user;
 
       const requestBody = {
