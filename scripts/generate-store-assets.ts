@@ -248,7 +248,7 @@ const MOCK_SICK_PLANT = {
 const MOCK_HISTORY = [
   { id: "plant-001", name: "Monstera deliciosa", description: "Planta tropical.", care: "Riego semanal.", diagnosis: "Saludable.", image_url: PLANT_PHOTO_DATA_URI, context: "home", created_at: "2026-04-10T10:00:00Z", user_id: MOCK_USER.id },
   { id: "plant-002", name: "Pothos dorado", description: "Planta colgante.", care: "Riego cada 10 días.", diagnosis: "Hojas amarillas.", image_url: PLANT_PHOTO_DATA_URI, context: "home", created_at: "2026-03-15T14:30:00Z", user_id: MOCK_USER.id },
-  { id: "plant-003", name: "Ficus elastica", description: "Árbol de interior.", care: "Luz brillante.", diagnosis: "Buen estado.", image_url: PLANT_PHOTO_DATA_URI, context: "wild", created_at: "2026-01-20T09:00:00Z", user_id: MOCK_USER.id },
+  { id: "plant-003", name: "Ficus elastica", description: "Árbol de interior.", care: "Luz brillante.", diagnosis: "Buen estado.", image_url: PLANT_PHOTO_DATA_URI, context: "wild", lat: 40.4168, lng: -3.7038, created_at: "2026-01-20T09:00:00Z", user_id: MOCK_USER.id },
 ];
 
 import type { Page } from "@playwright/test";
@@ -270,6 +270,34 @@ async function setupMocks(page: Page, authenticated: boolean, plant = MOCK_PLANT
     await page.route(`${SUPABASE_URL}/auth/v1/signup`, (r) => r.fulfill({ status: 200, json: MOCK_SESSION }));
     await page.route(`${SUPABASE_URL}/rest/v1/plant_searches*`, (r) => {
       if (r.request().method() === "DELETE") return r.fulfill({ status: 200, json: [] });
+
+      if (r.request().method() === "HEAD") {
+        const url = r.request().url();
+        const wild = MOCK_HISTORY.filter((p) => p.context === "wild");
+        const hasCoords = (p: (typeof MOCK_HISTORY)[number]) => p.lat != null && p.lng != null;
+
+        let count = 0;
+        if (url.includes("context=eq.home")) {
+          count = MOCK_HISTORY.filter((p) => p.context === "home").length;
+        } else if (url.includes("context=eq.wild")) {
+          count = url.includes("lat=not.is.null")
+            ? wild.filter(hasCoords).length
+            : wild.filter((p) => !hasCoords(p)).length;
+        } else if (url.includes("context=eq.unclassified")) {
+          count = MOCK_HISTORY.filter((p) => p.context === "unclassified").length;
+        }
+
+        return r.fulfill({
+          status: 200,
+          headers: {
+            "content-range": count > 0 ? `0-${count - 1}/${count}` : "*/0",
+            "access-control-allow-origin": "*",
+            "access-control-expose-headers": "content-range",
+          },
+          body: "",
+        });
+      }
+
       return r.fulfill({ status: 200, json: MOCK_HISTORY });
     });
     await page.route(`${SUPABASE_URL}/rest/v1/rpc/claim_anonymous_searches`, (r) => r.fulfill({ status: 200, json: null }));
@@ -319,13 +347,13 @@ async function main() {
   }
 
   const screenshotDefs: ScreenshotDef[] = [
-    { name: "01-home", url: "/", authenticated: false, headline: "Identifica cualquier planta con una foto" },
-    { name: "02-result", url: "/", authenticated: false, headline: "Cuidados personalizados para cada planta", action: "identify" },
+    { name: "01-home", url: "/", authenticated: true, headline: "Identifica cualquier planta con una foto" },
+    { name: "02-result", url: "/", authenticated: true, headline: "Cuidados personalizados para cada planta", action: "identify" },
     { name: "03-history", url: "/mis-plantas", authenticated: true, headline: "Tu colección de plantas guardada" },
     {
       name: "04-diagnosis",
       url: "/",
-      authenticated: false,
+      authenticated: true,
       headline: "Te decimos qué le pasa y cómo curarla",
       action: "identify",
       plant: MOCK_SICK_PLANT,
