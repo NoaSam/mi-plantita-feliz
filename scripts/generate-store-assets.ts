@@ -10,6 +10,7 @@
  */
 
 import { chromium } from "@playwright/test";
+import sharp from "sharp";
 import fs from "fs";
 import path from "path";
 
@@ -127,17 +128,21 @@ function screenshotFrameHTML(
   }
   .phone-frame {
     flex: 1;
+    min-height: 0;
     width: 100%;
-    display: flex; justify-content: center; align-items: flex-start;
-    padding: 0 60px;
+    display: flex; justify-content: center; align-items: stretch;
+    padding: 0 60px 72px;
   }
+  /* Height-driven: the frame takes whatever the headline leaves, and the
+     width follows from the Pixel 7 aspect ratio. A fixed 380x780 box left
+     almost half the 1080x1920 canvas empty. */
   .phone {
-    width: 380px;
-    height: 780px;
-    border-radius: 36px;
+    height: 100%;
+    aspect-ratio: 412 / 915;
+    border-radius: 56px;
     overflow: hidden;
-    border: 4px solid rgba(255,255,255,0.2);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    border: 5px solid rgba(255,255,255,0.22);
+    box-shadow: 0 24px 70px rgba(0,0,0,0.32);
     background: ${BG};
   }
   .phone img {
@@ -158,6 +163,58 @@ function screenshotFrameHTML(
 }
 
 // ---------------------------------------------------------------------------
+// Stand-in plant photo
+//
+// The screenshots used to feed the app a 1x1 transparent pixel, which the
+// result card stretched into a flat coloured rectangle, and the history
+// thumbnails pointed at `data:image/jpeg;base64,/9j/mock` — not valid base64,
+// so they rendered as broken-image icons with the alt text showing.
+//
+// This is a stylised botanical illustration standing in for the photo a real
+// user would have taken. The surrounding UI is the actual app.
+// ---------------------------------------------------------------------------
+
+function plantPhotoSVG(size = 800): string {
+  const leaf = (
+    cx: number, cy: number, rot: number, scale: number, fill: string, opacity = 1,
+  ) =>
+    `<g transform="translate(${cx} ${cy}) rotate(${rot}) scale(${scale})" opacity="${opacity}">` +
+    `<path d="M0 0 C 46 -70 140 -70 186 0 C 140 70 46 70 0 0 Z" fill="${fill}"/>` +
+    `<path d="M8 0 H 178" stroke="#F2F7EE" stroke-opacity="0.34" stroke-width="5" stroke-linecap="round"/>` +
+    `</g>`;
+
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 800 800">` +
+    `<defs>` +
+    `<linearGradient id="sky" x1="0" y1="0" x2="0.4" y2="1">` +
+    `<stop offset="0" stop-color="#EDF3E8"/><stop offset="1" stop-color="#BCD2B2"/>` +
+    `</linearGradient>` +
+    `<linearGradient id="deep" x1="0" y1="0" x2="0" y2="1">` +
+    `<stop offset="0" stop-color="#4F8C43"/><stop offset="1" stop-color="#2B6327"/>` +
+    `</linearGradient>` +
+    `<linearGradient id="mid" x1="0" y1="0" x2="0" y2="1">` +
+    `<stop offset="0" stop-color="#6BA85B"/><stop offset="1" stop-color="#3C7A33"/>` +
+    `</linearGradient>` +
+    `</defs>` +
+    `<rect width="800" height="800" fill="url(#sky)"/>` +
+    // Back layer, washed out for depth
+    leaf(300, 300, -148, 1.25, "#8FBA7F", 0.55) +
+    leaf(520, 260, -36, 1.15, "#8FBA7F", 0.5) +
+    // Mid layer
+    leaf(360, 470, -118, 1.5, "url(#mid)") +
+    leaf(470, 430, -56, 1.35, "url(#mid)") +
+    // Front
+    leaf(400, 620, -90, 1.7, "url(#deep)") +
+    `<path d="M400 790 C 398 680 400 600 404 520" stroke="#2B6327" stroke-width="13" ` +
+    `fill="none" stroke-linecap="round"/>` +
+    `</svg>`
+  );
+}
+
+const PLANT_PHOTO_DATA_URI =
+  "data:image/svg+xml;base64," + Buffer.from(plantPhotoSVG()).toString("base64");
+
+// ---------------------------------------------------------------------------
 // Supabase mock helpers (same as e2e fixtures)
 // ---------------------------------------------------------------------------
 
@@ -167,7 +224,7 @@ const MOCK_USER = { id: "user-e2e-001", email: "test@plantita.dev", aud: "authen
 const MOCK_SESSION = { access_token: "e2e-access-token", refresh_token: "e2e-refresh-token", token_type: "bearer", expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, user: MOCK_USER };
 const MOCK_PLANT = {
   plant_search_id: "plant-001",
-  name: "Monstera deliciosa (Monstera deliciosa)",
+  name: "Costilla de Adán (Monstera deliciosa)",
   description: "La **Monstera deliciosa** es una planta tropical originaria de los bosques de América Central.",
   care: "**Riego**: Cada 7-10 días. **Luz**: Indirecta brillante. **Temperatura**: 18-27°C.",
   diagnosis: "La planta se ve **saludable**. No se detectan signos de enfermedad.",
@@ -176,9 +233,9 @@ const MOCK_PLANT = {
   models: [{ model: "claude", consensus_group: "correct" }, { model: "gemini", consensus_group: "correct" }, { model: "gpt4o", consensus_group: "correct" }],
 };
 const MOCK_HISTORY = [
-  { id: "plant-001", name: "Monstera deliciosa", description: "Planta tropical.", care: "Riego semanal.", diagnosis: "Saludable.", image_url: "data:image/jpeg;base64,/9j/mock", created_at: "2026-04-10T10:00:00Z", user_id: MOCK_USER.id },
-  { id: "plant-002", name: "Pothos dorado", description: "Planta colgante.", care: "Riego cada 10 días.", diagnosis: "Hojas amarillas.", image_url: "data:image/jpeg;base64,/9j/mock2", created_at: "2026-03-15T14:30:00Z", user_id: MOCK_USER.id },
-  { id: "plant-003", name: "Ficus elastica", description: "Árbol de interior.", care: "Luz brillante.", diagnosis: "Buen estado.", image_url: "data:image/jpeg;base64,/9j/mock3", created_at: "2026-01-20T09:00:00Z", user_id: MOCK_USER.id },
+  { id: "plant-001", name: "Monstera deliciosa", description: "Planta tropical.", care: "Riego semanal.", diagnosis: "Saludable.", image_url: PLANT_PHOTO_DATA_URI, context: "home", created_at: "2026-04-10T10:00:00Z", user_id: MOCK_USER.id },
+  { id: "plant-002", name: "Pothos dorado", description: "Planta colgante.", care: "Riego cada 10 días.", diagnosis: "Hojas amarillas.", image_url: PLANT_PHOTO_DATA_URI, context: "home", created_at: "2026-03-15T14:30:00Z", user_id: MOCK_USER.id },
+  { id: "plant-003", name: "Ficus elastica", description: "Árbol de interior.", care: "Luz brillante.", diagnosis: "Buen estado.", image_url: PLANT_PHOTO_DATA_URI, context: "wild", created_at: "2026-01-20T09:00:00Z", user_id: MOCK_USER.id },
 ];
 
 import type { Page } from "@playwright/test";
@@ -187,6 +244,8 @@ async function setupMocks(page: Page, authenticated: boolean) {
   // Dismiss cookie consent
   await page.addInitScript(() => {
     localStorage.setItem("plantita_consent", JSON.stringify({ analytics: false, sessionRecording: false }));
+    // One-off notice aimed at existing users; it has no place in a store shot.
+    localStorage.setItem("mp_seen_history_relocation_notice", "1");
   });
   // Block analytics
   await page.route("**/*posthog*/**", (route) => route.abort());
@@ -242,12 +301,14 @@ async function main() {
     { name: "04-login", url: "/mis-plantas", authenticated: false, headline: "Crea tu cuenta en segundos" },
   ];
 
-  // Create a test image for identification
-  const testImagePath = path.resolve("e2e/test-image.png");
-  if (!fs.existsSync(testImagePath)) {
-    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==", "base64");
-    fs.writeFileSync(testImagePath, png);
-  }
+  // Stand-in photo for the identify flow. Regenerated every run so the
+  // screenshots never fall back to the 1x1 pixel that produced a flat
+  // coloured rectangle in the result card.
+  const testImagePath = path.join(OUT, ".plant-photo.png");
+  fs.writeFileSync(
+    testImagePath,
+    await sharp(Buffer.from(plantPhotoSVG(1200))).png().toBuffer(),
+  );
 
   for (const def of screenshotDefs) {
     console.log(`Capturing ${def.name}...`);

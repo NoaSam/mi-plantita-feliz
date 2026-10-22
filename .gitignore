@@ -54,3 +54,4 @@ capacitor.config.ts.bak
 
 # Supabase CLI local cache
 supabase/.temp/
+store-assets/.plant-photo.png
