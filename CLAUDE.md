@@ -11,6 +11,16 @@ App móvil para identificar plantas a partir de fotos. El usuario sube o toma un
 - **iOS:** PWA instalable (manifest.json + service worker). Sin store.
 - **Android:** App nativa con Capacitor (en beta). AppID: `app.mijardin.plantas` (inmutable — Play Store lo usa como identificador único). Nombre del launcher: "Mi jardin". Build: `npm run android`.
 
+## Keepalive de Supabase (leer antes de tocar)
+Supabase Free pausa el proyecto tras **7 días consecutivos sin actividad** en la DB. Si se pausa, la app deja de cargar datos hasta reanudarla a mano. Para evitarlo hay un ping automático.
+
+- **Automatismo activo:** Vercel Cron → `api/keepalive.ts` (edge function), schedule `0 4 * * *` declarado en el bloque `crons` de `vercel.json`. Vercel no desactiva crons por inactividad del repo. La función devuelve 500 si el ping falla, para que un ping muerto aparezca en los logs de Vercel en vez de pasar en silencio.
+- **Fallback manual:** `.github/workflows/supabase-keepalive.yml`, solo `workflow_dispatch` (Actions → Run workflow) para despertar Supabase a mano.
+- **No reintroducir `schedule` en el workflow de GitHub.** GitHub desactiva workflows programados en repos públicos tras **60 días sin actividad en el repo** (estado `disabled_inactivity`) — es exactamente lo que pasó el 22 oct 2026. Encadenado con la ventana de Supabase, un parón de ~67 días sin commits deja la app caída sin aviso previo. Sin `schedule`, GitHub no lo puede desactivar.
+- `CRON_SECRET` en los env vars de Vercel (producción) es opcional: si está definido, la función exige `Authorization: Bearer $CRON_SECRET`; si no, el endpoint queda abierto. Solo hace una lectura que ya es pública vía RLS, así que el riesgo es ruido de invocaciones, no datos.
+- Plan Hobby: máximo 1 ejecución diaria por cron y Vercel la dispara dentro de la hora indicada, no al minuto.
+- **Síntoma de que esto ha fallado:** la app no carga datos tras un parón largo → sospechar Supabase pausada → despertar con el workflow manual y revisar el cron en Vercel (Settings → Cron Jobs).
+
 ## Origen del código
 Código generado inicialmente en Lovable y migrado a este repo vía GitHub. Se está refactorizando para calidad de producción.
 
