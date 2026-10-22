@@ -9,7 +9,7 @@ App móvil para identificar plantas a partir de fotos. El usuario sube o toma un
 - **Almacenamiento:** Supabase (auth + base de datos para historial de búsquedas y fotos)
 - **Despliegue:** Vercel (mi-plantita-feliz.vercel.app)
 - **iOS:** PWA instalable (manifest.json + service worker). Sin store.
-- **Android:** App nativa con Capacitor (en beta). AppID: `app.mijardin.plantas` (inmutable — Play Store lo usa como identificador único). Nombre del launcher: "Mi jardin". Build: `npm run android`.
+- **Android:** App nativa con Capacitor (en beta). AppID: `app.mijardin.plantas` (inmutable — Play Store lo usa como identificador único). Nombre del launcher: "Mi Jardín". Build: `npm run android`.
 
 ## Keepalive de Supabase (leer antes de tocar)
 Supabase Free pausa el proyecto tras **7 días consecutivos sin actividad** en la DB. Si se pausa, la app deja de cargar datos hasta reanudarla a mano. Para evitarlo hay un ping automático.
@@ -77,7 +77,13 @@ src/
 npm install          # Instalar dependencias
 npm run dev          # Servidor de desarrollo
 npm run build        # Build de producción
+npm run icons        # Regenerar todos los iconos desde la hoja de trazo
 ```
+
+## Iconos y nombre de la app
+- **Una sola marca.** `scripts/generate-icons.ts` es la única fuente: deriva de la hoja de trazo (el path que ya usaba el icono de Play) el favicon multi-tamaño, los iconos PWA, el `apple-touch-icon`, los assets fuente de `assets/` y, vía `@capacitor/assets`, todas las densidades de Android. **No editar a mano ningún PNG de `public/`, `assets/` ni `android/app/src/main/res/mipmap-*/`** — se sobrescriben. Para cambiar la marca, tocar `LEAF_PATH` o las escalas en ese script y ejecutar `npm run icons`.
+- **El inset del adaptive icon.** `@capacitor/assets` reescribe `ic_launcher.xml` en cada ejecución aplicando un `inset` del 16,7 % a las dos capas. En el *foreground* es correcto (es la zona segura de Android); en el *background* es un bug, porque la capa de fondo debe ir a sangre o el launcher deja las esquinas transparentes al recortar la máscara. `patchAdaptiveIcon()` lo corrige después de generar. Si algún día se ejecuta `capacitor-assets` a mano, hay que volver a aplicar el parche.
+- **El nombre es "Mi Jardín"**, con tilde y jota mayúscula, en todas las superficies: `strings.xml`, `capacitor.config.ts`, el manifiesto PWA, `index.html` y los textos legales. El `appId` `app.mijardin.plantas` es inmutable y el dominio sigue siendo `mi-plantita-feliz.vercel.app`; esos dos no se tocan.
 
 ## Plugins de Claude Code activos (nivel usuario)
 - **frontend-design** — Se activa automáticamente en tareas de frontend. Obliga a definir dirección estética antes de generar código. Genera interfaces con identidad visual real (tipografía, animaciones, composición espacial), no el típico aspecto genérico de IA.

@@ -19,6 +19,7 @@
     "benchmark:bootstrap": "tsx scripts/bootstrap-golden-set.ts",
     "benchmark:prompt": "tsx scripts/benchmark-prompt.ts",
     "benchmark:latency": "tsx scripts/benchmark-latency.ts",
+    "icons": "tsx scripts/generate-icons.ts",
     "check:errors": "tsx scripts/check-errors.ts",
     "backfill:images": "tsx scripts/backfill-image-urls.ts"
   },
@@ -110,6 +111,7 @@
     "globals": "^15.15.0",
     "jsdom": "^20.0.3",
     "postcss": "^8.5.6",
+    "sharp": "^0.32.6",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.21.0",
     "typescript": "^5.8.3",

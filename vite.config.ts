@@ -29,15 +29,15 @@ export default defineConfig(({ mode }) => {
         VitePWA({
           registerType: "autoUpdate",
           injectRegister: null,
-          includeAssets: ["favicon.ico"],
+          includeAssets: ["favicon.ico", "apple-touch-icon.png"],
           workbox: {
             globPatterns: ["**/*.{js,css,html,ico,png,svg,webp}"],
             skipWaiting: true,
             clientsClaim: true,
           },
           manifest: {
-            name: "Mi jardín",
-            short_name: "Mi jardín",
+            name: "Mi Jardín",
+            short_name: "Mi Jardín",
             description: "Identifica y cuida tus plantas con una foto",
             theme_color: "#2D5A27",
             background_color: "#FDFCF8",
@@ -50,14 +50,18 @@ export default defineConfig(({ mode }) => {
                 src: "/pwa-192.png",
                 sizes: "192x192",
                 type: "image/png",
+                purpose: "any",
               },
               {
                 src: "/pwa-512.png",
                 sizes: "512x512",
                 type: "image/png",
+                purpose: "any",
               },
               {
-                src: "/pwa-512.png",
+                // Separate artwork: the glyph sits inside the inner 80% so the
+                // launcher can crop it to a circle without clipping the leaf.
+                src: "/pwa-maskable-512.png",
                 sizes: "512x512",
                 type: "image/png",
                 purpose: "maskable",

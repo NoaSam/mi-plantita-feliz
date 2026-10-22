@@ -12,7 +12,7 @@ export default function TermsOfService() {
 
       <h2>2. Descripción del servicio</h2>
       <p>
-        Mi jardín (en adelante, "la App") es una aplicación web progresiva (PWA) que
+        Mi Jardín (en adelante, "la App") es una aplicación web progresiva (PWA) que
         permite a los usuarios:
       </p>
       <ul>

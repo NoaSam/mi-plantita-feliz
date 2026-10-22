@@ -15,7 +15,7 @@ export default function LegalNotice() {
         <li><strong>Titular:</strong> Noemí Santos</li>
         <li><strong>Domicilio:</strong> Madrid, España</li>
         <li><strong>Email de contacto:</strong> noesantos@gmail.com</li>
-        <li><strong>Nombre comercial de la app:</strong> Mi jardín</li>
+        <li><strong>Nombre comercial de la app:</strong> Mi Jardín</li>
         <li><strong>Sitio web:</strong> https://mi-plantita-feliz.vercel.app</li>
       </ul>
 

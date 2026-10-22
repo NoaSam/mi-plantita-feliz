@@ -260,7 +260,7 @@ export default function SettingsPage() {
       {/* App info */}
       <div className="flex flex-col items-center gap-3 pt-4 text-muted-foreground">
         <Leaf className="size-8 text-primary/40" strokeWidth={1.2} />
-        <p className="font-display text-base font-semibold">Mi jardín</p>
+        <p className="font-display text-base font-semibold">Mi Jardín</p>
       </div>
 
       <ChangePasswordSheet

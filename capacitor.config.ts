@@ -4,7 +4,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "app.mijardin.plantas",
-  appName: "Mi jardin",
+  appName: "Mi Jardín",
   webDir: "dist",
   android: {
     minWebViewVersion: 60,

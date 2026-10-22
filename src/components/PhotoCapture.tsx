@@ -125,7 +125,7 @@ export default function PhotoCapture({ onCapture, isLoading }: PhotoCaptureProps
           <p className="font-medium">Permiso de cámara necesario</p>
           <p className="mt-1">
             Para identificar plantas, necesitamos acceso a tu cámara.
-            Ve a Ajustes &gt; Aplicaciones &gt; Mi jardín &gt; Permisos para activarlo.
+            Ve a Ajustes &gt; Aplicaciones &gt; Mi Jardín &gt; Permisos para activarlo.
           </p>
           <button
             type="button"
