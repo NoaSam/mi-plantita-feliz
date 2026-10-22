@@ -232,6 +232,19 @@ const MOCK_PLANT = {
   created_at: new Date().toISOString(),
   models: [{ model: "claude", consensus_group: "correct" }, { model: "gemini", consensus_group: "correct" }, { model: "gpt4o", consensus_group: "correct" }],
 };
+// Diagnosis is the function that sets the app apart, so the store listing
+// needs a plant with something actually wrong with it.
+const MOCK_SICK_PLANT = {
+  plant_search_id: "plant-002",
+  name: "Potos (Epipremnum aureum)",
+  description: "El **potos** es una trepadora de interior originaria de la Polinesia, muy habitual en casas por lo poco exigente que es.",
+  care: "**Riego**: cada 7-10 días. **Luz**: indirecta, tolera sombra. **Temperatura**: 18-26°C.",
+  diagnosis: "Las hojas amarillean desde la base: es **exceso de riego**. Deja secar los primeros 3 cm de sustrato antes de volver a regar y comprueba que la maceta drene bien.",
+  model: "claude",
+  created_at: new Date().toISOString(),
+  models: [{ model: "claude", consensus_group: "correct" }, { model: "gemini", consensus_group: "correct" }, { model: "gpt4o", consensus_group: "correct" }],
+};
+
 const MOCK_HISTORY = [
   { id: "plant-001", name: "Monstera deliciosa", description: "Planta tropical.", care: "Riego semanal.", diagnosis: "Saludable.", image_url: PLANT_PHOTO_DATA_URI, context: "home", created_at: "2026-04-10T10:00:00Z", user_id: MOCK_USER.id },
   { id: "plant-002", name: "Pothos dorado", description: "Planta colgante.", care: "Riego cada 10 días.", diagnosis: "Hojas amarillas.", image_url: PLANT_PHOTO_DATA_URI, context: "home", created_at: "2026-03-15T14:30:00Z", user_id: MOCK_USER.id },
@@ -240,7 +253,7 @@ const MOCK_HISTORY = [
 
 import type { Page } from "@playwright/test";
 
-async function setupMocks(page: Page, authenticated: boolean) {
+async function setupMocks(page: Page, authenticated: boolean, plant = MOCK_PLANT) {
   // Dismiss cookie consent
   await page.addInitScript(() => {
     localStorage.setItem("plantita_consent", JSON.stringify({ analytics: false, sessionRecording: false }));
@@ -267,7 +280,7 @@ async function setupMocks(page: Page, authenticated: boolean) {
     await page.route(`${SUPABASE_URL}/auth/v1/token*`, (r) => r.fulfill({ status: 400, json: { error: "invalid_grant" } }));
     await page.route(`${SUPABASE_URL}/auth/v1/user`, (r) => r.fulfill({ status: 401, json: { error: "not_authenticated" } }));
   }
-  await page.route(`${SUPABASE_URL}/functions/v1/identify-plant`, (r) => r.fulfill({ status: 200, json: MOCK_PLANT }));
+  await page.route(`${SUPABASE_URL}/functions/v1/identify-plant`, (r) => r.fulfill({ status: 200, json: plant }));
 }
 
 // ---------------------------------------------------------------------------
@@ -294,11 +307,32 @@ async function main() {
   await fgCtx.close();
 
   // ---- App Screenshots (Pixel 7 viewport: 412x915, scale to 1080x1920 via deviceScaleFactor) ----
-  const screenshotDefs = [
+  interface ScreenshotDef {
+    name: string;
+    url: string;
+    authenticated: boolean;
+    headline: string;
+    action?: "identify";
+    plant?: typeof MOCK_PLANT;
+    /** Visible text to scroll into view before capturing. */
+    scrollTo?: string;
+  }
+
+  const screenshotDefs: ScreenshotDef[] = [
     { name: "01-home", url: "/", authenticated: false, headline: "Identifica cualquier planta con una foto" },
     { name: "02-result", url: "/", authenticated: false, headline: "Cuidados personalizados para cada planta", action: "identify" },
     { name: "03-history", url: "/mis-plantas", authenticated: true, headline: "Tu colección de plantas guardada" },
-    { name: "04-login", url: "/mis-plantas", authenticated: false, headline: "Crea tu cuenta en segundos" },
+    {
+      name: "04-diagnosis",
+      url: "/",
+      authenticated: false,
+      headline: "Te decimos qué le pasa y cómo curarla",
+      action: "identify",
+      plant: MOCK_SICK_PLANT,
+      // The diagnosis accordion opens by default but sits below the fold,
+      // under the classification cards. Bring it into view before capturing.
+      scrollTo: "Qué le pasa",
+    },
   ];
 
   // Stand-in photo for the identify flow. Regenerated every run so the
@@ -319,7 +353,7 @@ async function main() {
       deviceScaleFactor: 2.625,
     });
     const appPage = await appCtx.newPage();
-    await setupMocks(appPage, def.authenticated);
+    await setupMocks(appPage, def.authenticated, def.plant ?? MOCK_PLANT);
     await appPage.goto(`http://localhost:8080${def.url}`, { waitUntil: "networkidle" });
 
     if (def.action === "identify") {
@@ -330,7 +364,29 @@ async function main() {
       if (await decline.isVisible({ timeout: 2000 }).catch(() => false)) {
         await decline.click();
       }
-      await appPage.getByText(MOCK_PLANT.name).waitFor({ timeout: 10000 });
+      await appPage.getByText((def.plant ?? MOCK_PLANT).name).waitFor({ timeout: 10000 });
+    }
+
+    if (def.scrollTo) {
+      const target = appPage.getByText(def.scrollTo).first();
+      await target.waitFor({ timeout: 10000 });
+      await target.evaluate((el) => {
+        el.scrollIntoView({ block: "start" });
+        // The content runs past the viewport, so scrollIntoView already lands
+        // at the bottom of the page. Settle there deliberately and then nudge
+        // up to the nearest clean boundary, so the top edge never slices a
+        // heading in half.
+        window.scrollTo(0, document.documentElement.scrollHeight);
+        // At the bottom of the page the top edge slices whatever element
+        // happens to straddle it. Pull back up until a section heading sits
+        // just inside the frame, so nothing is cut in half.
+        const heading = Array.from(document.querySelectorAll("p, h2, h3, span")).find(
+          (n) => n.textContent?.trim().startsWith("¿Qué hacemos con esta planta?"),
+        );
+        if (heading) {
+          window.scrollBy(0, heading.getBoundingClientRect().top - 26);
+        }
+      });
     }
 
     // Wait for content
