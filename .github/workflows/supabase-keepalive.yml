@@ -1,6 +1,13 @@
-# Supabase Free tier pauses a project after 7 consecutive days of inactivity.
-# This workflow pings the REST endpoint every 3 days so the "days inactive"
-# counter never reaches 7. Zero cost — public REST call with the anon key.
+# Manual fallback for waking up Supabase.
+#
+# The recurring keepalive now lives in Vercel Cron (`api/keepalive.ts` +
+# the `crons` block in vercel.json), which runs daily and is not subject to
+# GitHub's rule that disables *scheduled* workflows after 60 days without
+# repo activity — the reason this workflow got switched off on 22 oct 2026.
+#
+# The `schedule` trigger is deliberately gone: with only workflow_dispatch,
+# GitHub never auto-disables this, so it stays available as a one-click
+# "wake Supabase now" button from the Actions tab if the Vercel cron fails.
 #
 # The anon key is safe to check into git (it is the "publishable" key already
 # shipped in the web bundle via .env → import.meta.env). Row-level security
@@ -9,11 +16,7 @@
 name: Supabase keepalive
 
 on:
-  schedule:
-    # Every 3 days at 03:12 UTC. Non-round time avoids the top-of-hour rush
-    # that GitHub Actions delays. Cron minute 12 is chosen arbitrarily.
-    - cron: "12 3 */3 * *"
-  # Allow manual trigger from the Actions tab.
+  # Manual trigger only — see the note above.
   workflow_dispatch:
 
 jobs:

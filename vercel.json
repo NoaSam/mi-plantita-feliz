@@ -1,9 +1,15 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "crons": [
+    {
+      "path": "/api/keepalive",
+      "schedule": "0 4 * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/ingest/static/(.*)", "destination": "https://eu-assets.i.posthog.com/static/$1" },
     { "source": "/ingest/(.*)", "destination": "https://eu.i.posthog.com/$1" },
-    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+    { "source": "/((?!assets/|api/).*)", "destination": "/index.html" }
   ]
 }
