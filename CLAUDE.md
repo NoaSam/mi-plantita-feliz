@@ -33,7 +33,9 @@ ndk {
 }
 ```
 - `minifyEnabled true` activa R8. Sin él Play avisa de que la ofuscación está al 1 % y de que falta el fichero de desofuscación (`mapping.txt`).
-- `debugSymbolLevel` se deja puesto, pero **hoy no produce nada**: los `.so` de CameraX que arrastra `@capacitor/camera` llegan ya *stripped* desde el AAR de Google, así que la tarea `extractReleaseNativeSymbolTables` extrae 0 ficheros y el aviso de Play sobre símbolos nativos **no se puede resolver desde este proyecto**. Se mantiene la configuración para que, si alguna dependencia futura trae `.so` con símbolos, se incluyan solos.
+- `debugSymbolLevel` está puesto y es correcto, pero **hoy no produce nada porque falta el NDK**. AGP necesita las herramientas del NDK para extraer los símbolos y, si no está instalado, `extractReleaseNativeSymbolTables` **se salta en silencio**: 0 ficheros, sin error ni aviso en el build. De ahí el aviso de Play sobre símbolos nativos.
+  - Los `.so` de CameraX que arrastra `@capacitor/camera` vienen *stripped*, pero eso solo significa que les falta `.symtab`: **conservan `.dynsym`**, que es justo lo que extrae el nivel `SYMBOL_TABLE`. Comprobado leyendo las secciones del ELF. O sea, sí hay símbolos que extraer.
+  - **Decisión: no instalarlo por ahora.** Son 1-2 GB y lo que se gana es poder leer crashes dentro de la librería de cámara de Google — código ajeno que no se puede arreglar desde aquí. El aviso es recomendatorio y no bloquea publicar. Si algún día aparecen crashes nativos recurrentes en el panel de calidad, instalar el NDK desde el SDK Manager y regenerar el bundle basta: la configuración ya está puesta.
 - **`shrinkResources` está deliberadamente desactivado.** No lo pide ningún aviso de Play y puede eliminar recursos que solo se referencian por nombre desde el WebView.
 
 En `android/app/proguard-rules.pro` la regla que no se puede quitar:
