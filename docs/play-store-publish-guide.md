@@ -59,9 +59,15 @@ Esto abre Android Studio con el proyecto Android ya cargado. Espera a que termin
 4. Selecciona build variant: **release** → Finish
 5. Android Studio genera el archivo en:
    ```
-   android/app/build/outputs/bundle/release/app-release.aab
+   android/app/release/app-release.aab
    ```
    Ese es el archivo que subes a Google Play Console.
+
+   > **Ojo con la ruta.** El wizard lo deja en `app/release/`. La ruta
+   > `app/build/outputs/bundle/release/` es la de `./gradlew bundleRelease`
+   > por terminal, que además genera el bundle **sin firmar**. En `app/release/`
+   > suele quedar también un `app-release.apk` viejo de builds anteriores: ese
+   > no se sube.
 
 > **IMPORTANTE:** Guarda la keystore (`.jks` o `.keystore`) en un lugar seguro. Haz una copia de seguridad. Sin ella no podrás publicar actualizaciones.
 # Output: android/app/build/outputs/bundle/release/app-release.aab
@@ -195,6 +201,28 @@ Ve a **Configuración de la app** y completa las secciones obligatorias:
 
 ### 7.5 Apps de salud (si aparece)
 → No (la app identifica plantas, no da consejos médicos)
+
+---
+
+## Entender los estados de una versión
+
+Tres niveles que se confunden con facilidad:
+
+1. **Canales** (*tracks*): Producción, Prueba abierta, Prueba cerrada, Pruebas internas. Carriles independientes.
+2. **Versiones** (*releases*): dentro de cada canal. Cada una contiene uno o más bundles.
+3. **Estados**: lo que de verdad dice si algo está publicado. Subir el fichero no publica nada.
+
+Se consultan en **Versiones → Producción**.
+
+| Estado | Significa | Qué hacer para publicar algo nuevo |
+|---|---|---|
+| **Borrador** | Creada pero nunca enviada. No hay nada publicado. | Entrar en el borrador, quitar el bundle viejo y subir el nuevo. |
+| **En revisión** | Enviada; Google la revisa (horas a 2-3 días). | Esperar. Crear otra versión de producción ahora enreda la cola. |
+| **Disponible en producción** | Publicada, los usuarios la tienen. | Crear una versión nueva encima. |
+
+**Las versiones son acumulativas.** Una 1.3.2 contiene todo lo de la 1.3.1: no hace falta publicar las versiones intermedias en orden. Si hay dos bundles sin publicar, se sube solo el más alto.
+
+**Para cambios de riesgo** (activar R8, subir `targetSdk`, tocar permisos) conviene **lanzamiento escalonado**: Play permite elegir un porcentaje al crear la versión. Con un 20 % unos días da tiempo a ver crashes antes de llegar a todo el mundo.
 
 ---
 
