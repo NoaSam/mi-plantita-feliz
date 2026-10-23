@@ -7,64 +7,64 @@ Textos y assets listos para copiar-pegar en Google Play Console.
 ## Título (30 chars max)
 
 ```
-Mi Jardín - Identificar Plantas
+Mi Jardín: Identificar Plantas
 ```
-(31 chars — alternativa si no cabe:)
-```
-Mi Jardín: Identifica Plantas
-```
-(30 chars)
+30/30. Coincidencia exacta con la consulta más buscada. Alternativa a 29 si se
+prefiere el imperativo: `Mi Jardín: Identifica Plantas`.
 
 ---
 
 ## Descripción corta (80 chars max)
 
 ```
-Identifica plantas con una foto. Cuidados, enfermedades y diagnóstico con IA.
+Identifica plantas con una foto. Cuidados, diagnóstico y calendario de riego.
 ```
+77/80. La anterior decía "enfermedades y diagnóstico con IA": lo mismo dos veces
+y un "con IA" que no es lo que se busca. El hueco lo ocupa el riego, que no
+aparecía en ninguna parte de la ficha.
 
 ---
 
 ## Descripción completa (4.000 chars max)
 
 ```
-Saca una foto de cualquier planta y descubre al instante qué es, cómo cuidarla y si tiene algún problema de salud. Mi Jardín usa inteligencia artificial para identificar plantas y darte información práctica y fácil de entender.
+¿Qué planta es esta? Hazle una foto y lo sabrás en segundos: cómo se llama, qué cuidados necesita y, si tiene mal aspecto, qué le está pasando.
 
-Ideal para personas que tienen plantas en casa, jardineros principiantes o cualquiera que se encuentre una planta y quiera saber su nombre.
+Mi Jardín usa inteligencia artificial para identificar plantas y te explica qué hacer con ellas en un lenguaje que se entiende, sin jerga botánica.
 
-Qué puedes hacer con Mi Jardín:
+IDENTIFICA CUALQUIER PLANTA
+Haz una foto con la cámara o elige una de tu galería. En segundos tienes el nombre común, el nombre científico y la familia botánica.
 
-- Identificar plantas con una foto de la cámara o tu galería
-- Conocer el nombre común, nombre científico y familia botánica
-- Consultar una guía de cuidados personalizada: riego, luz, temperatura, sustrato y frecuencia de abono
-- Obtener un diagnóstico de enfermedades: síntomas detectados, causa probable y tratamiento recomendado
-- Guardar un historial de todas tus búsquedas con foto, fecha y resultado
-- Buscar y filtrar en tu colección de plantas guardadas
+DESCUBRE QUÉ LE PASA
+Diagnóstico de enfermedades y plagas a partir de la foto. ¿Hojas amarillas, manchas, aspecto triste? Te decimos la causa probable y cómo tratarla. Exceso de riego, falta de luz, hongos: con el problema identificado, la solución es fácil.
 
-Cómo funciona:
+CUIDADOS CLAROS, PLANTA A PLANTA
+Una guía de cuidados para esa planta concreta: riego, luz, temperatura, sustrato y abono. No consejos genéricos que valen para todo y no sirven para nada.
 
-1. Abre la app y haz una foto o sube una imagen de tu galería
-2. La inteligencia artificial analiza la planta en segundos
-3. Consulta el resultado: qué planta es, cómo cuidarla y qué le pasa
+NO SE TE OLVIDA REGAR
+Añade tus plantas a tu jardín y la app lleva la cuenta por ti: cuáles toca regar hoy y cuáles pueden esperar. Ajusta la frecuencia de cada una y marca el riego cuando lo hagas.
 
-Sin jerga botánica innecesaria. Todo explicado de forma cercana y clara para que cualquier persona pueda entender y aplicar los cuidados.
+TUS PLANTAS, EN UN SITIO
+Todo lo que identificas se guarda con su foto y su fecha. Busca y filtra en tu colección cuando quieras volver a consultarlo.
 
-Mi Jardín es una herramienta para quienes quieren cuidar mejor sus plantas, identificar flores y árboles durante un paseo, o simplemente descubrir el nombre de esa planta que les regalaron.
+LAS QUE TE ENCUENTRAS POR AHÍ
+Las plantas que descubres en un paseo se guardan en un mapa, con el sitio donde las viste. Tu propio registro de lo que crece cerca de casa.
 
-Funcionalidades principales:
+PARA QUIÉN ES
+Para quien tiene plantas de interior y no entiende por qué se le mueren. Para quien empieza en la jardinería y agradece que se lo expliquen claro. Y para quien va por la calle, ve una flor y quiere saber cómo se llama.
 
-- Identificación de plantas por foto con IA avanzada
-- Guía de cuidados completa para cada planta
-- Diagnóstico visual de enfermedades y plagas
-- Historial de búsquedas guardado en tu cuenta
-- Búsqueda y filtro por nombre y mes
-- Interfaz sencilla pensada para móvil
-- Registro con email, sin complicaciones
+TU PRIVACIDAD
+Tus fotos se analizan de forma segura y tus plantas son solo tuyas. Puedes consultar la política de privacidad dentro de la app.
 
-Tu privacidad es importante. Las fotos se analizan de forma segura y tus datos están protegidos. Consulta nuestra política de privacidad dentro de la app.
-
-Descarga Mi Jardín y empieza a identificar tus plantas hoy.
+Descarga Mi Jardín y empieza por esa planta que te regalaron y nunca supiste cuál era.
 ```
+1894/4000. La anterior repetía la lista de funcionalidades dos veces
+("Qué puedes hacer" y "Funcionalidades principales") y se dejaba fuera el
+calendario de riego y el mapa de descubrimientos, que ya existen en la app.
+
+**No prometer recordatorios ni notificaciones.** La app no tiene ningún plugin de
+notificaciones: Regar es un calendario que se consulta, no te avisa. Decir
+"recordatorios" sería una promesa falsa en la ficha.
 
 ---
 
