@@ -21,6 +21,31 @@ Supabase Free pausa el proyecto tras **7 días consecutivos sin actividad** en l
 - Plan Hobby: máximo 1 ejecución diaria por cron y Vercel la dispara dentro de la hora indicada, no al minuto.
 - **Síntoma de que esto ha fallado:** la app no carga datos tras un parón largo → sospechar Supabase pausada → despertar con el workflow manual y revisar el cron en Vercel (Settings → Cron Jobs).
 
+## Build de release Android (R8 y símbolos)
+`android/` está entero en `.gitignore`, así que **esta configuración vive solo en la máquina local** y se pierde si se regenera la plataforma con `cap add android`. Si eso pasa, hay que volver a aplicarla a mano. Está aquí para poder reconstruirla.
+
+En `android/app/build.gradle`, dentro de `buildTypes.release`:
+```gradle
+minifyEnabled true
+proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+ndk {
+    debugSymbolLevel 'SYMBOL_TABLE'
+}
+```
+- `minifyEnabled true` activa R8. Sin él Play avisa de que la ofuscación está al 1 % y de que falta el fichero de desofuscación (`mapping.txt`).
+- `debugSymbolLevel` se deja puesto, pero **hoy no produce nada**: los `.so` de CameraX que arrastra `@capacitor/camera` llegan ya *stripped* desde el AAR de Google, así que la tarea `extractReleaseNativeSymbolTables` extrae 0 ficheros y el aviso de Play sobre símbolos nativos **no se puede resolver desde este proyecto**. Se mantiene la configuración para que, si alguna dependencia futura trae `.so` con símbolos, se incluyan solos.
+- **`shrinkResources` está deliberadamente desactivado.** No lo pide ningún aviso de Play y puede eliminar recursos que solo se referencian por nombre desde el WebView.
+
+En `android/app/proguard-rules.pro` la regla que no se puede quitar:
+```
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+```
+El puente entre el JavaScript y el código nativo de Capacitor va por métodos anotados con `@JavascriptInterface`, invocados por nombre desde el WebView. R8 no ve esas llamadas: sin esta regla los renombra y **la app abre pero ninguna función nativa responde** — cámara, ubicación y preferencias dejan de ir, sin ningún error al compilar. `@capacitor/android` aporta el resto de reglas vía `consumerProguardFiles`.
+
+**Cualquier build de release con R8 se prueba en un dispositivo antes de subirlo.** Los fallos de R8 no aparecen al compilar, solo en ejecución. Para comprobar de forma estática qué ha conservado, `android/app/build/outputs/mapping/release/seeds.txt` lista todo lo que R8 ha mantenido: ahí deben aparecer `com.getcapacitor.MessageHandler: void postMessage(java.lang.String)` y los cinco `*Plugin` de `com.capacitorjs.plugins.*`.
+
 ## Origen del código
 Código generado inicialmente en Lovable y migrado a este repo vía GitHub. Se está refactorizando para calidad de producción.
 
